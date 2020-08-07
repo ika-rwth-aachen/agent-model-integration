@@ -1,0 +1,102 @@
+cmake_minimum_required(VERSION 3.5)
+project(OSMPTrafficAgent)
+# Set a default build type if none was specified
+set(default_build_type "Release")
+if(EXISTS "${CMAKE_SOURCE_DIR}/../.git")
+  set(default_build_type "Debug")
+endif()
+
+add_subdirectory(lib/open-simulation-interface)
+add_subdirectory(lib/SimDriver)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(LINK_WITH_SHARED_OSI ON CACHE BOOL "Link FMU with shared OSI library instead of statically linking")
+set(PUBLIC_LOGGING OFF CACHE BOOL "Enable logging via FMI logger")
+set(PRIVATE_LOGGING OFF CACHE BOOL "Enable private logging to file")
+if(WIN32)
+	set(PRIVATE_LOG_PATH "C:/TEMP/OSMPTrafficAgent.log" CACHE FILEPATH "Path to write private log file to")
+else()
+	set(PRIVATE_LOG_PATH "/tmp/OSMPTrafficAgent.log" CACHE FILEPATH "Path to write private log file to")
+endif()
+set(VERBOSE_FMI_LOGGING OFF CACHE BOOL "Enable detailed FMI function logging")
+set(DEBUG_BREAKS OFF CACHE BOOL "Enable debugger traps for debug builds of FMU")
+
+string(TIMESTAMP FMUTIMESTAMP UTC)
+string(MD5 FMUGUID modelDescription.in.xml)
+configure_file(modelDescription.in.xml modelDescription.xml @ONLY)
+
+find_package(Protobuf 3.6.1 REQUIRED)
+set(SIMDRIVER_SRC lib/SimDriver/src)
+set(INJECTION_DIR lib/SimDriver/lib/Injection)
+message(${CMAKE_CURRENT_BINARY_DIR})
+set(SIMDRIVER_LIB ${CMAKE_CURRENT_BINARY_DIR}/lib/SimDriver/src)
+include_directories(
+	include
+	include/FMI 
+	${THIRDPARTY_INCLUDES} 
+	${THIRDPARTY_INCLUDES}/osi3 
+	${SIMDRIVER_SRC} 
+	#${INJECTION_INC}/include/injection
+)
+link_directories(${THIRDPARTY_LIBRARIES} ${Protobuf_LIBRARIES} ${SIMDRIVER_LIB})
+add_library(OSMPTrafficAgent SHARED 
+			src/OSMPTrafficAgent.cpp 
+			src/IkaAgent.cpp 
+			#${SIMDRIVER_SRC}/AgentModel.cpp
+			#${SIMDRIVER_SRC}/model_collection.cpp
+			#${SIMDRIVER_SRC}/AgentModelInjection.cpp
+			)
+set_target_properties(OSMPTrafficAgent PROPERTIES PREFIX "")
+link_directories(${THIRDPARTY_LIBRARIES} ${Protobuf_LIBRARIES} ${SIMDRIVER_LIB})
+target_compile_definitions(OSMPTrafficAgent PRIVATE "FMU_SHARED_OBJECT")
+target_compile_definitions(OSMPTrafficAgent PRIVATE "FMU_GUID=\"${FMUGUID}\"")
+if(LINK_WITH_SHARED_OSI)
+	target_link_libraries(OSMPTrafficAgent open_simulation_interface -lprotobuf -lprotobuf-lite agent_model)
+else()
+	target_link_libraries(OSMPTrafficAgent open_simulation_interface_pic agent_model injection)
+endif()
+if(PRIVATE_LOGGING)
+	file(TO_NATIVE_PATH ${PRIVATE_LOG_PATH} PRIVATE_LOG_PATH_NATIVE)
+	string(REPLACE "\\" "\\\\" PRIVATE_LOG_PATH_ESCAPED ${PRIVATE_LOG_PATH_NATIVE})
+	target_compile_definitions(OSMPTrafficAgent PRIVATE
+		"PRIVATE_LOG_PATH=\"${PRIVATE_LOG_PATH_ESCAPED}\"")
+endif()
+target_compile_definitions(OSMPTrafficAgent PRIVATE
+	$<$<BOOL:${PUBLIC_LOGGING}>:PUBLIC_LOGGING>
+	$<$<BOOL:${VERBOSE_FMI_LOGGING}>:VERBOSE_FMI_LOGGING>
+	$<$<BOOL:${DEBUG_BREAKS}>:DEBUG_BREAKS>)
+
+if(WIN32)
+	if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+		set(FMI_BINARIES_PLATFORM "win64")
+	else()
+		set(FMI_BINARIES_PLATFORM "win32")
+	endif()
+elseif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+	if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+		set(FMI_BINARIES_PLATFORM "linux64")
+	else()
+		set(FMI_BINARIES_PLATFORM "linux32")
+	endif()
+elseif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+	if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+		set(FMI_BINARIES_PLATFORM "darwin64")
+	else()
+		set(FMI_BINARIES_PLATFORM "darwin32")
+	endif()
+endif()
+
+add_custom_command(TARGET OSMPTrafficAgent
+	POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_CURRENT_BINARY_DIR}/buildfmu"
+	COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/sources"
+	COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/binaries/${FMI_BINARIES_PLATFORM}"
+	COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_BINARY_DIR}/modelDescription.xml" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu"
+	COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/src/IkaAgent.cpp" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/sources/"
+	#COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/../SimDriver/src/AgentModel.cpp" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/sources/"
+	COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/include/IkaAgent.h" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/sources/"
+	COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/src/OSMPTrafficAgent.cpp" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/sources/"
+	COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/include/OSMPTrafficAgent.h" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/sources/"
+	COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:OSMPTrafficAgent> $<$<PLATFORM_ID:Windows>:$<$<CONFIG:Debug>:$<TARGET_PDB_FILE:OSMPTrafficAgent>>> "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/binaries/${FMI_BINARIES_PLATFORM}"
+	COMMAND ${CMAKE_COMMAND} -E chdir "${CMAKE_CURRENT_BINARY_DIR}/buildfmu" ${CMAKE_COMMAND} -E tar "cfv" "../OSMPTrafficAgent.fmu" --format=zip "modelDescription.xml" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/sources" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/binaries/${FMI_BINARIES_PLATFORM}")
