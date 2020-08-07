@@ -1,5 +1,5 @@
-## OsiPedestrian: Credible Modelling Process
-This Document is based on the Credible Modelling Process (CMP) and fills it from the perspective of the OsiPedestrian. The process description can be found [here](https://gitlab.sl4to5.de/deliverables/credible-simulation-process/credible-simulation-process/-/blob/0182678762e6e3f9910246913259ae5c9fa7313b/credible_simulation_process.md#introduction).
+## ika-driver: Credible Modelling Process
+This Document is based on the Credible Modelling Process (CMP) and fills it from the perspective of the ika-driver model. The process description can be found [here](https://gitlab.sl4to5.de/deliverables/credible-simulation-process/credible-simulation-process/-/blob/0182678762e6e3f9910246913259ae5c9fa7313b/credible_simulation_process.md#introduction).
 
 ### ToDo / übergreifende Punkte:
 * [ ] Dummy
@@ -37,37 +37,39 @@ This Document is based on the Credible Modelling Process (CMP) and fills it from
     *  OSI Deserialisierungsfehler (z.B. Puffer zu klein, Inkonsistente Eingangsdaten) 
 *  Nutzung von Koordinatensystemen und Transformationen gemäß abgestimmten Konventionen (derzeit in Bearbeitung von FZD, etc.)
 
-#### Fußgängermodell
+#### Fahrermodell (ika)
 
-* SUC1-FGM01: Das Fußgängermodell muss über eine Initialisierungsnachricht (tbd) initialisierbar sein.
-> Karte, Initialposition, Initialgeschwindigkeit, ... etc.
-* SUC1-FGM02: Das Fußgängermodell soll eine konkrete Routenvorgabe umsetzen können. Varianten:
-> Vorgabe Zielposition  
-> Vorgabe Zielposition und Zielzeitpunkt  
-> Vorgabe Zielposition und Bewegungsgeschwindigkeit  
-> Zusätzlich zur Zielposition können in jedem Fall noch weitere Routenpunkte vorgegeben werden   
-> Eine Routenvorgabe kann zu jedem Zeitpunkt während der Simulation erfolgen und auch überschrieben werden  
+* SUC1-FM01: Das Fahrermodell muss über eine Initialisierungsnachricht initialisierbar sein.
+> Initialposition, Initialgeschwindigkeit, Fahrertyp... ? (tbd)
+* SUC1-FM02: Das Fahrermodell soll eine Routenvorgabe umsetzen können. Varianten:
+> Vorgabe Route  
+> Vorgabe Route und Zielzeitpunkt  
+> Vorgabe Route und Bewegungsgeschwindigkeit  
+> Eine Route soll hier eine Stützstelle auf jeder Road entlang der Route haben     
+> Eine Routenvorgabe kann zu jedem Zeitpunkt während der Simulation erfolgen und auch überschrieben werden  > Ein Routenpunkt pro Road muss übergeben werden  
 > Detaillierte Anforderungen werden in TP3 diskutiert  
-* SUC1-FGM03: Das Fußgängermodell soll sich frei auf den Gehwegen bewegen können.
-> Ist eine Route vorgegeben, soll der Route gefolgt werden  
-> Ist keine Route vorgegeben, soll der Fußgänger eine zufällige Route wählen oder stehen bleiben (tbd, für SUC nicht relevant)  
-* SUC1-FGM04: Das Fußgängermodell muss sich an geltende Verkehrsregeln halten.
-> Hier insbesondere Vorfahrsregeln (RvL, Vorfahrtsschilder, Zebrastreifen)
-* SUC1-FGM05: Das Fußgängermodell soll ein Umschalten des Vehaltens während der Simulation ermöglichen
-> Ignorieren von Verkehrsregeln (ja/nein)  
+* SUC1-FM03: Das Fahrermodell muss sich an geltende Verkehrsregeln halten.
+> Hier insbesondere (RvL, Vorfahrtsschilder, Zebrastreifen)  
+* SUC1-FM04: Das Fahrermodell soll ein Umschalten des Verhaltens während des Simulationslaufs ermöglichen.
+> Ignorieren von Verkehrsregeln, Agressiv, Verändern der Geschwindigkeit ...  
 > Weitere Vorgaben gemäß TP3 / TP2  (nicht SUC relevant)
-* SUC1-FGM06: Das Fußgängermodell soll verschiedene Bewegungsmodi unterstützen
-> Gehen, Joggen, Rennen, spontanes beschleunigen  (ggf. durch Vorgabe Bewegungsgeschwindigkeit abbildbar)
-> Weitere Vorgaben gemäß TP3 / TP2  (nicht SUC relevant)  
-* SUC1-FGM07: Das Fußgängermodell soll ein Umschalten der Bewegunsmodi während der Simulation ermöglichen
-* SUC1-FGM08: Das Fußgängermodell soll Informationen über die Blickrichtung, Armbewegung (tbd) geben können.
-* SUC1-FGM09: Das Fußgängermodell muss als OSMP FMU bereitgestellt werden.
-* SUC1-FGM10: Das Fußgängermodell muss die OSI::Sensorview als Input verarbeiten können.
+* SUC1-FM05: Das Fahrermodell muss die OSI::Sensorview als Input Verarbeiten können.
 > (inkl. Ausgabe SensorViewConfiguration)
-* SUC1-FGM11: Das Fußgängermodell muss die Umsetzung des für SUC1 definierten Szenarios ermöglichen.
+* SUC1-FM06: Das Fahrermodell muss Wunschlängsbeschleunigung, ... (tbd) (zur weiteren Verarbeitung durch das Fahrzeug-Dynamikmodell) bereitstellen.
+* SUC1-FM07: Das Fahrermodell muss als OSMP FMU bereitgestellt werden.
+* SUC1-FM08: Das Fahrermodell muss die Umsetzung des für sUC1 definierten Szenarios ermöglichen.
+
+#### Agentenmodell Fahrer (Fremdverkehr)
+*  Fahrer (zunächst inkl. eigener Fahrdynmaik) als OSMP-FMU, Windows-fähig (64-bit) oder mit Windows-kompatiblem/plattfomrunabhängigem Source-Code
+*  Init: Initialisierung der FMU über FMU-Parameter (siehe https://gitlab.sl4to5.de/deliverables/architecture/osi-sensor-model-packaging/-/merge_requests/2). 
+*  Reset/Neuinitialisierung während der Simulation möglich (um Neustart des Szenarios oder
+	Szenario(varianten)wechseln bei laufender Simulationsumgebung zu unterstützen)Init/Input: Routenvorgabe wird eingelesen und umgesetzt (Vorgabe Zielposition, Zielzeitpunkt, ggf. mit Routenpunkten, genaue Anforderungen werden in TP3 definiert, OSI Message tbd) 
+*  Input: osi:SensorView, TrajectoryCommand via osi::TrafficCommand
+*  Output: osi::TrafficUpdate
+*  Bewegung auf Gehwegen nach Vorgegebener Trajektorie (Deklaration in OSI tbd)
+*  Keine Anforderungen an Animation des Fußgängers
 
 ### SUC2
-
 #### Anforderungen Modelle und Parameter
 *  Modelldokumentation muss Angaben zu Grenzwerten bei Simulationszeiten der Modelle enthalten
 *  Sensorik und HADf sollen alle mit identischer Simulationsschrittweite von 10 ms ausgeführt werden
@@ -84,15 +86,7 @@ This Document is based on the Credible Modelling Process (CMP) and fills it from
 ***	Inkonsistente Eingangsdaten (mögliche Ursache: falsche OSMP Size Information, …)
 *   Abgestimmte, soweit wie möglich einheitliche, Koordinatensysteme für die Schnittstellen bzw. abgestimmte Koordinatentransformationen
 
-#### Agentenmodell Fußgänger
-*  Fußgänger als OSMP-FMU, Windows-fähig (64-bit) oder mit Windows-kompatiblem/plattfomrunabhängigem Source-Code
-*  Init: Initialisierung der FMU über FMU-Parameter (siehe https://gitlab.sl4to5.de/deliverables/architecture/osi-sensor-model-packaging/-/merge_requests/2). 
-*  Reset/Neuinitialisierung während der Simulation möglich (um Neustart des Szenarios oder
-	Szenario(varianten)wechseln bei laufender Simulationsumgebung zu unterstützen)Init/Input: Routenvorgabe wird eingelesen und umgesetzt (Vorgabe Zielposition, Zielzeitpunkt, ggf. mit Routenpunkten, genaue Anforderungen werden in TP3 definiert, OSI Message tbd) 
-*  Input: osi:SensorView, TrajectoryCommand via osi::TrafficCommand
-*  Output: osi::TrafficUpdate
-*  Bewegung auf Gehwegen nach Vorgegebener Trajektorie (Deklaration in OSI tbd)
-*  Keine Anforderungen an Animation des Fußgängers
+
 
 ### SUC3
 

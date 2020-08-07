@@ -1,5 +1,5 @@
-## OsiPedestrian: Credible Modelling Process
-This Document is based on the Credible Modelling Process (CMP) and fills it from the perspective of the OsiPedestrian. The process description can be found [here](https://gitlab.sl4to5.de/deliverables/credible-simulation-process/credible-simulation-process/-/blob/0182678762e6e3f9910246913259ae5c9fa7313b/credible_simulation_process.md#introduction).
+## ika-driver: Credible Modelling Process
+This Document is based on the Credible Modelling Process (CMP) and fills it from the perspective of the ika-driver model. The process description can be found [here](https://gitlab.sl4to5.de/deliverables/credible-simulation-process/credible-simulation-process/-/blob/0182678762e6e3f9910246913259ae5c9fa7313b/credible_simulation_process.md#introduction).
 
 ### ToDo / übergreifende Punkte:
 * [ ] Dummy
@@ -7,7 +7,7 @@ This Document is based on the Credible Modelling Process (CMP) and fills it from
 
 # Phase 3: Design Specification
 
-> In this process phase, the design specification for OsiPedestrianling task is determined from the requirements. Also, the design specification (how is it realized) to the corresponding test cases, models, simulation & test environment, and quality assurance. Important here is the documentation why the respective type of realization was determined. Conceptual implementations can be used for design specification decisions. They are separate sub tasks.
+> In this process phase, the design specification for the ika-driver model task is determined from the requirements. Also, the design specification (how is it realized) to the corresponding test cases, models, simulation & test environment, and quality assurance. Important here is the documentation why the respective type of realization was determined. Conceptual implementations can be used for design specification decisions. They are separate sub tasks.
 > 
 > * Design specifications for test cases, models, parameters, simulation & test environment, quality assurance
 > <details>
@@ -26,6 +26,7 @@ This Document is based on the Credible Modelling Process (CMP) and fills it from
 
 ## Inputs
 
+**TODO @beck_d0: Describe**
 > * Overall Requirement specification for modelling task (also requirements for the overall simulation environment, including operation range, which have to be checked and tested)
 > * Requirement specification test cases
 > * Requirement specification models (+ parameters)
@@ -40,6 +41,8 @@ This Document is based on the Credible Modelling Process (CMP) and fills it from
 
 ## Process Step Execution
 
+**TODO @beck_d0: Describe**
+
 > * Design specification for test cases, models, parameters and simulation & test environment
 > * Conceptual implementations can be used for the design specification decisions
 > * Documentation of reasons for design specifications
@@ -50,6 +53,7 @@ This Document is based on the Credible Modelling Process (CMP) and fills it from
 
 ## Outputs
 
+**TODO @beck_d0: Describe**
 > * Overall design specification for simulation setup (model, parameters, simulation & test environment)
 > * Design specification model
 > * Design specification parameters

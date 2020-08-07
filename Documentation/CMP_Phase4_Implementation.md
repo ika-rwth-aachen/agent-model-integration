@@ -1,5 +1,5 @@
-## OsiPedestrian: Credible Modelling Process
-This Document is based on the Credible Modelling Process (CMP) and fills it from the perspective of the OsiPedestrian. The process description can be found [here](https://gitlab.sl4to5.de/deliverables/credible-simulation-process/credible-simulation-process/-/blob/0182678762e6e3f9910246913259ae5c9fa7313b/credible_simulation_process.md#introduction).
+## ika-driver: Credible Modelling Process
+This Document is based on the Credible Modelling Process (CMP) and fills it from the perspective of the ika-driver model. The process description can be found [here](https://gitlab.sl4to5.de/deliverables/credible-simulation-process/credible-simulation-process/-/blob/0182678762e6e3f9910246913259ae5c9fa7313b/credible_simulation_process.md#introduction).
 
 ### ToDo / übergreifende Punkte:
 * [ ] Dummy
@@ -13,6 +13,7 @@ This Document is based on the Credible Modelling Process (CMP) and fills it from
 
 ## Inputs
 
+**TODO @beck_d0: Describe**
 > * Overall Design specification for simulation set up (models, parameters, simulation & test environment)
 > * Design specification model
 > * Design specification parameters
@@ -29,6 +30,7 @@ This Document is based on the Credible Modelling Process (CMP) and fills it from
 
 ## Process Step Execution
 
+**TODO @beck_d0: Describe**
 > * Implement simulation model
 > * Implement (modules) simulation environment
 > * Set up simulation environment, integrate models
@@ -42,6 +44,7 @@ This Document is based on the Credible Modelling Process (CMP) and fills it from
 
 ## Outputs
 
+**TODO @beck_d0: Describe**
 > * Implemented, qualified and documented model, parameters, simulation & test environment according to requirement & design specifications
 > * Test results according to specification
 > * Quality information model & simulation environment
