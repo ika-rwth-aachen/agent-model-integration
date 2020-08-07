@@ -43,7 +43,7 @@ public:
 private:
     bool trajSet;
     bool initialized = false;
-    osi3::TrajectoryAction traj;
+    osi3::FollowTrajectoryAction traj;
     Pose pose;
 
     double lastS;

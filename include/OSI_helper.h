@@ -534,10 +534,10 @@ void futureLanes(osi3::SensorView& sensorView, osi3::TrafficCommand& commandData
 	}
 
 	//TrajectoryAction contains desired Trajectory 
-	osi3::TrajectoryAction action;
-	action.CopyFrom(commandData.action(0).trajectory_action());	
-	Point2D destination(action.trajectory_point(action.trajectory_point_size() - 1).state().position().x(),
-		action.trajectory_point(action.trajectory_point_size() - 1).state().position().y());
+	osi3::FollowTrajectoryAction action;
+	action.CopyFrom(commandData.action(0).follow_trajectory_action ());	
+	Point2D destination(action.trajectory_point(action.trajectory_point_size() - 1).position().x(),
+		action.trajectory_point(action.trajectory_point_size() - 1).position().y());
 
 	//determine last lane
 	std::vector<Point2D> centerline;

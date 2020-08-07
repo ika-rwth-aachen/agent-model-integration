@@ -95,9 +95,9 @@ int IkaAgent::step(double time, osi3::SensorView &sensorViewData, osi3::TrafficC
 
     for (int i = 0; i < commandData.action_size(); i++)
     {
-        if(commandData.action(i).has_trajectory_action())
+        if(commandData.action(i).has_follow_trajectory_action())
         {
-            traj.CopyFrom(commandData.action(i).trajectory_action());
+            traj.CopyFrom(commandData.action(i).follow_trajectory_action());
             trajSet = true;
         }
     }
@@ -131,8 +131,8 @@ int IkaAgent::getTrajPoint(double time, osi3::TrafficUpdate &out)
 			for (i = 0; i < traj.trajectory_point_size(); i++)
 			{
 				sCheck = traj.mutable_trajectory_point(i);
-				tCheck = sCheck->time_stamp().seconds()
-					+ sCheck->time_stamp().nanos() / 1000000000.0;
+				tCheck = sCheck->timestamp().seconds()
+					+ sCheck->timestamp().nanos() / 1000000000.0;
 				if (time < tCheck)
 					break;
 			}
@@ -197,18 +197,18 @@ int IkaAgent::interpolateState(int iStart, double t)
 	osi3::StatePoint *sp;
 	sp = traj.mutable_trajectory_point(iStart+2);
 	// get coordinates
-	double xm = sm->state().position().x();
-	double xi = si->state().position().x();
-	double xp = sp->state().position().x();
-	double ym = sm->state().position().y();
-	double yi = si->state().position().y();
-	double yp = sp->state().position().y();
-	double tm = sm->time_stamp().seconds()
-		+ sm->time_stamp().nanos() / 1000000000.0;
-	double ti = si->time_stamp().seconds()
-		+ si->time_stamp().nanos() / 1000000000.0;
-	double tp = sp->time_stamp().seconds()
-		+ sp->time_stamp().nanos() / 1000000000.0;
+	double xm = sm->position().x();
+	double xi = si->position().x();
+	double xp = sp->position().x();
+	double ym = sm->position().y();
+	double yi = si->position().y();
+	double yp = sp->position().y();
+	double tm = sm->timestamp().seconds()
+		+ sm->timestamp().nanos() / 1000000000.0;
+	double ti = si->timestamp().seconds()
+		+ si->timestamp().nanos() / 1000000000.0;
+	double tp = sp->timestamp().seconds()
+		+ sp->timestamp().nanos() / 1000000000.0;
 	
 	double alphaX = xm / ((tm - ti) * (tm - tp));
 	double alphaY = ym / ((tm - ti) * (tm - tp));
@@ -247,14 +247,14 @@ int IkaAgent::interpolateStateLinear(double t)
 	osi3::StatePoint *s1;
 	s1 = traj.mutable_trajectory_point(1);
 
-	double x0 = s0->state().position().x();
-	double y0 = s0->state().position().y();
-	double x1 = s1->state().position().x();
-	double y1 = s1->state().position().y();
-	double t0 = s0->time_stamp().seconds()
-		+ s0->time_stamp().nanos() / 1000000000.0;
-	double t1 = s1->time_stamp().seconds()
-		+ s1->time_stamp().nanos() / 1000000000.0;
+	double x0 = s0->position().x();
+	double y0 = s0->position().y();
+	double x1 = s1->position().x();
+	double y1 = s1->position().y();
+	double t0 = s0->timestamp().seconds()
+		+ s0->timestamp().nanos() / 1000000000.0;
+	double t1 = s1->timestamp().seconds()
+		+ s1->timestamp().nanos() / 1000000000.0;
 	
 	// yaw angle is constant.
 	pose.yaw = std::atan2(y1 - y0, x1 - x0);
