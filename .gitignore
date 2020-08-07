@@ -1,0 +1,11 @@
+debug/
+logs/
+build/
+test/traces/
+
+.vs/
+.vscode/
+
+*.fmu
+*.pyc
+*.osi
