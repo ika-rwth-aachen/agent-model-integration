@@ -35,8 +35,7 @@ This Document is based on the Credible Modelling Process (CMP) and fills it from
 > * Requirements according to criticality of decision of simulation task
 > * Requirements specifications for process quality
 
-**Collection of all Inputs**
-
+**Collection of all Inputs**  
 
 
 ## Process Step Execution
