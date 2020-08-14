@@ -24,6 +24,7 @@ void IkaAgent::init()
 	horizonTHW = 20;
 
 	drParam = getParameters();
+	drState = getState();
 
 	drParam->velocity.a = 2.0;
 	drParam->velocity.b = -2.0;
@@ -53,7 +54,49 @@ void IkaAgent::init()
 	drParam->steering.D[1] = 0.0;
 
 	AgentModel::init();
+   	vehInput = vehicle->getInput();
+    vehState = vehicle->getState();
+    vehParam = vehicle->getParameters();
 	
+	double l = 2.7; // wheel base
+    // vehicle parameters
+    vehParam->steerTransmission  = 0.474;
+    vehParam->steerTransmission  = 0.5;
+    vehParam->wheelBase          = l;
+    vehParam->cwA                = 0.6;
+    vehParam->mass               = 1.5e3;
+    vehParam->powerMax           = 1.0e5;
+    vehParam->forceMax           = 6.0e4;
+    vehParam->idle               = 0.05;
+    vehParam->rollCoefficient[0] = 4.0 * 9.91e-3;
+    vehParam->rollCoefficient[1] = 4.0 * 1.95e-5;
+    vehParam->rollCoefficient[2] = 4.0 * 1.76e-9;
+    vehParam->size.x = 5;
+    vehParam->size.y = 2;
+	vehParam->driverPosition.x = 0.;// 0.50;
+    vehParam->driverPosition.y = 0;//0.5;
+	
+	// set controller parameters (lateral motion control)
+    steeringContr->setParameters(10.0 * l, 0.1 * l, 0.0, 1.0);
+    steeringContr->setRange(-1.0, 1.0, INFINITY);
+
+    // set controller parameters (longitudinal motion control)
+    pedalContr->setParameters(2.5, 1.0, 0.0, 1.0);
+    pedalContr->setRange(-1.0, 1.0, INFINITY);
+
+    // set states
+    vehicle->reset();
+	vehState->position.x = lastPosition.x;
+    vehState->position.y = lastPosition.y;
+	vehState->v = 0.0;//tbd
+	vehState->psi = 0.; //tbd
+
+    // set variables
+    pedalContr->setVariables(&vehState->a, &drState->subconscious.a, &vehInput->pedal, &drState->subconscious.pedal);
+    steeringContr->setVariables(&vehState->kappa, &drState->subconscious.kappa, &vehInput->steer);
+	
+	pedalContr->reset();
+    steeringContr->reset();
 }
 
 
@@ -89,6 +132,8 @@ int IkaAgent::step(double time, osi3::SensorView &sensorViewData, osi3::TrafficC
 	adapterOsiToInput(sensorViewData, _input, lanes , out.timestamp().seconds()+(out.timestamp().nanos()*0.000000001));
 	
 	this->AgentModel::step(time);
+
+
 
 	//output << "   state:\ns= " << _input.vehicle.s << " d= " << _input.vehicle.d << " v= " << _input.vehicle.v << " psi= " << _input.vehicle.psi<< " Position: ("<<lastPosition.x <<" , "<<lastPosition.y<<")" << std::endl << std::endl;
 	//----------------

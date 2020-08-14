@@ -43,6 +43,8 @@ link_directories(${THIRDPARTY_LIBRARIES} ${Protobuf_LIBRARIES} ${SIMDRIVER_LIB})
 add_library(OSMPTrafficAgent SHARED 
 			src/OSMPTrafficAgent.cpp 
 			src/IkaAgent.cpp 
+			src/VehicleModel.cpp
+			src/PrimaryController.cpp
 			#${SIMDRIVER_SRC}/AgentModel.cpp
 			#${SIMDRIVER_SRC}/model_collection.cpp
 			#${SIMDRIVER_SRC}/AgentModelInjection.cpp

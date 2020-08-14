@@ -13,6 +13,8 @@
 #include "osi_sensorview.pb.h"
 #include "Interface.h"
 #include "AgentModel.h"
+#include "VehicleModel.h"
+#include "PrimaryController.h"
 #include <vector>
 #include <cmath>
 
@@ -53,6 +55,13 @@ private:
     
 
     agent_model::Parameters* drParam;
+    agent_model::State* drState;
+    VehicleModel *vehicle;
+    PrimaryController *steeringContr;
+    PrimaryController *pedalContr;
+    VehicleModel::Input      *vehInput;
+    VehicleModel::State      *vehState;
+    VehicleModel::Parameters *vehParam;
 
     int adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input& input, std::vector<int>& futureLanes, double time);
 
