@@ -100,7 +100,7 @@ void IkaAgent::init()
 }
 
 
-int IkaAgent::step(double time, osi3::SensorView &sensorViewData, osi3::TrafficCommand &commandData, osi3::TrafficUpdate &out)
+int IkaAgent::step(double time, double stepSize, osi3::SensorView &sensorViewData, osi3::TrafficCommand &commandData, osi3::TrafficUpdate &out)
 {
 	//----------------
 	std::ofstream output("debug.txt", std::ofstream::out | std::ofstream::app);
@@ -132,9 +132,12 @@ int IkaAgent::step(double time, osi3::SensorView &sensorViewData, osi3::TrafficC
 	adapterOsiToInput(sensorViewData, _input, lanes , out.timestamp().seconds()+(out.timestamp().nanos()*0.000000001));
 	
 	this->AgentModel::step(time);
-
-
-
+	pedalContr->step(stepSize);
+	steeringContr->step(stepSize);	
+    // Perform Vehicle Model step
+    vehInput->slope = 0.0; 
+	vehicle->step(stepSize); // STEP SIZE not TIME!
+	output << "x: " << vehState->position.x << std::endl;
 	//output << "   state:\ns= " << _input.vehicle.s << " d= " << _input.vehicle.d << " v= " << _input.vehicle.v << " psi= " << _input.vehicle.psi<< " Position: ("<<lastPosition.x <<" , "<<lastPosition.y<<")" << std::endl << std::endl;
 	//----------------
 
@@ -148,12 +151,38 @@ int IkaAgent::step(double time, osi3::SensorView &sensorViewData, osi3::TrafficC
     }
 
 	
-	return getTrajPoint(time, out);
+	//return getTrajPoint(time, out);
+	return applyDriverOutput(time, out);
 }
 
 int IkaAgent::terminate()
 {
     return 0;
+}
+
+int IkaAgent::applyDriverOutput(double time, osi3::TrafficUpdate &out)
+{
+	osi3::MovingObject *update = out.mutable_update();
+
+	pose.x = vehState->position.x;
+	pose.y = vehState->position.y;
+	pose.vx = vehState->v;
+	pose.vy = 0;
+	pose.ax = vehState->a;
+	pose.ay = 0;
+	pose.yaw = vehState->psi;
+	pose.dyaw = vehState->dPsi;
+
+	update->mutable_base()->mutable_position()->set_x(pose.x);
+	update->mutable_base()->mutable_position()->set_y(pose.y);
+	update->mutable_base()->mutable_velocity()->set_x(pose.vx);
+	update->mutable_base()->mutable_velocity()->set_y(pose.vy);
+	update->mutable_base()->mutable_acceleration()->set_x(pose.ax);
+	update->mutable_base()->mutable_acceleration()->set_y(pose.ay);
+	update->mutable_base()->mutable_orientation()->set_yaw(pose.yaw);
+	update->mutable_base()->mutable_orientation_rate()->set_yaw(pose.dyaw);
+
+	return 0;
 }
 
 int IkaAgent::getTrajPoint(double time, osi3::TrafficUpdate &out)

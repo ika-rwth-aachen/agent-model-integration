@@ -251,7 +251,7 @@ fmi2Status COSMPTrafficAgent::doCalc(fmi2Real currentCommunicationPoint, fmi2Rea
             });
 
     /* Update Trajectory */
-    agentModel.step(time, currentViewIn, currentCommandIn, currentOut);
+    agentModel.step(time, communicationStepSize, currentViewIn, currentCommandIn, currentOut);
 
     /* Serialize */
     set_fmi_traffic_update_out(currentOut);

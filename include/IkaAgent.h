@@ -38,7 +38,7 @@ public:
     ~IkaAgent() override = default;
 
     virtual void init();
-    int step(double time, osi3::SensorView &sensorViewData, osi3::TrafficCommand &commandData, osi3::TrafficUpdate &out);
+    int step(double time, double stepSize, osi3::SensorView &sensorViewData, osi3::TrafficCommand &commandData, osi3::TrafficUpdate &out);
     int terminate();
 
 
@@ -66,6 +66,7 @@ private:
     int adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input& input, std::vector<int>& futureLanes, double time);
 
     int getTrajPoint(double time, osi3::TrafficUpdate &out);
+	int applyDriverOutput(double time, osi3::TrafficUpdate &out);
 	int interpolateState(int iStart, double t);
 	int interpolateStateLinear(double t);
 };
