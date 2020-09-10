@@ -24,22 +24,25 @@ set(DEBUG_BREAKS OFF CACHE BOOL "Enable debugger traps for debug builds of FMU")
 
 string(TIMESTAMP FMUTIMESTAMP UTC)
 string(MD5 FMUGUID modelDescription.in.xml)
-configure_file(modelDescription.in.xml modelDescription.xml @ONLY)
+configure_file(modelDescription.xml modelDescription.xml @ONLY)
 
 find_package(Protobuf 3.6.1 REQUIRED)
 set(SIMDRIVER_SRC lib/SimDriver/src)
 set(INJECTION_DIR lib/SimDriver/lib/Injection)
-message(${CMAKE_CURRENT_BINARY_DIR})
+#message("osi dir " ${CMAKE_CURRENT_BINARY_DIR}/lib/open-simulation-interface)
 set(SIMDRIVER_LIB ${CMAKE_CURRENT_BINARY_DIR}/lib/SimDriver/src)
 include_directories(
 	include
 	include/FMI 
-	${THIRDPARTY_INCLUDES} 
-	${THIRDPARTY_INCLUDES}/osi3 
+	#${THIRDPARTY_INCLUDES} 
+	#${THIRDPARTY_INCLUDES}/osi3 
 	${SIMDRIVER_SRC} 
+	${Protobuf_INCLUDE_DIRS}
 	#${INJECTION_INC}/include/injection
 )
-link_directories(${THIRDPARTY_LIBRARIES} ${Protobuf_LIBRARIES} ${SIMDRIVER_LIB})
+#link_directories(${THIRDPARTY_LIBRARIES} ${Protobuf_LIBRARIES} ${SIMDRIVER_LIB} ${CMAKE_CURRENT_BINARY_DIR}/lib/open-simulation-interface)
+#link_directories(${THIRDPARTY_LIBRARIES})
+#link_directories(${Protobuf_LIBRARIES})
 add_library(OSMPTrafficAgent SHARED 
 			src/OSMPTrafficAgent.cpp 
 			src/IkaAgent.cpp 
@@ -50,14 +53,21 @@ add_library(OSMPTrafficAgent SHARED
 			#${SIMDRIVER_SRC}/AgentModelInjection.cpp
 			)
 set_target_properties(OSMPTrafficAgent PROPERTIES PREFIX "")
-link_directories(${THIRDPARTY_LIBRARIES} ${Protobuf_LIBRARIES} ${SIMDRIVER_LIB})
+#link_directories(${THIRDPARTY_LIBRARIES} ${Protobuf_LIBRARIES} ${SIMDRIVER_LIB} ${CMAKE_CURRENT_BINARY_DIR}/lib/open-simulation-interface)
+
 target_compile_definitions(OSMPTrafficAgent PRIVATE "FMU_SHARED_OBJECT")
 target_compile_definitions(OSMPTrafficAgent PRIVATE "FMU_GUID=\"${FMUGUID}\"")
-if(LINK_WITH_SHARED_OSI)
-	target_link_libraries(OSMPTrafficAgent open_simulation_interface -lprotobuf -lprotobuf-lite agent_model)
-else()
-	target_link_libraries(OSMPTrafficAgent open_simulation_interface_pic agent_model injection)
-endif()
+target_link_libraries(OSMPTrafficAgent
+                      PUBLIC open_simulation_interface_static
+					  #PUBLIC protobuf
+					  PUBLIC agent_model)
+#if(LINK_WITH_SHARED_OSI)
+	#target_link_libraries(OSMPTrafficAgent open_simulation_interface -lprotobuf agent_model)
+	
+
+#else()
+	#target_link_libraries(OSMPTrafficAgent open_simulation_interface_pic agent_model injection)
+#endif()
 if(PRIVATE_LOGGING)
 	file(TO_NATIVE_PATH ${PRIVATE_LOG_PATH} PRIVATE_LOG_PATH_NATIVE)
 	string(REPLACE "\\" "\\\\" PRIVATE_LOG_PATH_ESCAPED ${PRIVATE_LOG_PATH_NATIVE})
@@ -89,16 +99,36 @@ elseif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	endif()
 endif()
 
-add_custom_command(TARGET OSMPTrafficAgent
-	POST_BUILD
-	COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_CURRENT_BINARY_DIR}/buildfmu"
-	COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/sources"
-	COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/binaries/${FMI_BINARIES_PLATFORM}"
-	COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_BINARY_DIR}/modelDescription.xml" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu"
-	COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/src/IkaAgent.cpp" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/sources/"
-	#COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/../SimDriver/src/AgentModel.cpp" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/sources/"
-	COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/include/IkaAgent.h" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/sources/"
-	COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/src/OSMPTrafficAgent.cpp" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/sources/"
-	COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/include/OSMPTrafficAgent.h" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/sources/"
-	COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:OSMPTrafficAgent> $<$<PLATFORM_ID:Windows>:$<$<CONFIG:Debug>:$<TARGET_PDB_FILE:OSMPTrafficAgent>>> "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/binaries/${FMI_BINARIES_PLATFORM}"
-	COMMAND ${CMAKE_COMMAND} -E chdir "${CMAKE_CURRENT_BINARY_DIR}/buildfmu" ${CMAKE_COMMAND} -E tar "cfv" "../OSMPTrafficAgent.fmu" --format=zip "modelDescription.xml" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/sources" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/binaries/${FMI_BINARIES_PLATFORM}")
+get_filename_component(Protobuf_REAL_LIBRARY_FILENAME "${Protobuf_LIBRARY}" REALPATH)
+
+add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/lib/OSMPTrafficAgent.fmu
+                   DEPENDS OSMPTrafficAgent
+                           modelDescription.xml
+                   COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_CURRENT_BINARY_DIR}/buildfmu"
+                   COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/sources"
+                   COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/binaries/${FMI_BINARIES_PLATFORM}"
+                   COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/modelDescription.xml" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu"
+                   COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:OSMPTrafficAgent> "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/binaries/${FMI_BINARIES_PLATFORM}"
+                   #COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:open_simulation_interface> "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/binaries/${FMI_BINARIES_PLATFORM}"
+                   #COMMAND ${CMAKE_COMMAND} -E copy "${Protobuf_REAL_LIBRARY_FILENAME}" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/binaries/${FMI_BINARIES_PLATFORM}"
+				   #COMMAND ${CMAKE_COMMAND} -E chdir "${CMAKE_CURRENT_BINARY_DIR}/buildfmu" ${CMAKE_COMMAND} -E tar "cfv" "${CMAKE_CURRENT_SOURCE_DIR}/lib/OSMPTrafficAgent.fmu" --format=zip "modelDescription.xml" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/binaries/${FMI_BINARIES_PLATFORM}")
+				   COMMAND ${CMAKE_COMMAND} -E chdir "${CMAKE_CURRENT_BINARY_DIR}/buildfmu" ${CMAKE_COMMAND} -E tar "cfv" "D:/home/git/SETLevel4to5/openpass/Binaries/Windows/configs/OSMPTrafficAgent.fmu" --format=zip "modelDescription.xml" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/binaries/${FMI_BINARIES_PLATFORM}")
+
+add_custom_target(${PROJECT_NAME}_fmu
+                  ALL
+				  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/OSMPTrafficAgent.fmu)
+				  
+
+#add_custom_command(TARGET OSMPTrafficAgent
+	#POST_BUILD
+	#COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_CURRENT_BINARY_DIR}/buildfmu"
+	#COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/sources"
+	#COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/binaries/${FMI_BINARIES_PLATFORM}"
+	#COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_BINARY_DIR}/modelDescription.xml" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu"
+	#COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/src/IkaAgent.cpp" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/sources/"
+	##COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/../SimDriver/src/AgentModel.cpp" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/sources/"
+	#COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/include/IkaAgent.h" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/sources/"
+	#COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/src/OSMPTrafficAgent.cpp" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/sources/"
+	#COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/include/OSMPTrafficAgent.h" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/sources/"
+	#COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:OSMPTrafficAgent> $<$<PLATFORM_ID:Windows>:$<$<CONFIG:Debug>:$<TARGET_PDB_FILE:OSMPTrafficAgent>>> "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/binaries/${FMI_BINARIES_PLATFORM}"
+	#COMMAND ${CMAKE_COMMAND} -E chdir "${CMAKE_CURRENT_BINARY_DIR}/buildfmu" ${CMAKE_COMMAND} -E tar "cfv" "../OSMPTrafficAgent.fmu" --format=zip "modelDescription.xml" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/sources" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/binaries/${FMI_BINARIES_PLATFORM}")

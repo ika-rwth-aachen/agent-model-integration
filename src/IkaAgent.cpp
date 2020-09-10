@@ -44,7 +44,7 @@ void IkaAgent::init()
 	drParam->follow.dsStopped = 2.0;
 	drParam->follow.thwMax = 10.0;
 	drParam->follow.timeHeadway = 1.8;
-
+	
 	// steering
 	drParam->steering.thw[0] = 1.0;
 	drParam->steering.thw[1] = 2.0;
@@ -54,9 +54,9 @@ void IkaAgent::init()
 	drParam->steering.D[1] = 0.0;
 
 	AgentModel::init();
-   	vehInput = vehicle->getInput();
-    vehState = vehicle->getState();
-    vehParam = vehicle->getParameters();
+   	vehInput = _vehicle.getInput();
+    vehState = _vehicle.getState();
+    vehParam = _vehicle.getParameters();
 	
 	double l = 2.7; // wheel base
     // vehicle parameters
@@ -77,26 +77,26 @@ void IkaAgent::init()
     vehParam->driverPosition.y = 0;//0.5;
 	
 	// set controller parameters (lateral motion control)
-    steeringContr->setParameters(10.0 * l, 0.1 * l, 0.0, 1.0);
-    steeringContr->setRange(-1.0, 1.0, INFINITY);
+    steeringContr.setParameters(10.0 * l, 0.1 * l, 0.0, 1.0);
+    steeringContr.setRange(-1.0, 1.0, INFINITY);
 
     // set controller parameters (longitudinal motion control)
-    pedalContr->setParameters(2.5, 1.0, 0.0, 1.0);
-    pedalContr->setRange(-1.0, 1.0, INFINITY);
+    pedalContr.setParameters(2.5, 1.0, 0.0, 1.0);
+    pedalContr.setRange(-1.0, 1.0, INFINITY);
 
     // set states
-    vehicle->reset();
+    _vehicle.reset();
 	vehState->position.x = lastPosition.x;
     vehState->position.y = lastPosition.y;
 	vehState->v = 0.0;//tbd
 	vehState->psi = 0.; //tbd
 
     // set variables
-    pedalContr->setVariables(&vehState->a, &drState->subconscious.a, &vehInput->pedal, &drState->subconscious.pedal);
-    steeringContr->setVariables(&vehState->kappa, &drState->subconscious.kappa, &vehInput->steer);
+    pedalContr.setVariables(&vehState->a, &drState->subconscious.a, &vehInput->pedal, &drState->subconscious.pedal);
+    steeringContr.setVariables(&vehState->kappa, &drState->subconscious.kappa, &vehInput->steer);
 	
-	pedalContr->reset();
-    steeringContr->reset();
+	pedalContr.reset();
+    steeringContr.reset();
 }
 
 
@@ -104,12 +104,10 @@ int IkaAgent::step(double time, double stepSize, osi3::SensorView &sensorViewDat
 {
 	//----------------
 	std::ofstream output("debug.txt", std::ofstream::out | std::ofstream::app);
-	
 	//Initialize agent in first step
 	if (!initialized) {
 
 		IkaAgent::init();
-
 		//set initial Position
 		for (int i = 0; i < sensorViewData.global_ground_truth().moving_object_size(); i++) {
 			if (sensorViewData.global_ground_truth().moving_object(i).id().value() == sensorViewData.host_vehicle_id().value()) {
@@ -121,26 +119,23 @@ int IkaAgent::step(double time, double stepSize, osi3::SensorView &sensorViewDat
 		}
 
 		//determine lanes along Trajectory passed by commandData
-
 		futureLanes(sensorViewData, commandData, lanes);
-
 		initialized = true;
-	}
-
+	}	
 	std::cout << "------------ time: " << out.timestamp().seconds() + (out.timestamp().nanos() * 0.000000001) << "---------------" << std::endl;
 	
 	adapterOsiToInput(sensorViewData, _input, lanes , out.timestamp().seconds()+(out.timestamp().nanos()*0.000000001));
 	
 	this->AgentModel::step(time);
-	pedalContr->step(stepSize);
-	steeringContr->step(stepSize);	
+	
+	pedalContr.step(stepSize);
+	steeringContr.step(stepSize);	
     // Perform Vehicle Model step
     vehInput->slope = 0.0; 
-	vehicle->step(stepSize); // STEP SIZE not TIME!
-	output << "x: " << vehState->position.x << std::endl;
+	_vehicle.step(stepSize); // STEP SIZE not TIME!
+	std::cout << "x: " << vehState->position.x << ", y: " << vehState->position.y << std::endl;
 	//output << "   state:\ns= " << _input.vehicle.s << " d= " << _input.vehicle.d << " v= " << _input.vehicle.v << " psi= " << _input.vehicle.psi<< " Position: ("<<lastPosition.x <<" , "<<lastPosition.y<<")" << std::endl << std::endl;
-	//----------------
-
+	//----------------	
     for (int i = 0; i < commandData.action_size(); i++)
     {
         if(commandData.action(i).has_follow_trajectory_action())
@@ -150,7 +145,6 @@ int IkaAgent::step(double time, double stepSize, osi3::SensorView &sensorViewDat
         }
     }
 
-	
 	//return getTrajPoint(time, out);
 	return applyDriverOutput(time, out);
 }

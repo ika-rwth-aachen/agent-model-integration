@@ -56,9 +56,9 @@ private:
 
     agent_model::Parameters* drParam;
     agent_model::State* drState;
-    VehicleModel *vehicle;
-    PrimaryController *steeringContr;
-    PrimaryController *pedalContr;
+    VehicleModel _vehicle;
+    PrimaryController steeringContr;
+    PrimaryController pedalContr;
     VehicleModel::Input      *vehInput;
     VehicleModel::State      *vehState;
     VehicleModel::Parameters *vehParam;
