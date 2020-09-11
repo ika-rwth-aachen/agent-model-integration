@@ -63,7 +63,7 @@ private:
     VehicleModel::State      *vehState;
     VehicleModel::Parameters *vehParam;
 
-    int adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input& input, std::vector<int>& futureLanes, double time);
+    int adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input& input, std::vector<int>& futureLanes, double time, int h_id);
 
     int getTrajPoint(double time, osi3::TrafficUpdate &out);
 	int applyDriverOutput(double time, osi3::TrafficUpdate &out);

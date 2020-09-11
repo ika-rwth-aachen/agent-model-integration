@@ -123,8 +123,8 @@ int IkaAgent::step(double time, double stepSize, osi3::SensorView &sensorViewDat
 		initialized = true;
 	}	
 	std::cout << "------------ time: " << out.timestamp().seconds() + (out.timestamp().nanos() * 0.000000001) << "---------------" << std::endl;
-	
-	adapterOsiToInput(sensorViewData, _input, lanes , out.timestamp().seconds()+(out.timestamp().nanos()*0.000000001));
+	std::cout << "host vehicle id: " << sensorViewData.host_vehicle_id().value() << std::endl;
+	adapterOsiToInput(sensorViewData, _input, lanes , out.timestamp().seconds()+(out.timestamp().nanos()*0.000000001), sensorViewData.host_vehicle_id().value());
 	
 	this->AgentModel::step(time);
 	
@@ -133,7 +133,7 @@ int IkaAgent::step(double time, double stepSize, osi3::SensorView &sensorViewDat
     // Perform Vehicle Model step
     vehInput->slope = 0.0; 
 	_vehicle.step(stepSize); // STEP SIZE not TIME!
-	std::cout << "x: " << vehState->position.x << ", y: " << vehState->position.y << std::endl;
+	//std::cout << "x: " << vehState->position.x << ", y: " << vehState->position.y << std::endl;
 	//output << "   state:\ns= " << _input.vehicle.s << " d= " << _input.vehicle.d << " v= " << _input.vehicle.v << " psi= " << _input.vehicle.psi<< " Position: ("<<lastPosition.x <<" , "<<lastPosition.y<<")" << std::endl << std::endl;
 	//----------------	
     for (int i = 0; i < commandData.action_size(); i++)
@@ -366,8 +366,8 @@ int IkaAgent::interpolateStateLinear(double t)
  * @param input
  * @param time
  */
-int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input& input, std::vector<int>& futureLanes, double time) {
-	if (sensorView.host_vehicle_id().value() != 77)return 0;
+int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input& input, std::vector<int>& futureLanes, double time, int h_id) {
+	if (sensorView.host_vehicle_id().value() != 44)return 0;
 	/*static int count = 0;
 	if (count > 0)return 0;
 	count++;*/
@@ -619,7 +619,7 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 	
 	// --- horizon ---
 
-	double sMax = horizonTHW * input.vehicle.v;
+	double sMax = std::max(10.0, horizonTHW * input.vehicle.v);
 	//double sMax = 100;
 
 	//distance (along centerline) to each horizon point from current location
