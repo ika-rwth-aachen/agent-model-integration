@@ -6,6 +6,8 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/../.git")
   set(default_build_type "Debug")
 endif()
 
+set(FMU_OUTDIR "${CMAKE_SOURCE_DIR}/lib" CACHE STRING "Fmu output directory")
+
 add_subdirectory(lib/open-simulation-interface)
 add_subdirectory(lib/SimDriver)
 
@@ -101,7 +103,7 @@ endif()
 
 get_filename_component(Protobuf_REAL_LIBRARY_FILENAME "${Protobuf_LIBRARY}" REALPATH)
 
-add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/lib/OSMPTrafficAgent.fmu
+add_custom_command(OUTPUT ${FMU_OUTDIR}/OSMPTrafficAgent.fmu
                    DEPENDS OSMPTrafficAgent
                            modelDescription.xml
                    COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_CURRENT_BINARY_DIR}/buildfmu"
@@ -112,11 +114,11 @@ add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/lib/OSMPTrafficAgent.fmu
                    #COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:open_simulation_interface> "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/binaries/${FMI_BINARIES_PLATFORM}"
                    #COMMAND ${CMAKE_COMMAND} -E copy "${Protobuf_REAL_LIBRARY_FILENAME}" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/binaries/${FMI_BINARIES_PLATFORM}"
 				   #COMMAND ${CMAKE_COMMAND} -E chdir "${CMAKE_CURRENT_BINARY_DIR}/buildfmu" ${CMAKE_COMMAND} -E tar "cfv" "${CMAKE_CURRENT_SOURCE_DIR}/lib/OSMPTrafficAgent.fmu" --format=zip "modelDescription.xml" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/binaries/${FMI_BINARIES_PLATFORM}")
-				   COMMAND ${CMAKE_COMMAND} -E chdir "${CMAKE_CURRENT_BINARY_DIR}/buildfmu" ${CMAKE_COMMAND} -E tar "cfv" "D:/home/git/SETLevel4to5/openpass/Binaries/Windows/configs/OSMPTrafficAgent.fmu" --format=zip "modelDescription.xml" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/binaries/${FMI_BINARIES_PLATFORM}")
+				   COMMAND ${CMAKE_COMMAND} -E chdir "${CMAKE_CURRENT_BINARY_DIR}/buildfmu" ${CMAKE_COMMAND} -E tar "cfv" "${FMU_OUTDIR}/OSMPTrafficAgent.fmu" --format=zip "modelDescription.xml" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/binaries/${FMI_BINARIES_PLATFORM}")
 
 add_custom_target(${PROJECT_NAME}_fmu
                   ALL
-				  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/OSMPTrafficAgent.fmu)
+				  DEPENDS ${FMU_OUTDIR}/OSMPTrafficAgent.fmu)
 				  
 
 #add_custom_command(TARGET OSMPTrafficAgent
