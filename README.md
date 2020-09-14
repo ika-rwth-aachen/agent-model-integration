@@ -14,10 +14,16 @@ First create a `build` directory and enter it. Then execute:
 cmake -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release ..
 ```  
 
-If a specific `FMU` output dir shall be used:
+After building, the `FMU` will be in the subfolder `lib/`. If a specific `FMU` output dir shall be used:
 ```
 cmake -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DFMU_OUTDIR=<dir> ..
 ```  
+
+Compile the library with:
+```
+mingw32-make.exe
+```
+Optional: `mingw32-make.exe -j4` for building on multiple cores (replace `4` with an arbitrary number).
 
 ### Remarks
 **The described build instructions should be very similar when using other compilers!**  
