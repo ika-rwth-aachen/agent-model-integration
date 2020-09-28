@@ -120,10 +120,10 @@ int IkaAgent::step(double time, double stepSize, osi3::SensorView &sensorViewDat
 
 		//determine lanes along Trajectory passed by commandData
 		futureLanes(sensorViewData, commandData, lanes);
-		initialized = true;
+		initialized = true;		
 	}	
 	std::cout << "------------ time: " << out.timestamp().seconds() + (out.timestamp().nanos() * 0.000000001) << "---------------" << std::endl;
-	std::cout << "host vehicle id: " << sensorViewData.host_vehicle_id().value() << std::endl;
+	//std::cout << "host vehicle id: " << sensorViewData.host_vehicle_id().value() << std::endl;
 	adapterOsiToInput(sensorViewData, _input, lanes , out.timestamp().seconds()+(out.timestamp().nanos()*0.000000001), sensorViewData.host_vehicle_id().value());
 	
 	this->AgentModel::step(time);
@@ -133,8 +133,7 @@ int IkaAgent::step(double time, double stepSize, osi3::SensorView &sensorViewDat
     // Perform Vehicle Model step
     vehInput->slope = 0.0; 
 	_vehicle.step(stepSize); // STEP SIZE not TIME!
-	//std::cout << "x: " << vehState->position.x << ", y: " << vehState->position.y << std::endl;
-	//output << "   state:\ns= " << _input.vehicle.s << " d= " << _input.vehicle.d << " v= " << _input.vehicle.v << " psi= " << _input.vehicle.psi<< " Position: ("<<lastPosition.x <<" , "<<lastPosition.y<<")" << std::endl << std::endl;
+	//if(sensorViewData.host_vehicle_id().value()==44)std::cout << "(" << vehState->position.x<<"," << vehState->position.y <<")"<< std::endl;
 	//----------------	
     for (int i = 0; i < commandData.action_size(); i++)
     {
@@ -368,13 +367,13 @@ int IkaAgent::interpolateStateLinear(double t)
  */
 int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input& input, std::vector<int>& futureLanes, double time, int h_id) {
 	if (sensorView.host_vehicle_id().value() != 44)return 0;
-	/*static int count = 0;
-	if (count > 0)return 0;
-	count++;*/
-	osi3::GroundTruth* groundTruth= sensorView.mutable_global_ground_truth();
+	static int count = 0;
+	count++;
+	//if (count >1)return 0;
+	osi3::GroundTruth* groundTruth = sensorView.mutable_global_ground_truth();
 
 	std::ofstream output("debug.txt", std::ofstream::out | std::ofstream::app);
-	
+
 	// --- ego ---
 	// save properties needed often
 	int egoId = sensorView.host_vehicle_id().value();
@@ -390,7 +389,7 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 			break;
 		}
 	}
-	
+
 	//determine assigned lane
 	if (obj.assigned_lane_id_size() < 2) {
 		egoLanePtr = findLane(obj.assigned_lane_id(0).value(), groundTruth);
@@ -398,7 +397,7 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 	else {
 		//multiple assigned_lanes (intersection)
 		//iterate over future lanes in reverse --> the first assigned_lane encoutered is correct
-		for (int j = futureLanes.size()-1; j >=0; j--) {
+		for (int j = futureLanes.size() - 1; j >= 0; j--) {
 			for (int i = 0; i < obj.assigned_lane_id_size(); i++) {
 
 				if (find(futureLanes.begin(), futureLanes.end(), obj.assigned_lane_id(i).value()) != futureLanes.end())
@@ -406,12 +405,12 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 			}
 		}
 	}
-	
+
 	//save ego lane centerline coordinates for later 
 	std::vector<Point2D> elPoints;
 	getXY(egoLanePtr, elPoints);
 
-	
+
 
 	osi3::BaseMoving base = obj.base();
 
@@ -428,30 +427,34 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 	lastS += sqrt(dx * dx + dy * dy);
 
 	input.vehicle.s = lastS;
-	
+
 
 	//save angle of ego x-Axis/s-Axix because targets.psi and horizon.psi are relative to it
 	double egoPsi = base.orientation().yaw();
-	
+
 
 	input.vehicle.dPsi = base.orientation_rate().yaw();
-	
+
 	//projection of ego coordiantes on centerline
 
 	Point2D egoClPoint;
 	closestCenterlinePoint(lastPosition, elPoints, egoClPoint);
 	input.vehicle.d = sqrt(pow(lastPosition.x - egoClPoint.x, 2) + pow(lastPosition.y - egoClPoint.y, 2));
 
-	
+
 	// calculate s, psi, k of ego lane
 	std::vector<double> s, psi, k;
 	xy2curv(elPoints, s, psi, k);
+	/*std::cout << "psi:\n";
+	for (auto it : psi) {
+		std::cout << it*180/3.1416 << std::endl;
+	}*/
 
-	
+
 	int i = 1;
 	bool set = false;
 	//compute psi of lane at current location (vehicle.psi must be relative to lane)
-	for (i = 1; i < elPoints.size(),!set; i++) {	
+	for (i = 1; i < elPoints.size(), !set; i++) {
 		double x1 = elPoints[i - 1].x;
 		double x2 = elPoints[i].x;
 		double y1 = elPoints[i - 1].y;
@@ -465,24 +468,27 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 		if (t >= 0 && t <= 1) { //correct points (x1,y1)(x2,y2) were found (egoClPoint is in segment)
 			// global psi of ego minus psi of lane at current location (interpolated)
 			input.vehicle.psi = base.orientation().yaw() - (psi[i - 1] + t * (psi[i] - psi[i - 1]));
+			std::cout << "vehicle psi " << input.vehicle.psi << "=" << base.orientation().yaw() << "-"<< (psi[i - 1] + t * (psi[i] - psi[i - 1])) << std::endl;
 			set = true;
 		}
 	}
-	if(!set && (pow(egoClPoint.x - elPoints.back().x, 2) + pow(egoClPoint.y - elPoints.back().y, 2))
+	if (!set && (pow(egoClPoint.x - elPoints.back().x, 2) + pow(egoClPoint.y - elPoints.back().y, 2))
 		< (pow(egoClPoint.x - elPoints.front().x, 2) + pow(egoClPoint.y - elPoints.front().y, 2))) {
 		input.vehicle.psi = base.orientation().yaw() - psi.back();
+		std::cout << "vehicle psi " << input.vehicle.psi << "=" << base.orientation().yaw() << "-"<< psi.back() << std::endl;
 	}
 	else if (!set) {
 		input.vehicle.psi = base.orientation().yaw() - psi.front();
+		std::cout << "vehicle psi " << input.vehicle.psi << "=" << base.orientation().yaw() << "-" << psi.back() << std::endl;
 	}
-	
+
 	input.vehicle.pedal = 0;         // TODO
 	input.vehicle.steering = 0;      // TODO  
 
 	
 	// --- signals --- 
 
-	
+
 	for (int i = 0; i < agent_model::NOS; i++)
 	{
 		if (i < groundTruth->traffic_sign_size())
@@ -492,21 +498,21 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 
 			// check that sign is assigned to current ego lane. lane changes in the future are not considered currently
 			bool assigned = false;
-			for (int j = 0; j < clas.assigned_lane_id_size(); j++) 
+			for (int j = 0; j < clas.assigned_lane_id_size(); j++)
 				if (clas.assigned_lane_id(j).value() == egoLanePtr->id().value())
 					assigned = true;
-	
+
 			if (!assigned) continue;
 
 			input.signals[i].id = sign.id().value();
-			
-			
+
+
 			//projection of signal position on centerline
 			Point2D cPoint;
 			Point2D sPoint(sign.main_sign().base().position().x(), sign.main_sign().base().position().y());
 
 			closestCenterlinePoint(sPoint, elPoints, cPoint);
-			
+
 			double sSig = 0;
 
 			sSig = xy2s(egoClPoint, cPoint, elPoints);
@@ -524,7 +530,7 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 
 			// TODO? calculate value
 			input.signals[i].value = clas.value().value();
-			
+
 		}
 		else
 		{
@@ -533,17 +539,17 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 			input.signals[i].type = agent_model::SIGNAL_NOT_SET;
 			input.signals[i].value = 0;
 		}
-		
+
 	}
-	
-	
-	
+
+
+
 	// --- traffic ---
 	std::unordered_map<int, int> laneMapping;
-	
+
 	mapLanes(groundTruth, laneMapping, egoLanePtr);
-	
-	
+
+
 	for (int i = 0; i < agent_model::NOT; i++)
 	{
 
@@ -571,7 +577,7 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 
 			input.targets[i].id = obj.id().value();
 
-			
+
 			Point2D cPoint;
 			Point2D bPoint; bPoint.x = base.position().x(); bPoint.y = base.position().y();
 
@@ -586,20 +592,20 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 			input.targets[i].ds = sTar;
 			input.targets[i].d = sqrt(pow(base.position().x() - cPoint.x, 2) + pow(base.position().y() - cPoint.y, 2));
 
-			
+
 			input.targets[i].xy.x = base.position().x() - lastPosition.x;
 			input.targets[i].xy.y = base.position().y() - lastPosition.y;
 
-			input.targets[i].v = sqrt(base.velocity().x()*base.velocity().x()+base.velocity().y()*base.velocity().y());
+			input.targets[i].v = sqrt(base.velocity().x() * base.velocity().x() + base.velocity().y() * base.velocity().y());
 			input.targets[i].a = sqrt(base.acceleration().x() * base.acceleration().x() + base.acceleration().y() * base.acceleration().y());
-			input.targets[i].psi = base.orientation().yaw() - egoPsi; 
+			input.targets[i].psi = base.orientation().yaw() - egoPsi;
 
 			input.targets[i].size.length = base.dimension().length();
 			input.targets[i].size.width = base.dimension().width();
 
 
 			input.targets[i].lane = laneMapping[obj.assigned_lane_id(0).value()];
-			
+
 		}
 		else
 		{
@@ -616,27 +622,26 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 			input.targets[i].size.length = 0;
 		}
 	}
-	
+
 	// --- horizon ---
 
 	double sMax = std::max(10.0, horizonTHW * input.vehicle.v);
 	//double sMax = 100;
 
 	//distance (along centerline) to each horizon point from current location
-	std::vector<double> ds(agent_model::NOH,0);
+	std::vector<double> ds(agent_model::NOH, 0);
 
 	double delta = sqrt(sMax) / double(agent_model::NOH);	//linear spaces
 	for (int i = 0; i < agent_model::NOH; i++) {			//create squared spaces
-		ds[i]= (i+1) * (i+1) * delta * delta;
+		ds[i] = (i + 1) * (i + 1) * delta * delta;
 	}
-	std::cout << std::endl;
-	
+
 
 	std::vector<Point2D> horizon;
 	std::vector<Point2D> currentCl = elPoints;
 	std::vector<double> kappa = k;
 
-	double interpolation=0;
+	double interpolation = 0;
 
 	int currentLane = egoLanePtr->id().value();
 	int nextLane = 127;
@@ -645,12 +650,12 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 	int finalLane = *(futureLanes.end() - 1);
 	double sStart = 0;
 	double sPast = 0;
-	
+
 	Point2D p1;
 	Point2D p2;
 
 	idx = closestCenterlinePoint(egoClPoint, currentCl, p2);
-	
+
 	//setup for horizon calculation
 	if (idx == 0) {
 		//Host vehicle before scope of the centerline.
@@ -665,8 +670,8 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 		//Host vehicle after scope of the centerline.
 		s.clear(); psi.clear(); kappa.clear(); currentCl.clear();
 		spline = true;
-		
-		if(currentLane != finalLane) {
+
+		if (currentLane != finalLane) {
 			nextLane = *(find(futureLanes.begin(), futureLanes.end(), currentLane) + 1);
 			std::vector<Point2D> tempLane;
 			getXY(findLane(nextLane, groundTruth), tempLane);
@@ -683,14 +688,14 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 	}
 	else {
 		//somewhere within scope of currentCl
-		sStart = s[idx - 1] + sqrt((egoClPoint.x - elPoints[idx].x) * (egoClPoint.x - elPoints[idx].x) + (egoClPoint.y - elPoints[idx].y) * (egoClPoint.y - elPoints[idx].y));
+		sStart = s[idx - 1] + sqrt((lastPosition.x - elPoints[idx - 1].x) * (lastPosition.x - elPoints[idx - 1].x) + (lastPosition.y - elPoints[idx - 1].y) * (lastPosition.y - elPoints[idx - 1].y));
 	}
-	
+
 	//set helpers because currentCl is overwritten when lane changes
 	p1.x = currentCl.back().x; p1.y = currentCl.back().y;
 	p2.x = currentCl[currentCl.size() - 2].x; p2.y = currentCl[currentCl.size() - 2].y;
-	
-	
+
+
 	[&] {
 		for (int i = 0; i < agent_model::NOH; i++) {
 
@@ -712,7 +717,7 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 					/*spline3(p1, tempLane.front(), Point2D(p1.x-p2.x, p1.y - p2.y),
 						Point2D((tempLane[1].x - tempLane[0].x), tempLane[1].y - tempLane[0].y), currentCl);*/
 
-					//straight connection?
+						//straight connection?
 					spline1(p1, tempLane.front(), currentCl);
 					xy2curv(currentCl, s, psi, kappa);
 					spline = true;
@@ -731,7 +736,7 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 					spline = false;
 				}
 			}
-			
+
 			//s, currentCl should now contain correct lane
 			bool stop = false;
 
@@ -752,40 +757,42 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 					input.horizon.y[i] = horizon.back().y - lastPosition.y;
 					input.horizon.ds[i] = ds[i];
 
-					input.horizon.psi[i] = psi[k - 1] + interpolation * (psi[k] - psi[k - 1]) - egoPsi; //not correct for relative psi
+					input.horizon.psi[i] = psi[k - 1] + interpolation * (psi[k] - psi[k - 1]) - egoPsi; //heading of road at horizon point relative to heading of host vehicle. 
+						//Alternatively: angle between heading of host compared to heading needed to reach horizon point meant here?
 					input.horizon.kappa[i] = kappa[k - 1] + interpolation * (kappa[k] - kappa[k - 1]);
 
 				}
 			}
 		}
-		
+
 	}();
-	
+
 	if (horizon.size() == 0) {
-		
+
 		horizon.push_back(Point2D(lastPosition.x, lastPosition.y));
 		input.horizon.x[0] = horizon.back().x - lastPosition.x;
 		input.horizon.y[0] = horizon.back().y - lastPosition.y;
 		input.horizon.ds[0] = ds.back();
-		input.horizon.psi[0] = 0; 
+		input.horizon.psi[0] = 0;
 		input.horizon.kappa[0] = 0;//TODO
 	}
 	for (int i = horizon.size(); i < agent_model::NOH; i++) {
-		input.horizon.x[i] = horizon.back().x  -lastPosition.x;
+		input.horizon.x[i] = horizon.back().x - lastPosition.x;
 		input.horizon.y[i] = horizon.back().y - lastPosition.y;
 		input.horizon.ds[i] = ds.back();
-		input.horizon.psi[i] = input.horizon.psi[i-1]; 
+		input.horizon.psi[i] = input.horizon.psi[i - 1];
 		input.horizon.kappa[i] = k.back();
 
 		Point2D knot(horizon.back().x, horizon.back().y);
 		horizon.push_back(knot);
 	}
 
-	
-	for (int i = 0; i < agent_model::NOH; i++) {
-		std::cout << "(" << input.horizon.x[i] << "," << input.horizon.y[i] << ")\n";
+	if ((count-1)%10==0) {
+		for (int i = 0; i < agent_model::NOH; i++) {
+			std::cout << "(" << input.horizon.x[i] << "," << input.horizon.y[i] << ") \n";
+		}
 	}
-	
+
 
 	int l, e, r;
 
@@ -795,12 +802,12 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 	r = egoLanePtr->classification().right_adjacent_lane_id_size() > 0 ?
 		egoLanePtr->classification().right_adjacent_lane_id(0).value() : 127;
 
-	/*
-	// --- lanes ---
-	std::vector<double> width;
-	calcWidth(horizon, egoLanePtr->id().value(), futureLanes, width, groundTruth);
 
-	
+	// --- lanes ---
+	std::vector<double> width(agent_model::NOL, 4.0); //instead: call calcWidth whenever appending orizon knot. use default value when on spline, later replace dafault with average
+	//calcWidth(horizon, egoLanePtr->id().value(), futureLanes, width, groundTruth);
+
+
 	for (int i = 0; i < agent_model::NOL; i++)
 	{
 		if (i < groundTruth->lane_size())
@@ -829,8 +836,8 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 
 
 			// calculate lane width at horizon points
-			
-			
+
+
 
 			// store width of horizon TODO: correct value for neighbor lanes
 			if (lane.id().value() == l)
@@ -877,11 +884,11 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 	if (r == 127)
 		for (int i = 0; i < agent_model::NOH; i++)
 			input.horizon.rightLaneWidth[i] = 0;
-	
-	for (int i = 0; i < width.size(); i++) {
+
+	/*for (int i = 0; i < width.size(); i++) {
 		std::cout << "w: " << width[i] << std::endl;
 		input.horizon.egoLaneWidth[i] = width[i];
-	}
-	*/
+	}*/
+
 	return 0;
 }
