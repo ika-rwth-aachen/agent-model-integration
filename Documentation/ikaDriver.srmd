@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<srmd:SimulationResourceMetaData xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://apps.pmsf.net/STMD/SimulationResourceMetaData SRMD.xsd"
+    xmlns:srmd="http://apps.pmsf.net/STMD/SimulationResourceMetaData"
+    version="0.5" name="Sensor Model XXX Meta-Data">
+    <srmd:Classification type="de.sl4to5.srmd.model-meta-data">
+        <!-- Sensor related information -->
+        <srmd:ClassificationEntry keyword="model.type">driver model</srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="sensor.manufacturer">-</srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="sensor.family">-</srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="sensor.name">-</srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="sensor.version">-</srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="sensor.manufacturer.partnumber">-</srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="sensor.type">-</srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="sensor.technology">-</srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="sensor.technology.variant">-</srmd:ClassificationEntry>
+        <!-- Model related information -->
+        <srmd:ClassificationEntry keyword="model.manufacturer">Institute for automotive engineering RWTH Aachen University, ika</srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="model.family">Traffic Agent Models</srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="model.name">ikaDriver</srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="model.version">0.5</srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="model.releasedate">-</srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="model.status">Development Status, integration in simulation env.</srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="model.guid">where do I find that</srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="model.purpose">A driver model that moves traffic agents in the scenario and that may be used to induce relevant scenarios.</srmd:ClassificationEntry>        
+        <srmd:ClassificationEntry keyword="model.modelling-approach">Deterministic control based modelling of guidance variables</srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="model.preconditions">-</srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="model.validity-range">-</srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="model.specification">-</srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="model.verification.status">-</srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="model.verification.report"></srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="model.validation.concept"></srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="model.validation.status"></srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="model.validation.platform"></srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="model.validation.report"></srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="model.limitations">t.b.d.</srmd:ClassificationEntry>
+        
+        <!-- Model implementation related information -->
+        <srmd:ClassificationEntry keyword="model.implementation.format">OSMP 1.0 OSI 3.1.2 (SET Level version) FMI 2.0</srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="model.implementation.preconditions">Model can be configured with cmake and build with gcc or another c++ compiler</srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="model.implementation.performance-characteristics">Has to be determined</srmd:ClassificationEntry>
+        
+        <srmd:ClassificationEntry keyword="model.integration.requirements">Provide a link to requirements and considerations for operating the model</srmd:ClassificationEntry>
+        
+    </srmd:Classification>
+</srmd:SimulationResourceMetaData>
