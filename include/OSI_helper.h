@@ -66,7 +66,7 @@ int xy2curv(std::vector<Point2D> pos, std::vector<double>& s, std::vector<double
 {
 	// calculate s from xy coordinates
 	s.push_back(0);
-	std::vector<double> x(1, 0), y(1, 0);
+	std::vector<double> x(1, pos[0].x), y(1, pos[0].y);
 	for (int i = 1; i < pos.size(); i++)
 	{
 		double dx = pos[i].x - pos[i - 1].x;
@@ -89,7 +89,8 @@ int xy2curv(std::vector<Point2D> pos, std::vector<double>& s, std::vector<double
 		double bot = pow(dxds[i] * dxds[i] + dyds[i] * dyds[i], 1.5);
 
 		k.push_back(top / bot);
-		psi.push_back(atan2(dyds[i], dxds[i]));
+		double p = atan2(dyds[i], dxds[i]);
+		psi.push_back(p>=0?p:p+2* M_PI);
 	}
 
 	return 0;
@@ -168,7 +169,7 @@ int closestCenterlinePoint(Point2D point, std::vector<Point2D>& cl, Point2D& clo
  */
 int getXY(osi3::Lane* l, std::vector<Point2D>& pos)
 {
-	/*if (l->classification().centerline_is_driving_direction()) {
+	if (l->classification().centerline_is_driving_direction()) {
 		for (int i = 0; i < l->classification().centerline_size(); i++)
 		{
 			Point2D point(l->classification().centerline(i).x(), l->classification().centerline(i).y());
@@ -183,25 +184,7 @@ int getXY(osi3::Lane* l, std::vector<Point2D>& pos)
 			pos.push_back(point);
 		}
 		return 0;
-	}	*/
-
-	//temporary workaround for incorrect lane directions
-	if (l->classification().centerline_is_driving_direction() && l->id().value() != 42 ) {
-		for (int i = 0; i < l->classification().centerline_size(); i++)
-		{
-			Point2D point(l->classification().centerline(i).x(), l->classification().centerline(i).y());
-			pos.push_back(point);
-		}
-		return 0;
-	}
-	else {
-		for (int i = l->classification().centerline_size() - 1; i >= 0; i--)
-		{
-			Point2D point(l->classification().centerline(i).x(), l->classification().centerline(i).y());
-			pos.push_back(point);
-		}
-		return 0;
-	}
+	}	
 
 }
 
@@ -528,6 +511,7 @@ void futureLanes(osi3::SensorView& sensorView, osi3::TrafficCommand& commandData
 	//needs an initial assigned lane that is unambiguous
 	if (host.assigned_lane_id_size() < 2) {
 		start = findLaneId(groundTruth, host.assigned_lane_id(0).value());
+		std::cout << "starting on lane : " << host.assigned_lane_id(0).value() << std::endl;
 	}
 	else {
 		//determine assigned lane TODO
@@ -538,6 +522,8 @@ void futureLanes(osi3::SensorView& sensorView, osi3::TrafficCommand& commandData
 	action.CopyFrom(commandData.action(0).follow_trajectory_action ());	
 	Point2D destination(action.trajectory_point(action.trajectory_point_size() - 1).position().x(),
 		action.trajectory_point(action.trajectory_point_size() - 1).position().y());
+
+	std::cout << "destination :" << destination.x << "," << destination.y;
 
 	//determine last lane
 	std::vector<Point2D> centerline;
@@ -560,7 +546,7 @@ void futureLanes(osi3::SensorView& sensorView, osi3::TrafficCommand& commandData
 	}
 
 	dest = findLaneId(groundTruth, destId);
-
+	std::cout<< " on lane " << destId << std::endl;
 	//Graph setup
 	//create adjacency list for graph representing lane connections
 	std::vector<int> adj[groundTruth->lane_size()];
