@@ -7,6 +7,7 @@
 #include "osi_sensorview.pb.h"
 #include "Interface.h"
 #include <iostream>
+#include <algorithm>
 
 using Point2D = agent_model::Position;
 

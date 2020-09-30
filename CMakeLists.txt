@@ -28,7 +28,7 @@ string(TIMESTAMP FMUTIMESTAMP UTC)
 string(MD5 FMUGUID modelDescription.in.xml)
 configure_file(modelDescription.xml modelDescription.xml @ONLY)
 
-find_package(Protobuf 3.6.1 REQUIRED)
+find_package(Protobuf REQUIRED)
 set(SIMDRIVER_SRC lib/SimDriver/src)
 set(INJECTION_DIR lib/SimDriver/lib/Injection)
 #message("osi dir " ${CMAKE_CURRENT_BINARY_DIR}/lib/open-simulation-interface)
@@ -55,14 +55,20 @@ add_library(OSMPTrafficAgent SHARED
 			#${SIMDRIVER_SRC}/AgentModelInjection.cpp
 			)
 set_target_properties(OSMPTrafficAgent PROPERTIES PREFIX "")
-#link_directories(${THIRDPARTY_LIBRARIES} ${Protobuf_LIBRARIES} ${SIMDRIVER_LIB} ${CMAKE_CURRENT_BINARY_DIR}/lib/open-simulation-interface)
 
 target_compile_definitions(OSMPTrafficAgent PRIVATE "FMU_SHARED_OBJECT")
 target_compile_definitions(OSMPTrafficAgent PRIVATE "FMU_GUID=\"${FMUGUID}\"")
-target_link_libraries(OSMPTrafficAgent
-                      PUBLIC open_simulation_interface_static
-					  #PUBLIC protobuf
-					  PUBLIC agent_model)
+if(WIN32)
+    target_link_libraries(OSMPTrafficAgent
+                  PUBLIC open_simulation_interface_static
+                  #PUBLIC protobuf
+                  PUBLIC agent_model)
+else()
+  target_link_libraries(OSMPTrafficAgent
+                  PUBLIC open_simulation_interface
+		  #PUBLIC protobuf
+		  PUBLIC agent_model)
+endif()
 #if(LINK_WITH_SHARED_OSI)
 	#target_link_libraries(OSMPTrafficAgent open_simulation_interface -lprotobuf agent_model)
 	
