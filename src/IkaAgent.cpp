@@ -20,6 +20,7 @@ void IkaAgent::init()
 {
 	lastS = 0;
 	horizonTHW = 20;
+	double l = 2.7; // wheel base
 
 	drParam = getParameters();
 	drState = getState();
@@ -48,38 +49,40 @@ void IkaAgent::init()
 	drParam->steering.thw[1] = 2.0;
 	drParam->steering.dsMin[0] = 5.0;
 	drParam->steering.dsMin[1] = 10.0;
-	drParam->steering.D[0] = 0.0;
-	drParam->steering.D[1] = 0.0;
+   	drParam->steering.P[0] = 0.06 * l;
+    drParam->steering.P[1] = 0.03 * l;
+    drParam->steering.D[0] = 0.0;
+    drParam->steering.D[1] = 0.0;
 
 	AgentModel::init();
    	vehInput = _vehicle.getInput();
     vehState = _vehicle.getState();
     vehParam = _vehicle.getParameters();
 	
-	double l = 2.7; // wheel base
+	
     // vehicle parameters
     vehParam->steerTransmission  = 0.474;
     vehParam->steerTransmission  = 0.5;
     vehParam->wheelBase          = l;
     vehParam->cwA                = 0.6;
     vehParam->mass               = 1.5e3;
-    vehParam->powerMax           = 1.0e5;
-    vehParam->forceMax           = 6.0e4;
+    vehParam->powerMax           = 1.0e4;
+    vehParam->forceMax           = 6.0e3;
     vehParam->idle               = 0.05;
     vehParam->rollCoefficient[0] = 4.0 * 9.91e-3;
     vehParam->rollCoefficient[1] = 4.0 * 1.95e-5;
     vehParam->rollCoefficient[2] = 4.0 * 1.76e-9;
-    vehParam->size.x = 5;
-    vehParam->size.y = 2;
-	vehParam->driverPosition.x = 0.;// 0.50;
-    vehParam->driverPosition.y = 0;//0.5;
+    vehParam->size.x = 5.0;
+    vehParam->size.y = 2.0;
+	vehParam->driverPosition.x = 0.0;// 0.50;
+    vehParam->driverPosition.y = 0.0;//0.5;
 	
 	// set controller parameters (lateral motion control)
     steeringContr.setParameters(10.0 * l, 0.1 * l, 0.0, 1.0);
     steeringContr.setRange(-1.0, 1.0, INFINITY);
 
     // set controller parameters (longitudinal motion control)
-    pedalContr.setParameters(2.5, 1.0, 0.1, 1.0);
+    pedalContr.setParameters(2.5, 1.0, 0.0, 1.0);
     pedalContr.setRange(-1.0, 1.0, INFINITY);
 
     // set states
@@ -131,14 +134,15 @@ int IkaAgent::step(double time, double stepSize, osi3::SensorView &sensorViewDat
 	adapterOsiToInput(sensorViewData, _input, lanes , out.timestamp().seconds()+(out.timestamp().nanos()*0.000000001), sensorViewData.host_vehicle_id().value());
 	
 	this->AgentModel::step(time);
-	std::cout << "\na=" << drState->subconscious.a <<" k="<< drState->subconscious.kappa <<std::endl;
-
+	
 	pedalContr.step(stepSize);
 	steeringContr.step(stepSize);	
-    // Perform Vehicle Model step
+	// Perform Vehicle Model step
     vehInput->slope = 0.0; 
 	_vehicle.step(stepSize); // STEP SIZE not TIME!
-	if(sensorViewData.host_vehicle_id().value()==44)output << "(" << vehState->position.x<<"," << vehState->position.y <<")\ta="<<vehState->a<<"\tv="<<vehState->v<< std::endl;
+	//std::cout << "a=" << drState->subconscious.a <<" kappa="<< drState->subconscious.kappa << " dpsiDes=" << drState->subconscious.dPsi <<std::endl;
+    //std::cout << "pedal = " << vehInput->pedal << "\tveh_a = " << vehState->a << "\tstep_size = " << stepSize << std::endl;
+	if(sensorViewData.host_vehicle_id().value()==44)output << vehState->position.x<<"," << vehState->position.y <<","<<vehState->a<<","<<vehState->v<< std::endl;
 	//----------------	
     /*for (int i = 0; i < commandData.action_size(); i++)
     {
