@@ -50,7 +50,10 @@ private:
 
     double lastS;
     double horizonTHW;
+    double psi;
+    double v;
     agent_model::Position lastPosition;
+
     std::vector<int> lanes;
     
 
