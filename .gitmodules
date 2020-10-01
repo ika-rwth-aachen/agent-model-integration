@@ -1,6 +1,7 @@
 [submodule "open-simulation-interface"]
 	path = lib/open-simulation-interface
-	url = https://gitlab.sl4to5.de/deliverables/architecture/open-simulation-interface.git
+	#url = https://gitlab.sl4to5.de/deliverables/architecture/open-simulation-interface.git
+	url = ../../../architecture/open-simulation-interface.git
 [submodule "SimDriver"]
 	path = lib/SimDriver
 	url = https://github.com/ika-rwth-aachen/SimDriver.git
