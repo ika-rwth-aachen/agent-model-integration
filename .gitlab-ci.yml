@@ -2,14 +2,14 @@ image: ubuntu:18.04
 
 stages:
   - build
-#variables:
-  #GIT_SUBMODULE_STRATEGY: recursive
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
 before_script:
   - apt update
-  - apt install -y cmake build-essential git
+  - apt install -y cmake build-essential #git
   - apt install -y libprotobuf-dev protobuf-compiler
-  - git submodule sync --recursive
-  - git submodule update --init --recursive
+  #- git submodule sync --recursive
+  #- git submodule update --init --recursive
 
 buildFMU:
   stage: build
