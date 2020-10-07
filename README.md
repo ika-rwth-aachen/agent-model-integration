@@ -1,5 +1,7 @@
 # Driver model for SET Level 4to5
 
+> [Latest FMU](https://gitlab.sl4to5.de/deliverables/model/traffic-agents/ika-driver/-/jobs/artifacts/master/raw/lib/OSMPTrafficAgent.fmu?job=buildFMU) from CI pipeline
+
 ## Build
 Brief build instructions for compilation with `MinGW` (64Bit V8.1.0) on Windows.  
 ### Protobuf dependency
