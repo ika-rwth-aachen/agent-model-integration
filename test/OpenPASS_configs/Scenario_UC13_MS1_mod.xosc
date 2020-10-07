@@ -1,0 +1,196 @@
+<OpenSCENARIO>
+  <FileHeader revMajor="0" revMinor="1" date="2020-01-21T17:15:00" description="Exported scenario for MS1 (VTD scenario) plus manual adaptations plus more manual adaptions" author="VIRES OpenDRIVE Scenario Editor 2019.1.577 and ZF and in-tech"/>
+  <ParameterDeclarations>
+    <ParameterDeclaration name="OP_OSC_SchemaVersion" parameterType="string" value="0.4.0"/>
+  </ParameterDeclarations>
+  <CatalogLocations>
+    <VehicleCatalog>
+      <Directory path="VehicleCatalog_MS1.xosc"/>
+    </VehicleCatalog>
+    <ControllerCatalog/>
+    <PedestrianCatalog>
+      <Directory path="PedestrianCatalog_MS1.xosc"/>
+    </PedestrianCatalog>
+    <MiscObjectCatalog>
+      <Directory path=""/>
+    </MiscObjectCatalog>
+    <EnvironmentCatalog>
+      <Directory path=""/>
+    </EnvironmentCatalog>
+    <ManeuverCatalog>
+      <Directory path=""/>
+    </ManeuverCatalog>
+    <TrajectoryCatalog>
+      <Directory path="Trajectories_MS1.xosc"/>
+    </TrajectoryCatalog>
+    <RouteCatalog>
+      <Directory path=""/>
+    </RouteCatalog>
+  </CatalogLocations>
+  <RoadNetwork>
+    <LogicFile filepath="EinfacheKreuzung_VR203_MS1_mod.xodr"/>
+    <SceneGraphFile filepath=""/>
+  </RoadNetwork>
+  <Entities>
+    <ScenarioObject name="turning_car">
+      <CatalogReference catalogName="ProfilesCatalog.xml" entryName="turning_car"/>
+    </ScenarioObject>
+    <ScenarioObject name="pedestrian">
+      <CatalogReference catalogName="ProfilesCatalog.xml" entryName="pedestrian"/>
+    </ScenarioObject>
+  </Entities>
+  <Storyboard>
+    <Init>
+      <Actions>
+        <Private entityRef="turning_car">
+          <PrivateAction>
+            <TeleportAction>
+              <Position>
+                <WorldPosition x="223.0" y="-25.5" z="0" h="3.9269" p="0" r="0"/>
+              </Position>
+            </TeleportAction>
+          </PrivateAction>
+          <PrivateAction>
+            <LongitudinalAction>
+              <SpeedAction>
+                <SpeedActionDynamics dynamicsShape="linear" value="0.0" dynamicsDimension="rate"/>
+                <SpeedActionTarget>
+                  <AbsoluteTargetSpeed value="0.0"/>
+                </SpeedActionTarget>
+              </SpeedAction>
+            </LongitudinalAction>
+          </PrivateAction>
+        </Private>
+        <Private entityRef="pedestrian">
+          <PrivateAction>
+            <TeleportAction>
+              <Position>
+                <WorldPosition x="-1.6834" y="13.8447" z="0" h="3.16228" p="0" r="0"/>
+              </Position>
+            </TeleportAction>
+          </PrivateAction>
+          <PrivateAction>
+            <LongitudinalAction>
+              <SpeedAction>
+                <SpeedActionDynamics dynamicsShape="linear" value="0.0" dynamicsDimension="rate"/>
+                <SpeedActionTarget>
+                  <AbsoluteTargetSpeed value="0.0"/>
+                </SpeedActionTarget>
+              </SpeedAction>
+            </LongitudinalAction>
+          </PrivateAction>
+        </Private>
+      </Actions>
+    </Init>
+    <Story name="New Story 1">
+      <Act name="New Act 1">
+        <ManeuverGroup maximumExecutionCount="1" name="TurningCar_Sequence">
+          <Actors selectTriggeringEntities="false">
+            <EntityRef entityRef="turning_car"/>
+          </Actors>
+          <Maneuver name="TurningCar_Maneuver">
+            <Event name="TurningCar_Event" priority="overwrite">
+              <Action name="TurningCar_Action">
+                <PrivateAction>
+                  <RoutingAction>
+                    <FollowTrajectoryAction>
+                      <CatalogReference catalogName="Trajectories_MS1" entryName="TurnRight_trajectory"/>
+                      <TimeReference>
+                        <None/>
+                      </TimeReference>
+                      <TrajectoryFollowingMode followingMode="position"/>
+                    </FollowTrajectoryAction>
+                  </RoutingAction>
+                </PrivateAction>
+              </Action>
+              <StartTrigger>
+                <ConditionGroup>
+                  <Condition name="Start Condition of New Event 1" delay="0.0" conditionEdge="rising">
+                    <ByValueCondition>
+                      <SimulationTimeCondition value="-1" rule="greaterThan"/>
+                    </ByValueCondition>
+                  </Condition>
+                </ConditionGroup>
+              </StartTrigger>
+            </Event>
+          </Maneuver>
+        </ManeuverGroup>
+        <ManeuverGroup maximumExecutionCount="1" name="Pedestrian_Sequence">
+          <Actors selectTriggeringEntities="false">
+            <EntityRef entityRef="pedestrian"/>
+          </Actors>
+          <Maneuver name="Pedestrian_Maneuver">
+            <Event name="Pedestrian_Event" priority="overwrite">
+              <Action name="Pedestrian_Action">
+                <PrivateAction>
+                  <RoutingAction>
+                    <FollowTrajectoryAction>
+                      <CatalogReference catalogName="Trajectories_MS1" entryName="CrossRoad"/>
+                      <TimeReference>
+                        <None/>
+                      </TimeReference>
+                      <TrajectoryFollowingMode followingMode="position"/>
+                    </FollowTrajectoryAction>
+                  </RoutingAction>
+                </PrivateAction>
+              </Action>
+              <StartTrigger>
+                <ConditionGroup>
+                  <Condition name="Start Condition of New Event 1" delay="0.0" conditionEdge="rising">
+                    <ByValueCondition>
+                      <SimulationTimeCondition value="-1" rule="greaterThan"/>
+                    </ByValueCondition>
+                  </Condition>
+                </ConditionGroup>
+              </StartTrigger>
+            </Event>
+          </Maneuver>
+        </ManeuverGroup>
+        <ManeuverGroup maximumExecutionCount="1" name="ttc check">
+          <Actors selectTriggeringEntities="false">
+            <EntityRef entityRef="turning_car"/>
+            <EntityRef entityRef="pedestrian"/>
+          </Actors>
+          <Maneuver name="ttc check">
+            <Event name="ttc event" priority="overwrite">
+              <Action name="NoOperation">
+                <UserDefinedAction>
+                  <CustomCommandAction>
+					<Command>NoOperation</Command>
+				  </CustomCommandAction>
+                </UserDefinedAction>
+              </Action>
+              <StartTrigger>
+                <ConditionGroup>
+                  <Condition name="Conditional">
+                    <ByEntityCondition>
+                      <TriggeringEntities triggeringEntitiesRule="any">
+                        <EntityRef entityRef="turning_car"/>
+                      </TriggeringEntities>
+                      <EntityCondition>
+                        <TimeToCollisionCondition value="3.0" rule="lessThan">
+                          <TimeToCollisionConditionTarget>
+                            <EntityRef entityRef="pedestrian"/>
+                          </TimeToCollisionConditionTarget>
+                        </TimeToCollisionCondition>
+                      </EntityCondition>
+                    </ByEntityCondition>
+                  </Condition>
+                </ConditionGroup>
+              </StartTrigger>
+            </Event>
+          </Maneuver>
+        </ManeuverGroup>
+      </Act>
+    </Story>
+    <StopTrigger>
+      <ConditionGroup>
+        <Condition name="EndTime" delay="0.0" conditionEdge="rising">
+          <ByValueCondition>
+            <SimulationTimeCondition value="30.0" rule="greaterThan"/>
+          </ByValueCondition>
+        </Condition>
+      </ConditionGroup>
+    </StopTrigger>
+  </Storyboard>
+</OpenSCENARIO>

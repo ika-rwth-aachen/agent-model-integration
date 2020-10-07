@@ -1,0 +1,27 @@
+<Profiles SchemaVersion="0.4.1">
+  <AgentProfiles>
+    <AgentProfile Name="turning_car" Type="Static">
+      <System>
+        <File>systemConfig.xml</File>
+        <Id>0</Id>
+      </System>
+      <VehicleModel>car_bmw_7_g12_2016</VehicleModel>
+    </AgentProfile>
+    <AgentProfile Name="pedestrian" Type="Static">
+      <System>
+        <File>systemConfig.xml</File>
+        <Id>0</Id>
+      </System>
+      <VehicleModel>pedestrian_adult_ncap</VehicleModel>
+    </AgentProfile>
+  </AgentProfiles>
+  <VehicleProfiles/>
+  
+  <ProfileGroup Type="Driver"/>
+  <ProfileGroup Type="TrafficGroup"/>
+  <ProfileGroup Type="Spawner"/>
+  <VehicleComponentProfiles/>
+  <SensorProfiles/>
+  <TrafficGroup/>
+  <SpawnPointProfiles/>
+</Profiles>

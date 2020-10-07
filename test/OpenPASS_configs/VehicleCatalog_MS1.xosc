@@ -1,0 +1,68 @@
+<OpenSCENARIO>
+  <FileHeader revMajor="0" revMinor="1" date="2019-12-06T16:00:00" description="Manual generated Vehicle Catalog for MS1 (VTD scenario)!" author="ZF"/>
+  <Catalog name="VehicleCatalog_MS1">
+    <Vehicle name="Audi_A3_2009_black" vehicleCategory="car">
+      <Properties>
+        <Property name="AirDragCoefficient" value="0.3"/>
+        <Property name="AxleRatio" value="1.0"/>
+        <Property name="DecelerationFromPowertrainDrag" value="0.5"/>
+        <Property name="FrictionCoefficient" value="0.0"/>
+        <Property name="FrontSurface" value="2.38"/>
+        <Property name="GearRatio1" value="9.665"/>
+        <Property name="MaximumEngineSpeed" value="6000.0"/>
+        <Property name="MaximumEngineTorque" value="250.0"/>
+        <Property name="MinimumEngineSpeed" value="900.0"/>
+        <Property name="MinimumEngineTorque" value="-54.0"/>
+        <Property name="MomentInertiaPitch" value="0.0"/>
+        <Property name="MomentInertiaRoll" value="0.0"/>
+        <Property name="MomentInertiaYaw" value="0.0"/>
+        <Property name="NumberOfGears" value="1"/>
+        <Property name="SteeringRatio" value="10.7"/>
+      </Properties>
+      <BoundingBox>
+        <Center x="1.317" y="0" z="0.7115"/>
+        <Dimensions width="1.776" length="4.3" height="1.423"/>
+      </BoundingBox>
+      <Performance maxSpeed="58.4" maxDeceleration="9.5"/>
+      <Axles>
+        <FrontAxle maxSteering="0.48" wheelDiameter="0.641" trackWidth="1.576" positionX="2.591" positionZ="0.3205"/>
+        <RearAxle maxSteering="0" wheelDiameter="0.641" trackWidth="1.576" positionX="0" positionZ="0.3205"/>
+      </Axles>
+    </Vehicle>
+    <Vehicle name="car_bmw_7_g12_2016" vehicleCategory="car">
+      <Properties>
+        <Property name="AirDragCoefficient" value="0.3"/>
+        <Property name="AxleRatio" value="3.077"/>
+        <Property name="DecelerationFromPowertrainDrag" value="0.5"/>
+        <Property name="FrictionCoefficient" value="0.0"/>
+        <Property name="FrontSurface" value="2.42"/>
+        <Property name="GearRatio1" value="5.0"/>
+        <Property name="GearRatio2" value="3.2"/>
+        <Property name="GearRatio3" value="2.143"/>
+        <Property name="GearRatio4" value="1.72"/>
+        <Property name="GearRatio5" value="1.314"/>
+        <Property name="GearRatio6" value="1.0"/>
+        <Property name="GearRatio7" value="0.822"/>
+        <Property name="GearRatio8" value="0.64"/>
+        <Property name="MaximumEngineSpeed" value="6000.0"/>
+        <Property name="MaximumEngineTorque" value="450.0"/>
+        <Property name="MinimumEngineSpeed" value="900.0"/>
+        <Property name="MinimumEngineTorque" value="-54.0"/>
+        <Property name="MomentInertiaPitch" value="0.0"/>
+        <Property name="MomentInertiaRoll" value="0.0"/>
+        <Property name="MomentInertiaYaw" value="0.0"/>
+        <Property name="NumberOfGears" value="8"/>
+        <Property name="SteeringRatio" value="10.7"/>
+      </Properties>
+      <BoundingBox>
+        <Center x="1.46" y="0.0" z="0.755"/>
+        <Dimensions width="2.18" length="5.26" height="1.51"/>
+      </BoundingBox>
+      <Performance maxSpeed="69.44" maxDeceleration="9.80665"/>
+      <Axles>
+        <FrontAxle maxSteering="0.5226" wheelDiameter="0.682" trackWidth="1.8" positionX="3.22" positionZ="0.341"/>
+        <RearAxle maxSteering="0.0" wheelDiameter="0.682" trackWidth="1.8" positionX="0.0" positionZ="0.341"/>
+      </Axles>
+    </Vehicle>
+  </Catalog>
+</OpenSCENARIO>

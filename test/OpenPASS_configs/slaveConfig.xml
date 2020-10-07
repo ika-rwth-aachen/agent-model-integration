@@ -1,0 +1,52 @@
+<slaveConfig SchemaVersion="0.8.1">
+  <ProfilesCatalog>ProfilesCatalog.xml</ProfilesCatalog>
+  <Experiment>
+    <ExperimentID>1</ExperimentID>
+    <NumberOfInvocations>1</NumberOfInvocations>
+    <RandomSeed>532725206</RandomSeed>
+    <Libraries>
+      <WorldLibrary>World_OSI</WorldLibrary>
+    </Libraries>
+  </Experiment>
+  <Scenario>
+    <OpenScenarioFile>Scenario_UC13_MS1_mod.xosc</OpenScenarioFile>
+  </Scenario>
+  <Environment>
+    <TimeOfDays>
+      <TimeOfDay Probability="1.0" Value="12"/>
+    </TimeOfDays>
+    <VisibilityDistances>
+      <VisibilityDistance Probability="1.0" Value="500"/>
+    </VisibilityDistances>
+    <Frictions>
+      <Friction Probability="1.0" Value="1.0"/>
+    </Frictions>
+    <Weathers>
+      <Weather Probability="1.0" Value="Sunny"/>
+    </Weathers>
+  </Environment>
+  <Observations>
+    <Observation>
+      <Library>Observation_Log</Library>
+      <Parameters>
+        <String Key="OutputFilename" Value="simulationOutput.xml"/>
+        <Bool Key="LoggingCyclicsToCsv" Value="true"/>
+        <StringVector Key="LoggingGroup_Trace" Value="XPosition,YPosition,YawAngle"/>
+        <StringVector Key="LoggingGroup_Driver" Value="AOI,CurrentSituation,LateralActionState,LongitudinalActionState,MesoscopicSituation,PreviewDistance,SCMLeadingVehicle"/>
+        <StringVector Key="LoggingGroup_RoadPosition" Value="AgentInFront,Lane,PositionRoute,Road,TCoordinate"/>
+        <StringVector Key="LoggingGroup_RoadPositionExtended" Value="SecondaryLanes"/>
+        <StringVector Key="LoggingGroup_Sensor" Value="Sensor*_DetectedAgents,Sensor*_VisibleAgents"/>
+        <StringVector Key="LoggingGroup_Vehicle" Value="AccelerationPedalPosition,BrakePedalPosition,EngineMoment,Gear,SteeringAngle,TotalDistanceTraveled,YawRate"/>
+        <StringVector Key="LoggingGroup_Visualization" Value="AccelerationEgo,BrakeLight,IndicatorState,LightStatus,VelocityEgo"/>
+        <StringVector Key="LoggingGroups" Value="Trace,Visualization,RoadPosition,Sensor"/>
+      </Parameters>
+    </Observation>
+  </Observations>
+  <Spawners>
+    <Spawner>
+      <Library>SpawnPointScenario</Library>
+      <Type>PreRun</Type>
+      <Priority>1</Priority>
+    </Spawner>
+  </Spawners>
+</slaveConfig>
