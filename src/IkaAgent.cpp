@@ -30,7 +30,7 @@ void IkaAgent::init()
 	drParam->velocity.thwMax = 10.0;
 	drParam->velocity.delta = 4.0;
 	drParam->velocity.deltaPred = 3.0;
-	drParam->velocity.vComfort = 50.0 / 3.6;
+	drParam->velocity.vComfort = 30.0 / 3.6;
 	drParam->velocity.ayMax = 1.3;
 
 	// stop control
@@ -98,6 +98,9 @@ void IkaAgent::init()
 	
 	pedalContr.reset();
     steeringContr.reset();
+
+	std::ofstream output("debug.txt", std::ofstream::out | std::ofstream::trunc);
+	output.close();
 }
 
 
@@ -142,7 +145,13 @@ int IkaAgent::step(double time, double stepSize, osi3::SensorView &sensorViewDat
 	_vehicle.step(stepSize); // STEP SIZE not TIME!
 	//std::cout << "a=" << drState->subconscious.a <<" kappa="<< drState->subconscious.kappa << " dpsiDes=" << drState->subconscious.dPsi <<std::endl;
     //std::cout << "pedal = " << vehInput->pedal << "\tveh_a = " << vehState->a << "\tstep_size = " << stepSize << std::endl;
-	if(sensorViewData.host_vehicle_id().value()==44)output << vehState->position.x<<"," << vehState->position.y <<","<<vehState->a<<","<<vehState->v<< std::endl;
+	if(sensorViewData.host_vehicle_id().value()==44)
+		output << out.timestamp().seconds() + (out.timestamp().nanos() * 0.000000001) << "," 
+			<< vehState->position.x << "," 
+			<< vehState->position.y << ","
+			<< vehState->a << "," 
+			<< vehState->v << ","  
+			<< vehState->dPsi << std::endl;
 	//----------------	
     /*for (int i = 0; i < commandData.action_size(); i++)
     {
