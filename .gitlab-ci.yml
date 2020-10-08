@@ -18,6 +18,6 @@ buildFMU:
     - make -j10
   artifacts:
       paths:
-        - lib/OSMPTrafficAgent.fmu
+        - lib/ikaDriverAgent.fmu
 
   
