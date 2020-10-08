@@ -56,7 +56,7 @@
                         <id>FmuPath</id>
                         <type>string</type>
                         <unit/>
-                        <value>configs/OSMPTrafficAgent.fmu</value>
+                        <value>configs/ikaDriverAgent.fmu</value>
                     </parameter>
                     <parameter>
                         <id>Logging</id>

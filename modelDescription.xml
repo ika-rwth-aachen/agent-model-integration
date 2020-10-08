@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <fmiModelDescription
   fmiVersion="2.0"
-  modelName="Simple Traffic Agent"
+  modelName="ika's driver model as FMU"
   guid="@FMUGUID@"
   description="Test OSMP for a simple trajectory follower which provides an TrafficUpdate."
   author="dbeckerAC"
@@ -10,7 +10,7 @@
   generationDateAndTime="@FMUTIMESTAMP@"
   variableNamingConvention="structured">
   <CoSimulation
-    modelIdentifier="OSMPTrafficAgent"
+    modelIdentifier="ikaDriverAgent"
     canHandleVariableCommunicationStepSize="true"
     canNotUseMemoryManagementFunctions="true">
     <SourceFiles>
