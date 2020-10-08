@@ -1,6 +1,7 @@
 # Driver model for SET Level 4to5
-
-> **[Latest FMU](https://gitlab.sl4to5.de/deliverables/model/traffic-agents/ika-driver/-/jobs/artifacts/master/raw/lib/ikaDriverAgent.fmu?job=buildFMU1804)** from CI pipeline. Only available for Linux
+> CI pipeline results:  
+> * [**Latest FMU** (Ubuntu 18.04 LTS)](https://gitlab.sl4to5.de/deliverables/model/traffic-agents/ika-driver/-/jobs/artifacts/master/raw/lib/ikaDriverAgent.fmu?job=buildFMU1804) 
+> * [**Latest FMU** (Ubuntu 20.04 LTS)](https://gitlab.sl4to5.de/deliverables/model/traffic-agents/ika-driver/-/jobs/artifacts/master/raw/lib/ikaDriverAgent.fmu?job=buildFMU2004) 
 
 ## Build
 Brief build instructions for compilation with `MinGW` (64Bit V8.1.0) on Windows.  
