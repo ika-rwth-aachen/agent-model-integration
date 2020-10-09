@@ -49,10 +49,10 @@ void IkaAgent::init()
 	drParam->steering.thw[1] = 2.0;
 	drParam->steering.dsMin[0] = 5.0;
 	drParam->steering.dsMin[1] = 10.0;
-   	drParam->steering.P[0] = 0.06 * l;
-    drParam->steering.P[1] = 0.03 * l;
-    drParam->steering.D[0] = 0.0;
-    drParam->steering.D[1] = 0.0;
+   	drParam->steering.P[0] = 0.03 * l;
+    drParam->steering.P[1] = 0.01 * l;
+    drParam->steering.D[0] = 0.1;
+    drParam->steering.D[1] = 0.1;
 
 	AgentModel::init();
    	vehInput = _vehicle.getInput();
