@@ -29,15 +29,3 @@ buildFMU2004:
   artifacts:
       paths:
         - lib/ikaDriverAgent.fmu
-
-buildFMUmingw:
-  image: mmozeiko/mingw-w64
-  stage: build
-  script: 
-    - cmake -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release .
-    - mingw32-make.exe -j7
-  artifacts:
-      paths:
-        - lib/ikaDriverAgent.fmu
-  
-
