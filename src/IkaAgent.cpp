@@ -30,7 +30,7 @@ void IkaAgent::init()
 	drParam->velocity.thwMax = 10.0;
 	drParam->velocity.delta = 4.0;
 	drParam->velocity.deltaPred = 3.0;
-	drParam->velocity.vComfort = 30.0 / 3.6;
+	drParam->velocity.vComfort = 40.0 / 3.6;
 	drParam->velocity.ayMax = 1.3;
 
 	// stop control
@@ -99,6 +99,7 @@ void IkaAgent::init()
 	pedalContr.reset();
     steeringContr.reset();
 
+	// clean output file
 	std::ofstream output("debug.txt", std::ofstream::out | std::ofstream::trunc);
 	output.close();
 }
@@ -111,8 +112,6 @@ int IkaAgent::step(double time, double stepSize, osi3::SensorView &sensorViewDat
 	std::ofstream output("debug.txt", std::ofstream::out | std::ofstream::app);
 	//Initialize agent in first step
 	if (!initialized) {
-
-		
 		//set initial Position
 		for (int i = 0; i < sensorViewData.global_ground_truth().moving_object_size(); i++) {
 			if (sensorViewData.global_ground_truth().moving_object(i).id().value() == sensorViewData.host_vehicle_id().value()) {
@@ -129,13 +128,16 @@ int IkaAgent::step(double time, double stepSize, osi3::SensorView &sensorViewDat
 		
 		//determine lanes along Trajectory passed by commandData
 		futureLanes(sensorViewData, commandData, lanes);
+		// std::cout << "lanes: ";
+		// for (int j=0 ; j<lanes.size(); j++)
+		// 	std::cout << lanes[j] << " ";
+		// std::cout << std::endl;
 		initialized = true;	
 	}	
 
 	std::cout << "------------ time: " << out.timestamp().seconds() + (out.timestamp().nanos() * 0.000000001) << "---------------" << std::endl;
 	//std::cout << "host vehicle id: " << sensorViewData.host_vehicle_id().value() << std::endl;
 	adapterOsiToInput(sensorViewData, _input, lanes , out.timestamp().seconds()+(out.timestamp().nanos()*0.000000001), sensorViewData.host_vehicle_id().value());
-	
 	this->AgentModel::step(time);
 	
 	pedalContr.step(stepSize);
@@ -458,7 +460,7 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 	Point2D egoClPoint;
 	closestCenterlinePoint(lastPosition, elPoints, egoClPoint);
 	input.vehicle.d = sqrt(pow(lastPosition.x - egoClPoint.x, 2) + pow(lastPosition.y - egoClPoint.y, 2));
-	std::cout << "d=" << input.vehicle.d <<"dPsi="<< input.vehicle.dPsi<<std::endl;
+	//std::cout << "d=" << input.vehicle.d <<" dPsi="<< input.vehicle.dPsi<<std::endl;
 
 	// calculate s, psi, k of ego lane
 	std::vector<double> s, psi, k;
@@ -486,18 +488,18 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 		if (t >= 0 && t <= 1) { //correct points (x1,y1)(x2,y2) were found (egoClPoint is in segment)
 			// global psi of ego minus psi of lane at current location (interpolated)
 			input.vehicle.psi = base.orientation().yaw() - (psi[i - 1] + t * (psi[i] - psi[i - 1]));
-			std::cout << "vehicle psi " << input.vehicle.psi * 180 / 3.14159 << "=" << base.orientation().yaw() * 180 / 3.14159 << "-"<< (psi[i - 1] + t * (psi[i] - psi[i - 1])) * 180 / 3.14159 << std::endl;
+			//std::cout << "vehicle psi " << input.vehicle.psi * 180 / 3.14159 << "=" << base.orientation().yaw() * 180 / 3.14159 << "-"<< (psi[i - 1] + t * (psi[i] - psi[i - 1])) * 180 / 3.14159 << std::endl;
 			set = true;
 		}
 	}
 	if (!set && (pow(egoClPoint.x - elPoints.back().x, 2) + pow(egoClPoint.y - elPoints.back().y, 2))
 		< (pow(egoClPoint.x - elPoints.front().x, 2) + pow(egoClPoint.y - elPoints.front().y, 2))) {
 		input.vehicle.psi = base.orientation().yaw() - psi.back();
-		std::cout << "vehicle psi " << input.vehicle.psi * 180 / 3.14159 << "=" << base.orientation().yaw()*180 / 3.14159 << "-"<< psi.back() * 180 / 3.14159 << std::endl;
+		//std::cout << "vehicle psi " << input.vehicle.psi * 180 / 3.14159 << "=" << base.orientation().yaw()*180 / 3.14159 << "-"<< psi.back() * 180 / 3.14159 << std::endl;
 	}
 	else if (!set) {
 		input.vehicle.psi = base.orientation().yaw() - psi.front();
-		std::cout << "vehicle psi " << input.vehicle.psi * 180 / 3.14159 << "=" << base.orientation().yaw()*180/3.14159 << "-" << psi.back() * 180 / 3.14159 << std::endl;
+		//std::cout << "vehicle psi " << input.vehicle.psi * 180 / 3.14159 << "=" << base.orientation().yaw()*180/3.14159 << "-" << psi.back() * 180 / 3.14159 << std::endl;
 	}
 
 	input.vehicle.pedal = 0;         // TODO
@@ -807,11 +809,11 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 		horizon.push_back(knot);
 	}
 
-	/*if ((count-1)%10==0) {
+	if ((count-1)%10==0) {
 		for (int i = 0; i < agent_model::NOH; i++) {
 			std::cout << "(" << input.horizon.x[i] << "," << input.horizon.y[i] << ") \n";
 		}
-	}*/
+	}
 
 
 	int l, e, r;

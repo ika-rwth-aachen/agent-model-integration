@@ -518,13 +518,27 @@ void futureLanes(osi3::SensorView& sensorView, osi3::TrafficCommand& commandData
 		//determine assigned lane TODO
 	}
 
+	// check for traffic commands
+	osi3::FollowPathAction path_action;	
+	osi3::FollowTrajectoryAction traj_action;	
+	for (int i = 0; i < commandData.action_size(); i++) {
+		if (commandData.action(i).has_follow_path_action())
+			path_action.CopyFrom(commandData.action(i).follow_path_action());
+		if (commandData.action(i).has_follow_trajectory_action()){
+			traj_action.CopyFrom(commandData.action(i).follow_trajectory_action());
+			//std::cout << "has traj. action with length: " << traj_action.trajectory_point_size() << "\n";
+			//std::cout << "first point: " << traj_action.trajectory_point(0).position().x() << "\n";
+		}
+	}
 	//TrajectoryAction contains desired Trajectory 
-	osi3::FollowTrajectoryAction action;
-	action.CopyFrom(commandData.action(0).follow_trajectory_action ());	
-	Point2D destination(action.trajectory_point(action.trajectory_point_size() - 1).position().x(),
-		action.trajectory_point(action.trajectory_point_size() - 1).position().y());
-
-	std::cout << "destination :" << destination.x << "," << destination.y;
+	//osi3::FollowTrajectoryAction action;
+	//action.CopyFrom(commandData.action(0).follow_trajectory_action());	
+	//Point2D destination(traj_action.trajectory_point(traj_action.trajectory_point_size() - 1).position().x(),
+	//	traj_action.trajectory_point(traj_action.trajectory_point_size() - 1).position().y());
+	//Point2D destination(-100.0, 90.0);
+	Point2D destination(19.0, 123.0);
+	
+	std::cout << "destination :" << destination.x << "," << destination.y << "\n";
 
 	//determine last lane
 	std::vector<Point2D> centerline;
@@ -533,19 +547,21 @@ void futureLanes(osi3::SensorView& sensorView, osi3::TrafficCommand& commandData
 
 	for (int i = 0; i < groundTruth->lane_size(); i++) {
 		centerline.clear();
-		getXY((groundTruth->mutable_lane(i)), centerline);
-
+		osi3::Lane cur_lane;
+		cur_lane.CopyFrom( groundTruth->lane(i) );
+		getXY(&cur_lane, centerline);
+		
 		Point2D closest;
 		closestCenterlinePoint(destination, centerline, closest);
 		double d = (closest.x - destination.x) * (closest.x - destination.x) + (closest.y - destination.y) * (closest.y - destination.y);
-
+		std::cout << "centerline pt count: " << centerline.size() << " with dist: " << d << " and id: " << cur_lane.id().value() << "\n";
 		if (distance > d) {
 			distance = d;
-			destId = groundTruth->lane(i).id().value();
-			
+			destId = cur_lane.id().value();
+			//std::cout << "new lane " <<destId << " with distance " << distance << std::endl;
 		}
 	}
-
+	std::cout << "distance = " << distance << std::endl;
 	dest = findLaneId(groundTruth, destId);
 	std::cout<< " on lane " << destId << std::endl;
 	//Graph setup

@@ -24,6 +24,7 @@
 #include <cmath>
 #include <algorithm>
 #include "VehicleModel.h"
+#include <iostream>
 
 #ifndef G_ACC
 #define G_ACC 9.81
@@ -113,7 +114,8 @@ bool VehicleModel::step(double timeStepSize) {
     // calculate acceleration
     st->a  = -aRoll - aAir - aSlope + aBrake + throttle * st->force / p->mass;
     st->ay = st->kappa * st->v * st->v;
-
+    //std::cout << "aRoll=" << aRoll << "\taAir=" << aAir << "\taSlope=" << aSlope << "\taBrake=" << aBrake << "\tforce=" << st->force << "\tmass=" << p->mass << std::endl;
+    //std::cout << "gas=" << throttle * st->force / p->mass << std::endl;
     // unset acceleration, when standing
     if(st->v == 0.0 && st->a < 0.0)
         st->a = 0.0;
