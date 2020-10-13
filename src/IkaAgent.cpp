@@ -102,6 +102,8 @@ void IkaAgent::init()
 	// clean output file
 	std::ofstream output("debug.txt", std::ofstream::out | std::ofstream::trunc);
 	output.close();
+	std::ofstream hor("horizon.txt", std::ofstream::out | std::ofstream::trunc);
+	hor.close();
 }
 
 
@@ -153,7 +155,10 @@ int IkaAgent::step(double time, double stepSize, osi3::SensorView &sensorViewDat
 			<< vehState->position.y << ","
 			<< vehState->a << "," 
 			<< vehState->v << ","  
-			<< vehState->dPsi << std::endl;
+			<< vehState->dPsi << ","  
+			<< drState->subconscious.a << ","  
+			<< drState->conscious.velocity.local << ","  
+			<< drState->conscious.velocity.prediction << std::endl;
 	//----------------	
     /*for (int i = 0; i < commandData.action_size(); i++)
     {
@@ -392,8 +397,7 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 	//if (count >1)return 0;
 	osi3::GroundTruth* groundTruth = sensorView.mutable_global_ground_truth();
 
-	std::ofstream output("debug.txt", std::ofstream::out | std::ofstream::app);
-
+	std::ofstream horizon_out("horizon.txt", std::ofstream::out | std::ofstream::app);
 	// --- ego ---
 	// save properties needed often
 	int egoId = sensorView.host_vehicle_id().value();
@@ -809,13 +813,13 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 		horizon.push_back(knot);
 	}
 
-	if ((count-1)%10==0) {
-		for (int i = 0; i < agent_model::NOH; i++) {
-			std::cout << "(" << input.horizon.x[i] << "," << input.horizon.y[i] << ") \n";
-		}
+	for (int i = 0; i < agent_model::NOH; i++) {
+		//std::cout << "(" << input.horizon.x[i] << "," << input.horizon.y[i] << ") \n";
+		horizon_out << input.horizon.x[i] << "," << input.horizon.y[i] << "," << input.horizon.kappa[i] << "\n";
 	}
 
 
+	horizon_out.close();
 	int l, e, r;
 
 	l = egoLanePtr->classification().left_adjacent_lane_id_size() > 0 ?
