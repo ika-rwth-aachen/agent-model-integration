@@ -5,15 +5,15 @@
     version="0.5" name="Sensor Model XXX Meta-Data">
     <srmd:Classification type="de.sl4to5.srmd.model-meta-data">
         <!-- Sensor related information -->
-        <srmd:ClassificationEntry keyword="model.type">driver model</srmd:ClassificationEntry>
-        <srmd:ClassificationEntry keyword="sensor.manufacturer">-</srmd:ClassificationEntry>
-        <srmd:ClassificationEntry keyword="sensor.family">-</srmd:ClassificationEntry>
-        <srmd:ClassificationEntry keyword="sensor.name">-</srmd:ClassificationEntry>
-        <srmd:ClassificationEntry keyword="sensor.version">-</srmd:ClassificationEntry>
-        <srmd:ClassificationEntry keyword="sensor.manufacturer.partnumber">-</srmd:ClassificationEntry>
-        <srmd:ClassificationEntry keyword="sensor.type">-</srmd:ClassificationEntry>
-        <srmd:ClassificationEntry keyword="sensor.technology">-</srmd:ClassificationEntry>
-        <srmd:ClassificationEntry keyword="sensor.technology.variant">-</srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="model.type">trafficAgent</srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="trafficAgent.manufacturer">-</srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="trafficAgent.family">-</srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="trafficAgent.name">-</srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="trafficAgent.version">-</srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="trafficAgent.manufacturer.partnumber">-</srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="trafficAgent.type">-</srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="trafficAgent.technology">-</srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="trafficAgent.technology.variant">-</srmd:ClassificationEntry>
         <!-- Model related information -->
         <srmd:ClassificationEntry keyword="model.manufacturer">Institute for automotive engineering RWTH Aachen University, ika</srmd:ClassificationEntry>
         <srmd:ClassificationEntry keyword="model.family">Traffic Agent Models</srmd:ClassificationEntry>
