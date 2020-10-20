@@ -803,8 +803,8 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 		input.horizon.kappa[0] = 0;//TODO
 	}
 	for (int i = horizon.size(); i < agent_model::NOH; i++) {
-		input.horizon.x[i] = horizon.back().x - lastPosition.x;
-		input.horizon.y[i] = horizon.back().y - lastPosition.y;
+		input.horizon.x[i] =  std::cos(egoPsi) * (horizon.back().x - lastPosition.x)+ std::sin(egoPsi) * (horizon.back().y - lastPosition.y); //pre.x * c + pre.y * s; egoPsi
+		input.horizon.y[i] = -1.0*std::sin(egoPsi) * (horizon.back().x - lastPosition.x) + std::cos(egoPsi) * (horizon.back().y - lastPosition.y); //pre.x * (-1 * s) + pre.y * c;
 		input.horizon.ds[i] = ds.back();
 		input.horizon.psi[i] = input.horizon.psi[i - 1];
 		input.horizon.kappa[i] = k.back();
