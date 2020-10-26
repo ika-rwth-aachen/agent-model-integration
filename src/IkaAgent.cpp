@@ -20,7 +20,7 @@ void IkaAgent::init()
 {
 	lastS = 0;
 	horizonTHW = 20;
-	double l = 2.7; // wheel base
+	double l = 3.22; // wheel base
 
 	drParam = getParameters();
 	drState = getState();
@@ -30,7 +30,7 @@ void IkaAgent::init()
 	drParam->velocity.thwMax = 10.0;
 	drParam->velocity.delta = 4.0;
 	drParam->velocity.deltaPred = 3.0;
-	drParam->velocity.vComfort = 40.0 / 3.6;
+	drParam->velocity.vComfort = 50.0 / 3.6;
 	drParam->velocity.ayMax = 1.3;
 
 	// stop control
@@ -47,10 +47,10 @@ void IkaAgent::init()
 	// steering
 	drParam->steering.thw[0] = 1.0;
 	drParam->steering.thw[1] = 2.0;
-	drParam->steering.dsMin[0] = 5.0;
-	drParam->steering.dsMin[1] = 10.0;
+	drParam->steering.dsMin[0] = 8.0;
+	drParam->steering.dsMin[1] = 15.0;
    	drParam->steering.P[0] = 0.03 * l;
-    drParam->steering.P[1] = 0.01 * l;
+    drParam->steering.P[1] = 0.015 * l;
     drParam->steering.D[0] = 0.1;
     drParam->steering.D[1] = 0.1;
 
@@ -82,7 +82,7 @@ void IkaAgent::init()
     steeringContr.setRange(-1.0, 1.0, INFINITY);
 
     // set controller parameters (longitudinal motion control)
-    pedalContr.setParameters(2.5, 1.0, 0.0, 1.0);
+    pedalContr.setParameters(1.75, .5, 0.01, 1.0);
     pedalContr.setRange(-1.0, 1.0, INFINITY);
 
     // set states
@@ -109,7 +109,7 @@ void IkaAgent::init()
 
 int IkaAgent::step(double time, double stepSize, osi3::SensorView &sensorViewData, osi3::TrafficCommand &commandData, osi3::TrafficUpdate &out)
 {
-	if (sensorViewData.host_vehicle_id().value() != 44)return 0;
+	if (sensorViewData.host_vehicle_id().value() != 44) return 0;
 	//----------------
 	std::ofstream output("debug.txt", std::ofstream::out | std::ofstream::app);
 	//Initialize agent in first step
@@ -121,7 +121,7 @@ int IkaAgent::step(double time, double stepSize, osi3::SensorView &sensorViewDat
 				lastPosition.x = base.position().x();
 				lastPosition.y = base.position().y();
 				psi = base.orientation().yaw();
-				v = 3;// sqrt(base.velocity().x() * base.velocity().x() + base.velocity().y() * base.velocity().y());
+				v = 7;// sqrt(base.velocity().x() * base.velocity().x() + base.velocity().y() * base.velocity().y());
 				break;
 			}
 		}
@@ -158,7 +158,9 @@ int IkaAgent::step(double time, double stepSize, osi3::SensorView &sensorViewDat
 			<< vehState->dPsi << ","  
 			<< drState->subconscious.a << ","  
 			<< drState->conscious.velocity.local << ","  
-			<< drState->conscious.velocity.prediction << std::endl;
+			<< drState->conscious.velocity.prediction << ","  
+			<< _input.vehicle.d << ","  
+			<< vehInput->pedal << std::endl;
 	//----------------	
     /*for (int i = 0; i < commandData.action_size(); i++)
     {
@@ -785,7 +787,10 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 					input.horizon.psi[i] = psi[k - 1] + interpolation * (psi[k] - psi[k - 1]) - egoPsi; //heading of road at horizon point relative to heading of host vehicle. 
 						//Alternatively: angle between heading of host compared to heading needed to reach horizon point meant here?
 					
-					input.horizon.kappa[i] = kappa[k - 1] + interpolation * (kappa[k] - kappa[k - 1]);
+					//if(abs(kappa[k - 1] + interpolation * (kappa[k] - kappa[k - 1])) < 2)
+						input.horizon.kappa[i] = kappa[k - 1] + interpolation * (kappa[k] - kappa[k - 1]);
+					//else
+						//input.horizon.kappa[i] = 0;
 
 				}
 			}
@@ -807,7 +812,7 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 		input.horizon.y[i] = -1.0*std::sin(egoPsi) * (horizon.back().x - lastPosition.x) + std::cos(egoPsi) * (horizon.back().y - lastPosition.y); //pre.x * (-1 * s) + pre.y * c;
 		input.horizon.ds[i] = ds.back();
 		input.horizon.psi[i] = input.horizon.psi[i - 1];
-		input.horizon.kappa[i] = k.back();
+		input.horizon.kappa[i] = 0;//k.back();
 
 		Point2D knot(horizon.back().x, horizon.back().y);
 		horizon.push_back(knot);
@@ -815,7 +820,7 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 
 	for (int i = 0; i < agent_model::NOH; i++) {
 		//std::cout << "(" << input.horizon.x[i] << "," << input.horizon.y[i] << ") \n";
-		horizon_out << input.horizon.x[i] << "," << input.horizon.y[i] << "," << input.horizon.kappa[i] << "\n";
+		horizon_out << input.horizon.x[i] << "," << input.horizon.y[i] << "," << input.horizon.ds[i] << "," << input.horizon.kappa[i] << "\n";
 	}
 
 
