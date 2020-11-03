@@ -41,12 +41,19 @@ std::vector<double> gradient(std::vector<double> x, std::vector<double> y, int o
 	if (order == 2)
 	{
 		// calculate interior gradient values with central differences
-		for (int i = 1; i < n - 1; i++)
-			res[i] = (y[i + 1] - 2 * y[i] + y[i - 1]) / pow(x[i + 1] - x[i], 2);
+		for (int i = 1; i < n - 1; i++) {
+			double h1 = (x[i] - x[i-1]), h2 = (x[i + 1] - x[i]); 
+			res[i] = (2.0 / (h1 + h2)) * ((y[i + 1] - y[i]) / h2 - (y[i] - y[i - 1]) / h1);
+		}
 
 		// calculate gradient at edges with one sided differences
-		res[0] = (y[2] - 2 * y[1] + y[0]) / pow(x[1] - x[0], 2);
-		res[n - 1] = (y[n - 1] - 2 * y[n - 2] + y[n - 3]) / pow(x[n - 1] - x[n - 2], 2);
+		//res[0] = (y[2] - 2 * y[1] + y[0]) / pow(x[1] - x[0], 2);
+		double h1 = (x[1] - x[0]), h2 = (x[2] - x[1]);
+		res[0] = (2.0 / (h1 + h2)) * ( (y[2] - y[1]) / h2 - (y[1] - y[0]) / h1 );
+		h1 = (x[n-1] - x[n-2]), h2 = (x[n-2] - x[n-3]);
+		res[n - 1] = (2.0 / (h1 + h2)) * ( (y[n-1] - y[n-2]) / h1 - (y[n-2] - y[n-3]) / h2 );
+		//res[n - 1] = (y[n - 1] - 2 * y[n - 2] + y[n - 3]) / pow(x[n - 1] - x[n - 2], 2);
+		
 	}
 
 	return res;
@@ -77,6 +84,7 @@ int xy2curv(std::vector<Point2D> pos, std::vector<double>& s, std::vector<double
 
 		s.push_back(s.back() + sqrt(pow(dx, 2) + pow(dy, 2)));
 	}
+	
 
 	// calculate psi and kappa
 	std::vector<double> dxds = gradient(s, x, 1);
@@ -84,12 +92,18 @@ int xy2curv(std::vector<Point2D> pos, std::vector<double>& s, std::vector<double
 	std::vector<double> dxxdss = gradient(s, x, 2);
 	std::vector<double> dyydss = gradient(s, y, 2);
 
-	for (int i = 0; i < x.size(); i++)
+
+	for (int i = 0; i < pos.size(); i++)
 	{
+		if (pos.size() > 2) {
 		double top = dxds[i] * dyydss[i] - dxxdss[i] * dyds[i];
 		double bot = pow(dxds[i] * dxds[i] + dyds[i] * dyds[i], 1.5);
-
 		k.push_back(top / bot);
+		}
+		else {
+			k.push_back(0.0);
+		}
+		
 		double p = atan2(dyds[i], dxds[i]);
 		psi.push_back(p>=0?p:p+2* M_PI);
 	}
@@ -537,6 +551,7 @@ void futureLanes(osi3::SensorView& sensorView, osi3::TrafficCommand& commandData
 	//	traj_action.trajectory_point(traj_action.trajectory_point_size() - 1).position().y());
 	//Point2D destination(-100.0, 90.0);
 	Point2D destination(19.0, 123.0);
+	//Point2D destination(104.0, 20.0);
 	
 	std::cout << "destination :" << destination.x << "," << destination.y << "\n";
 

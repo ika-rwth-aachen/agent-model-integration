@@ -670,10 +670,11 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 	double interpolation = 0;
 
 	int currentLane = egoLanePtr->id().value();
-	int nextLane = 127;
+
 	int idx = 127;
 	bool spline = false;
 	int finalLane = *(futureLanes.end() - 1);
+	int nextLane = (currentLane != finalLane) ? *(find(futureLanes.begin(), futureLanes.end(), currentLane) + 1) : 127;
 	double sStart = 0;
 	double sPast = 0;
 
@@ -716,51 +717,26 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 		//somewhere within scope of currentCl
 		sStart = s[idx - 1] + sqrt((lastPosition.x - elPoints[idx - 1].x) * (lastPosition.x - elPoints[idx - 1].x) + (lastPosition.y - elPoints[idx - 1].y) * (lastPosition.y - elPoints[idx - 1].y));
 	}
-
-	//set helpers because currentCl is overwritten when lane changes
-	p1.x = currentCl.back().x; p1.y = currentCl.back().y;
-	p2.x = currentCl[currentCl.size() - 2].x; p2.y = currentCl[currentCl.size() - 2].y;
-
+	//------------------------------
 
 	[&] {
 		for (int i = 0; i < agent_model::NOH; i++) {
-
-			//determine correct lane
-			while ((s.back() + sPast - sStart) < ds[i])
+			//determine correct lane. If s is already of the correct lane for this horizon point, the loop is not executed
+			while ((s.back() + sPast - sStart) < ds[i]) //s.back = s at the end of current lane. sPast = s along the lanes on the path already considered, sStart = s at starting point
 			{
+				if (currentLane == finalLane) return;
+				
 				sPast += s.back();
+				p1.x = currentCl.back().x; p1.y = currentCl.back().y;
+				s.clear(); psi.clear(); kappa.clear(); currentCl.clear();
 
-				if (!spline) {	//currently on a regular lane. Switching to spline and setting nextLane
+				currentLane = nextLane;
+				nextLane = *(find(futureLanes.begin(), futureLanes.end(), currentLane) + 1);
+				getXY(findLane(currentLane, groundTruth), currentCl);
+				currentCl.insert(currentCl.begin(), p1);
+				xy2curv(currentCl, s, psi, kappa);
 
-					if (currentLane == finalLane)return;
 
-					nextLane = *(find(futureLanes.begin(), futureLanes.end(), currentLane) + 1);
-					s.clear(); psi.clear(); kappa.clear(); currentCl.clear();
-					std::vector<Point2D> tempLane;
-					getXY(findLane(nextLane, groundTruth), tempLane);
-
-					//curved connection? TODO criterium
-					/*spline3(p1, tempLane.front(), Point2D(p1.x-p2.x, p1.y - p2.y),
-						Point2D((tempLane[1].x - tempLane[0].x), tempLane[1].y - tempLane[0].y), currentCl);*/
-
-						//straight connection?
-					spline1(p1, tempLane.front(), currentCl);
-					xy2curv(currentCl, s, psi, kappa);
-					spline = true;
-				}
-				else {			//currently on a spline. Switching to lane determined by nextLane
-
-					s.clear(); psi.clear(); kappa.clear(); currentCl.clear();
-					currentLane = nextLane;
-					nextLane = 127;
-					getXY(findLane(currentLane, groundTruth), currentCl);
-					xy2curv(currentCl, s, psi, kappa);
-
-					p1.x = currentCl.back().x; p1.y = currentCl.back().y;
-					p2.x = currentCl[currentCl.size() - 2].x; p2.y = currentCl[currentCl.size() - 2].y;
-
-					spline = false;
-				}
 			}
 
 			//s, currentCl should now contain correct lane
@@ -769,7 +745,7 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 			for (int k = 1; k < s.size() && !stop; k++) {
 
 				if ((s[k - 1] + sPast - sStart < ds[i]) && (s[k] + sPast - sStart >= ds[i])) {
-					
+
 					if (s[k - 1] == s[k]) s[k] += 0.3;
 
 					interpolation = (ds[i] - (s[k - 1] + sPast - sStart)) / (s[k] - s[k - 1]);
@@ -780,23 +756,101 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 					horizon.push_back(hKnot);
 
 
-					input.horizon.x[i] =  std::cos(egoPsi) * (horizon.back().x - lastPosition.x)+ std::sin(egoPsi) * (horizon.back().y - lastPosition.y); //pre.x * c + pre.y * s; egoPsi
-					input.horizon.y[i] = -1.0*std::sin(egoPsi) * (horizon.back().x - lastPosition.x) + std::cos(egoPsi) * (horizon.back().y - lastPosition.y); //pre.x * (-1 * s) + pre.y * c;
+					input.horizon.x[i] = std::cos(egoPsi) * (horizon.back().x - lastPosition.x) + std::sin(egoPsi) * (horizon.back().y - lastPosition.y); //pre.x * c + pre.y * s; egoPsi
+					input.horizon.y[i] = -1.0 * std::sin(egoPsi) * (horizon.back().x - lastPosition.x) + std::cos(egoPsi) * (horizon.back().y - lastPosition.y); //pre.x * (-1 * s) + pre.y * c;
 					input.horizon.ds[i] = ds[i];
 
-					input.horizon.psi[i] = psi[k - 1] + interpolation * (psi[k] - psi[k - 1]) - egoPsi; //heading of road at horizon point relative to heading of host vehicle. 
-						//Alternatively: angle between heading of host compared to heading needed to reach horizon point meant here?
-					
-					//if(abs(kappa[k - 1] + interpolation * (kappa[k] - kappa[k - 1])) < 2)
-						input.horizon.kappa[i] = kappa[k - 1] + interpolation * (kappa[k] - kappa[k - 1]);
-					//else
-						//input.horizon.kappa[i] = 0;
+					input.horizon.psi[i] = psi[k - 1] + interpolation * (psi[k] - psi[k - 1]) - egoPsi;
+
+
+					input.horizon.kappa[i] = kappa[k - 1] + interpolation * (kappa[k] - kappa[k - 1]);
 
 				}
 			}
 		}
-
 	}();
+	//--------------------------------
+
+	//set helpers because currentCl is overwritten when lane changes
+	//p1.x = currentCl.back().x; p1.y = currentCl.back().y;
+	//p2.x = currentCl[currentCl.size() - 2].x; p2.y = currentCl[currentCl.size() - 2].y;
+
+
+	//[&] {
+	//	for (int i = 0; i < agent_model::NOH; i++) {
+
+	//		//determine correct lane
+	//		while ((s.back() + sPast - sStart) < ds[i])
+	//		{
+	//			sPast += s.back();
+
+	//			if (!spline) {	//currently on a regular lane. Switching to spline and setting nextLane
+
+	//				if (currentLane == finalLane)return;
+
+	//				nextLane = *(find(futureLanes.begin(), futureLanes.end(), currentLane) + 1);
+	//				s.clear(); psi.clear(); kappa.clear(); currentCl.clear();
+	//				std::vector<Point2D> tempLane;
+	//				getXY(findLane(nextLane, groundTruth), tempLane);
+
+	//				//curved connection? TODO criterium
+	//				/*spline3(p1, tempLane.front(), Point2D(p1.x-p2.x, p1.y - p2.y),
+	//					Point2D((tempLane[1].x - tempLane[0].x), tempLane[1].y - tempLane[0].y), currentCl);*/
+
+	//					//straight connection?
+	//				spline1(p1, tempLane.front(), currentCl);
+	//				xy2curv(currentCl, s, psi, kappa);
+	//				spline = true;
+	//			}
+	//			else {			//currently on a spline. Switching to lane determined by nextLane
+
+	//				s.clear(); psi.clear(); kappa.clear(); currentCl.clear();
+	//				currentLane = nextLane;
+	//				nextLane = 127;
+	//				getXY(findLane(currentLane, groundTruth), currentCl);
+	//				xy2curv(currentCl, s, psi, kappa);
+
+	//				p1.x = currentCl.back().x; p1.y = currentCl.back().y;
+	//				p2.x = currentCl[currentCl.size() - 2].x; p2.y = currentCl[currentCl.size() - 2].y;
+
+	//				spline = false;
+	//			}
+	//		}
+
+	//		//s, currentCl should now contain correct lane
+	//		bool stop = false;
+
+	//		for (int k = 1; k < s.size() && !stop; k++) {
+
+	//			if ((s[k - 1] + sPast - sStart < ds[i]) && (s[k] + sPast - sStart >= ds[i])) {
+	//				
+	//				if (s[k - 1] == s[k]) s[k] += 0.3;
+
+	//				interpolation = (ds[i] - (s[k - 1] + sPast - sStart)) / (s[k] - s[k - 1]);
+
+	//				Point2D hKnot(currentCl[k - 1].x + interpolation * (currentCl[k].x - currentCl[k - 1].x),
+	//					currentCl[k - 1].y + interpolation * (currentCl[k].y - currentCl[k - 1].y));
+
+	//				horizon.push_back(hKnot);
+
+
+	//				input.horizon.x[i] =  std::cos(egoPsi) * (horizon.back().x - lastPosition.x)+ std::sin(egoPsi) * (horizon.back().y - lastPosition.y); //pre.x * c + pre.y * s; egoPsi
+	//				input.horizon.y[i] = -1.0*std::sin(egoPsi) * (horizon.back().x - lastPosition.x) + std::cos(egoPsi) * (horizon.back().y - lastPosition.y); //pre.x * (-1 * s) + pre.y * c;
+	//				input.horizon.ds[i] = ds[i];
+
+	//				input.horizon.psi[i] = psi[k - 1] + interpolation * (psi[k] - psi[k - 1]) - egoPsi; //heading of road at horizon point relative to heading of host vehicle. 
+	//					//Alternatively: angle between heading of host compared to heading needed to reach horizon point meant here?
+	//				
+	//				//if(abs(kappa[k - 1] + interpolation * (kappa[k] - kappa[k - 1])) < 2)
+	//					input.horizon.kappa[i] = kappa[k - 1] + interpolation * (kappa[k] - kappa[k - 1]);
+	//				//else
+	//					//input.horizon.kappa[i] = 0;
+
+	//			}
+	//		}
+	//	}
+
+	//}();
 
 	if (horizon.size() == 0) {
 
@@ -821,6 +875,7 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 	for (int i = 0; i < agent_model::NOH; i++) {
 		//std::cout << "(" << input.horizon.x[i] << "," << input.horizon.y[i] << ") \n";
 		horizon_out << input.horizon.x[i] << "," << input.horizon.y[i] << "," << input.horizon.ds[i] << "," << input.horizon.kappa[i] << "\n";
+		//horizon_out << input.horizon.ds[i] << "," << input.horizon.kappa[i] << "\n";
 	}
 
 
@@ -838,73 +893,87 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 	std::vector<double> width(agent_model::NOL, 4.0); //instead: call calcWidth whenever appending orizon knot. use default value when on spline, later replace dafault with average
 	//calcWidth(horizon, egoLanePtr->id().value(), futureLanes, width, groundTruth);
 
+	int laneCounter = 0;
+	while(laneCounter<futureLanes.size() && laneCounter < agent_model::NOL){
+		osi3::Lane lane = *findLane(futureLanes[laneCounter], groundTruth);
+		input.lanes[laneCounter].id = laneMapping[futureLanes[laneCounter]];
 
-	for (int i = 0; i < agent_model::NOL; i++)
-	{
-		if (i < groundTruth->lane_size())
-		{
+		input.lanes[laneCounter].access = agent_model::Accessibility::ACC_ACCESSIBLE; //lanes along route are accessible by definition
+		input.lanes[laneCounter].width = 4.0;
 
-			osi3::Lane lane = groundTruth->lane(i);
-
-			input.lanes[i].id = laneMapping[lane.id().value()];
-
-			// calculate type
-			if (lane.classification().type() == osi3::Lane_Classification_Type_TYPE_DRIVING)
-			{
-				input.lanes[i].access = agent_model::Accessibility::ACC_ACCESSIBLE;
-			}
-			else if (lane.classification().type() == osi3::Lane_Classification_Type_TYPE_NONDRIVING)
-			{
-				input.lanes[i].access = agent_model::Accessibility::ACC_NOT_ACCESSIBLE;
-			}
-
-
-			// calculate driving direction
-			if (lane.classification().centerline_is_driving_direction())
-				input.lanes[i].dir = agent_model::DrivingDirection::DD_FORWARDS;
-			else
-				input.lanes[i].dir = agent_model::DrivingDirection::DD_BACKWARDS;
-
-
-			// calculate lane width at horizon points
-
-
-
-			// store width of horizon TODO: correct value for neighbor lanes
-			if (lane.id().value() == l)
-				for (int i = 0; i < agent_model::NOH; i++)
-					input.horizon.leftLaneWidth[i] = width[i];
-
-
-			if (lane.id().value() == e)
-				for (int i = 0; i < agent_model::NOH; i++)
-					input.horizon.egoLaneWidth[i] = width[i];
-
-			if (lane.id().value() == r)
-				for (int i = 0; i < agent_model::NOH; i++)
-					input.horizon.rightLaneWidth[i] = width[i];
-
-
-			// save average of width
-			input.lanes[i].width = accumulate(width.begin(), width.end(), 0.0) / width.size();
-
-			std::vector<Point2D> lPoints;
-
-			getXY(&lane, lPoints);
-
-			input.lanes[i].closed = xy2s(egoClPoint, lPoints.back(), lPoints);
-			input.lanes[i].route = input.lanes[i].closed;   // TODO
-			// -> where do we get this value from? 
-		}
+		if (lane.classification().centerline_is_driving_direction() == egoLanePtr->classification().centerline_is_driving_direction())
+			input.lanes[laneCounter].dir = agent_model::DrivingDirection::DD_FORWARDS;
 		else
-		{
-			input.lanes[i].id = 127;
-			input.lanes[i].width = 0;
-			input.lanes[i].route = 0;
-			input.lanes[i].closed = 0;
-			input.lanes[i].access = agent_model::ACC_NOT_SET;
-			input.lanes[i].dir = agent_model::DD_NOT_SET;
+			input.lanes[laneCounter].dir = agent_model::DrivingDirection::DD_BACKWARDS;
+
+		//input.lanes[i].width = accumulate(width.begin(), width.end(), 0.0) / width.size();
+
+		std::vector<Point2D> lPoints;
+
+		getXY(&lane, lPoints);
+
+		if (lane.id().value() == egoLanePtr->id().value()) {
+			input.lanes[laneCounter].closed = xy2s(egoClPoint, lPoints.back(), lPoints);
+			input.lanes[laneCounter].route = input.lanes[laneCounter].closed;
 		}
+		else {
+			input.lanes[laneCounter].closed = xy2s(lPoints.front(), lPoints.back(), lPoints);
+			input.lanes[laneCounter].route = INFINITY;
+		}
+		//std::cout <<"dist to close "<< input.lanes[laneCounter].closed << std::endl;
+		//input.lanes[laneCounter].route = input.lanes[laneCounter].closed;
+		laneCounter++;
+
+	}
+	
+	for (int i = 0; i < groundTruth->lane_size() && laneCounter < agent_model::NOL; i++) {
+		osi3::Lane lane = groundTruth->lane(i);
+		//break if lane is in fututeLanes, that means it was already considered before
+		if (find(futureLanes.begin(), futureLanes.end(), lane.id().value()) != futureLanes.end()) {
+			continue;
+		}
+
+		input.lanes[i].id = laneMapping[lane.id().value()];
+
+		// calculate type
+		if (lane.classification().type() == osi3::Lane_Classification_Type_TYPE_DRIVING)
+		{
+			input.lanes[i].access = agent_model::Accessibility::ACC_ACCESSIBLE;
+		}
+		else if (lane.classification().type() == osi3::Lane_Classification_Type_TYPE_NONDRIVING)
+		{
+			input.lanes[i].access = agent_model::Accessibility::ACC_NOT_ACCESSIBLE;
+		}
+
+
+		// calculate driving direction
+		if (lane.classification().centerline_is_driving_direction() == egoLanePtr->classification().centerline_is_driving_direction())
+			input.lanes[i].dir = agent_model::DrivingDirection::DD_FORWARDS;
+		else
+			input.lanes[i].dir = agent_model::DrivingDirection::DD_BACKWARDS;
+
+
+		// save average of width
+		input.lanes[i].width = accumulate(width.begin(), width.end(), 0.0) / width.size();
+
+		std::vector<Point2D> lPoints;
+
+		getXY(&lane, lPoints);
+
+		input.lanes[i].closed = xy2s(lPoints.front(), lPoints.back(), lPoints);
+		input.lanes[i].route = input.lanes[i].closed;   // TODO
+		//std::cout << "dist to close " << input.lanes[laneCounter].closed << std::endl;
+
+		laneCounter++;
+	}
+	while (laneCounter < agent_model::NOL) {
+		input.lanes[laneCounter].id = 127;
+		input.lanes[laneCounter].width = 0;
+		input.lanes[laneCounter].route = 0;
+		input.lanes[laneCounter].closed = 0;
+		input.lanes[laneCounter].access = agent_model::ACC_NOT_SET;
+		input.lanes[laneCounter].dir = agent_model::DD_NOT_SET;
+		laneCounter++;
 	}
 
 	//if egolane has no right/left adjacent lane
