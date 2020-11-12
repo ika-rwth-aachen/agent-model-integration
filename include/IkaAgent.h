@@ -11,6 +11,7 @@
 #include "osi_trafficcommand.pb.h"
 #include "osi_trafficupdate.pb.h"
 #include "osi_sensorview.pb.h"
+#include "sl45_dynamicsrequest.pb.h"
 #include "Interface.h"
 #include "AgentModel.h"
 #include "VehicleModel.h"
@@ -38,7 +39,7 @@ public:
     ~IkaAgent() override = default;
 
     virtual void init();
-    int step(double time, double stepSize, osi3::SensorView &sensorViewData, osi3::TrafficCommand &commandData, osi3::TrafficUpdate &out);
+    int step(double time, double stepSize, osi3::SensorView &sensorViewData, osi3::TrafficCommand &commandData, osi3::TrafficUpdate &out, setlevel4to5::DynamicsRequest & dynOut);
     int terminate();
 
 

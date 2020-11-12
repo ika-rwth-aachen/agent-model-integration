@@ -57,6 +57,9 @@ using namespace std;
 #define FMI_INTEGER_TRAFFICUPDATE_OUT_BASELO_IDX 6
 #define FMI_INTEGER_TRAFFICUPDATE_OUT_BASEHI_IDX 7
 #define FMI_INTEGER_TRAFFICUPDATE_OUT_SIZE_IDX 8
+#define FMI_INTEGER_DYNAMICSREQUEST_OUT_BASELO_IDX 9
+#define FMI_INTEGER_DYNAMICSREQUEST_OUT_BASEHI_IDX 10
+#define FMI_INTEGER_DYNAMICSREQUEST_OUT_SIZE_IDX 11
 #define FMI_INTEGER_LAST_IDX FMI_INTEGER_TRAFFICUPDATE_OUT_SIZE_IDX
 #define FMI_INTEGER_VARS (FMI_INTEGER_LAST_IDX+1)
 
@@ -219,7 +222,9 @@ protected:
     bool get_fmi_sensor_view_in(osi3::SensorView& data);
     bool get_fmi_traffic_command_in(osi3::TrafficCommand& data);
     void set_fmi_traffic_update_out(const osi3::TrafficUpdate& data);
+    void set_fmi_dynamics_request_out(const setlevel4to5::DynamicsRequest& data);
     void reset_fmi_traffic_update_out();
+    void reset_fmi_dynamics_request_out();
 
     /* Refreshing of Calculated Parameters */
     //void refresh_fmi_sensor_view_config_request();

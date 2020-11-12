@@ -141,11 +141,27 @@ void COSMPTrafficAgent::set_fmi_traffic_update_out(const osi3::TrafficUpdate& da
     swap(currentOutputBuffer,lastOutputBuffer);
 }
 
+void COSMPTrafficAgent::set_fmi_dynamics_request_out(const setlevel4to5::DynamicsRequest& data)
+{
+    data.SerializeToString(&currentOutputBuffer);
+    encode_pointer_to_integer(currentOutputBuffer.data(),integer_vars[FMI_INTEGER_DYNAMICSREQUEST_OUT_BASEHI_IDX],integer_vars[FMI_INTEGER_DYNAMICSREQUEST_OUT_BASELO_IDX]);
+    integer_vars[FMI_INTEGER_DYNAMICSREQUEST_OUT_SIZE_IDX]=(fmi2Integer)currentOutputBuffer.length();
+    normal_log("OSMP","Providing %08X %08X, writing from %p ...",integer_vars[FMI_INTEGER_DYNAMICSREQUEST_OUT_BASEHI_IDX],integer_vars[FMI_INTEGER_DYNAMICSREQUEST_OUT_BASELO_IDX],currentOutputBuffer.data());
+    swap(currentOutputBuffer,lastOutputBuffer);
+}
+
 void COSMPTrafficAgent::reset_fmi_traffic_update_out()
 {
     integer_vars[FMI_INTEGER_TRAFFICUPDATE_OUT_SIZE_IDX]=0;
     integer_vars[FMI_INTEGER_TRAFFICUPDATE_OUT_BASEHI_IDX]=0;
     integer_vars[FMI_INTEGER_TRAFFICUPDATE_OUT_BASELO_IDX]=0;
+}
+
+void COSMPTrafficAgent::reset_fmi_dynamics_request_out()
+{
+    integer_vars[FMI_INTEGER_DYNAMICSREQUEST_OUT_SIZE_IDX]=0;
+    integer_vars[FMI_INTEGER_DYNAMICSREQUEST_OUT_BASEHI_IDX]=0;
+    integer_vars[FMI_INTEGER_DYNAMICSREQUEST_OUT_BASELO_IDX]=0;
 }
 
 /*
@@ -213,6 +229,7 @@ fmi2Status COSMPTrafficAgent::doCalc(fmi2Real currentCommunicationPoint, fmi2Rea
     osi3::SensorView currentViewIn;
     osi3::TrafficCommand currentCommandIn;
     osi3::TrafficUpdate currentOut;
+    setlevel4to5::DynamicsRequest currentDynReq;
     double time = currentCommunicationPoint;
     normal_log("OSI","Calculating Trajectory Agent at %f for %f (step size %f)",currentCommunicationPoint,time,communicationStepSize);
 
@@ -237,6 +254,11 @@ fmi2Status COSMPTrafficAgent::doCalc(fmi2Real currentCommunicationPoint, fmi2Rea
     /* Adjust Timestamp */
     currentOut.mutable_timestamp()->set_seconds((long long int)floor(time));
     currentOut.mutable_timestamp()->set_nanos((int)((time - floor(time))*1000000000.0));
+    currentDynReq.Clear();
+    currentDynReq.mutable_version()->CopyFrom(osi3::InterfaceVersion::descriptor()->file()->options().GetExtension(osi3::current_interface_version));
+    /* Adjust Timestamp */
+    currentDynReq.mutable_timestamp()->set_seconds((long long int)floor(time));
+    currentDynReq.mutable_timestamp()->set_nanos((int)((time - floor(time))*1000000000.0));
 
     /* Determine Our Vehicle ID and copy external state */
     osi3::Identifier ego_id = currentViewIn.global_ground_truth().host_vehicle_id();
@@ -251,10 +273,11 @@ fmi2Status COSMPTrafficAgent::doCalc(fmi2Real currentCommunicationPoint, fmi2Rea
             });
 
     /* Update Trajectory */
-    agentModel.step(time, communicationStepSize, currentViewIn, currentCommandIn, currentOut);
+    agentModel.step(time, communicationStepSize, currentViewIn, currentCommandIn, currentOut, currentDynReq);
 
     /* Serialize */
     set_fmi_traffic_update_out(currentOut);
+    set_fmi_dynamics_request_out(currentDynReq);
     set_fmi_valid(true);
  
     return fmi2OK;

@@ -549,8 +549,8 @@ void futureLanes(osi3::SensorView& sensorView, osi3::TrafficCommand& commandData
 	//action.CopyFrom(commandData.action(0).follow_trajectory_action());	
 	//Point2D destination(traj_action.trajectory_point(traj_action.trajectory_point_size() - 1).position().x(),
 	//	traj_action.trajectory_point(traj_action.trajectory_point_size() - 1).position().y());
-	//Point2D destination(-100.0, 90.0);
-	Point2D destination(19.0, 123.0);
+	Point2D destination(-100.0, 90.0);
+	//Point2D destination(19.0, 123.0);
 	//Point2D destination(104.0, 20.0);
 	
 	std::cout << "destination :" << destination.x << "," << destination.y << "\n";

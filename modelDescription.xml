@@ -81,16 +81,36 @@
         <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="OSMPTrafficUpdateOut" role="size" mime-type="application/x-open-simulation-interface; type=TrafficUpdate; version=3.0.0"/></Tool>
       </Annotations>
     </ScalarVariable>
+    <ScalarVariable name="OSMPDynamicsRequestOut.base.lo" valueReference="9" causality="output" variability="discrete" initial="exact">
+      <Integer start="0"/>
+      <Annotations>
+        <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="OSMPDynamicsRequestOut" role="base.lo" mime-type="application/x-open-simulation-interface; type=DynamicsRequest; version=3.0.0"/></Tool>
+      </Annotations>
+    </ScalarVariable>
+    <ScalarVariable name="OSMPDynamicsRequestOut.base.hi" valueReference="10" causality="output" variability="discrete" initial="exact">
+      <Integer start="0"/>
+      <Annotations>
+        <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="OSMPDynamicsRequestOut" role="base.hi" mime-type="application/x-open-simulation-interface; type=DynamicsRequest; version=3.0.0"/></Tool>
+      </Annotations>
+    </ScalarVariable>
+    <ScalarVariable name="OSMPDynamicsRequestOut.size" valueReference="11" causality="output" variability="discrete" initial="exact">
+      <Integer start="0"/>
+      <Annotations>
+        <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="OSMPDynamicsRequestOut" role="size" mime-type="application/x-open-simulation-interface; type=DynamicsRequest; version=3.0.0"/></Tool>
+      </Annotations>
+    </ScalarVariable>
     <ScalarVariable name="valid" valueReference="0" causality="output" variability="discrete" initial="exact">
       <Boolean start="false"/>
     </ScalarVariable>
   </ModelVariables>
   <ModelStructure>
     <Outputs>
+      <Unknown index="6"/>
       <Unknown index="7"/>
       <Unknown index="8"/>
       <Unknown index="9"/>
       <Unknown index="10"/>
+      <Unknown index="11"/>
     </Outputs>    
   </ModelStructure>
 </fmiModelDescription>

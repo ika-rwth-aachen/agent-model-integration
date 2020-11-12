@@ -107,7 +107,7 @@ void IkaAgent::init()
 }
 
 
-int IkaAgent::step(double time, double stepSize, osi3::SensorView &sensorViewData, osi3::TrafficCommand &commandData, osi3::TrafficUpdate &out)
+int IkaAgent::step(double time, double stepSize, osi3::SensorView &sensorViewData, osi3::TrafficCommand &commandData, osi3::TrafficUpdate &out, setlevel4to5::DynamicsRequest & dynOut)
 {
 	if (sensorViewData.host_vehicle_id().value() != 44) return 0;
 	//----------------
@@ -173,6 +173,8 @@ int IkaAgent::step(double time, double stepSize, osi3::SensorView &sensorViewDat
 
 	//return getTrajPoint(time, out);
 	return applyDriverOutput(time, out);
+	dynOut.set_longitudinal_acceleration_target(drState->subconscious.a);
+	dynOut.set_curvature_target(drState->subconscious.kappa);
 }
 
 int IkaAgent::terminate()
