@@ -118,7 +118,7 @@ int xy2curv(std::vector<Point2D> pos, std::vector<double>& s, std::vector<double
  * @param cl centerline (can also be boundary line)
  * @param closest
  */
-int closestCenterlinePoint(Point2D point, std::vector<Point2D>& cl, Point2D& closest) {
+int closestCenterlinePoint(const Point2D point, const std::vector<Point2D>& cl, Point2D& closest) {
 
 	for (int i = 1; i < cl.size(); i++) {	//IMPROVE finding correct points (x1,y1)(x2,y2) without iterating over entire centerline
 		double x1 = cl[i - 1].x;
@@ -204,61 +204,57 @@ int getXY(osi3::Lane* l, std::vector<Point2D>& pos)
 }
 
 /**
- * @brief calculates width of lane
- *
- * width of lane computed at all centerline points and stored in vector 'width'
- *
- * @param cl centerline points
- * @param lane
- * @param width
+ * @brief calculates width of lane at a point if the lane has adjascent lanes
+ * 
+ * 
+ * @param point width at this point
+ * @param lane lane corresponding to point
  * @param groundTruth
+ * @return width
  */
-int calcWidth(std::vector<Point2D>& cl, osi3::Lane* lane, std::vector<double>& width, osi3::GroundTruth* groundTruth) {
-
-	// find correct boundaries
-	osi3::LaneBoundary lB;
-	osi3::LaneBoundary rB;
-
-	int lBId = lane->classification().left_lane_boundary_id(0).value();
-	int rBId = lane->classification().right_lane_boundary_id(0).value();
-
-	for (int i = 0; i < groundTruth->lane_boundary_size(); i++)
-	{
-		if (groundTruth->lane_boundary(i).id().value() == lBId)
-		{
-			lB = groundTruth->lane_boundary(i);
-		}
-		if (groundTruth->lane_boundary(i).id().value() == rBId)
-		{
-			rB = groundTruth->lane_boundary(i);
-		}
-	}
-
+double calcWidth(const Point2D point, osi3::Lane* lane, osi3::GroundTruth* groundTruth) {
+	
+	std::vector<int> lBIds, rBIds;
 	std::vector<Point2D> lBPoints, rBPoints;
 
-	for (int i = 0; i < lB.boundary_line_size(); i++) {
-
-		Point2D point(lB.boundary_line(i).position().x(), lB.boundary_line(i).position().y());
-		lBPoints.push_back(point);
+	//std::cout << "left:"<< lane->classification().left_lane_boundary_id_size()<<" right:"<< lane->classification().right_lane_boundary_id_size()<<"\n";
+	for (int i = 0; i < lane->classification().left_lane_boundary_id_size(); i++) {
+		lBIds.push_back(lane->classification().left_lane_boundary_id(i).value());
 	}
-	for (int i = 0; i < rB.boundary_line_size(); i++) {
-
-		Point2D point(rB.boundary_line(i).position().x(), rB.boundary_line(i).position().y());
-		rBPoints.push_back(point);
+	for (int i = 0; i < lane->classification().right_lane_boundary_id_size(); i++) {
+		rBIds.push_back(lane->classification().right_lane_boundary_id(i).value());
 	}
 
-	// for each horizon knot, calculate the distance between the
-	//corresponding  x,y point and the lane boundary
-	for (int i = 0; i < cl.size(); i++) {
+	if (lBIds.size() == 0 || rBIds.size() == 0) return 0;
+	
+	for (int i = 0; i < groundTruth->lane_boundary_size(); i++)
+	{
+		if (find(lBIds.begin(), lBIds.end(), groundTruth->lane_boundary(i).id().value()) != lBIds.end())
+		{
+			for (int i = 0; i < groundTruth->lane_boundary(i).boundary_line_size(); i++) {
+				Point2D point(
+					groundTruth->lane_boundary(i).boundary_line(i).position().x(),
+					groundTruth->lane_boundary(i).boundary_line(i).position().y());
+				lBPoints.push_back(point);
+			}
+		}
+		else if (find(rBIds.begin(), rBIds.end(), groundTruth->lane_boundary(i).id().value()) != rBIds.end())
+		{
+			for (int i = 0; i < groundTruth->lane_boundary(i).boundary_line_size(); i++) {
 
-		Point2D rPoint, lPoint;
-		closestCenterlinePoint(cl[i], lBPoints, lPoint);
-		closestCenterlinePoint(cl[i], rBPoints, rPoint);
-
-		double w = sqrt(pow(lPoint.x - rPoint.x, 2) + pow(lPoint.y - rPoint.y, 2));
-		width.push_back(w);
+				Point2D point(
+					groundTruth->lane_boundary(i).boundary_line(i).position().x(),
+					groundTruth->lane_boundary(i).boundary_line(i).position().y());
+				rBPoints.push_back(point);
+			}
+		}
 	}
-	return 0;
+
+	Point2D rPoint, lPoint;
+	closestCenterlinePoint(point, lBPoints, lPoint);
+	closestCenterlinePoint(point, rBPoints, rPoint);
+
+	return sqrt(pow(lPoint.x - rPoint.x, 2) + pow(lPoint.y - rPoint.y, 2));
 }
 
 
@@ -502,60 +498,14 @@ bool BFS(std::vector<int> adj[], int src, int dest, int num_vertices,
 	return false;
 }
 
-
 /**
- * @brief determines lanes along Trajectory passed by TrafficCommand
+ * @brief determines lane closest to a point
  *
- * @param SensorView
- * @param TrafficCommand
- * @param futureLanes
+ * @param groundTruth
+ * @param point
+ * @return id of lane
  */
-void futureLanes(osi3::SensorView& sensorView, osi3::TrafficCommand& commandData, std::vector<int>& futureLanes) {
-
-	osi3::GroundTruth* groundTruth = sensorView.mutable_global_ground_truth();
-	osi3::MovingObject host;
-	int start;
-	int dest;
-
-	//find Host
-	for (int i = 0; i < groundTruth->moving_object_size(); i++) {
-		if (groundTruth->moving_object(i).id().value() == sensorView.host_vehicle_id().value())
-			host = groundTruth->moving_object(i);
-	}
-
-	//needs an initial assigned lane that is unambiguous
-	if (host.assigned_lane_id_size() < 2) {
-		start = findLaneId(groundTruth, host.assigned_lane_id(0).value());
-		std::cout << "starting on lane : " << host.assigned_lane_id(0).value() << std::endl;
-	}
-	else {
-		//determine assigned lane TODO
-	}
-
-	// check for traffic commands
-	osi3::FollowPathAction path_action;	
-	osi3::FollowTrajectoryAction traj_action;	
-	for (int i = 0; i < commandData.action_size(); i++) {
-		if (commandData.action(i).has_follow_path_action())
-			path_action.CopyFrom(commandData.action(i).follow_path_action());
-		if (commandData.action(i).has_follow_trajectory_action()){
-			traj_action.CopyFrom(commandData.action(i).follow_trajectory_action());
-			//std::cout << "has traj. action with length: " << traj_action.trajectory_point_size() << "\n";
-			//std::cout << "first point: " << traj_action.trajectory_point(0).position().x() << "\n";
-		}
-	}
-	//TrajectoryAction contains desired Trajectory 
-	//osi3::FollowTrajectoryAction action;
-	//action.CopyFrom(commandData.action(0).follow_trajectory_action());	
-	//Point2D destination(traj_action.trajectory_point(traj_action.trajectory_point_size() - 1).position().x(),
-	//	traj_action.trajectory_point(traj_action.trajectory_point_size() - 1).position().y());
-	Point2D destination(-100.0, 90.0);
-	//Point2D destination(19.0, 123.0);
-	//Point2D destination(104.0, 20.0);
-	
-	std::cout << "destination :" << destination.x << "," << destination.y << "\n";
-
-	//determine last lane
+int closestLane(osi3::GroundTruth* groundTruth, const Point2D& point) {
 	std::vector<Point2D> centerline;
 	double distance = INFINITY;
 	int destId = 127;
@@ -563,12 +513,12 @@ void futureLanes(osi3::SensorView& sensorView, osi3::TrafficCommand& commandData
 	for (int i = 0; i < groundTruth->lane_size(); i++) {
 		centerline.clear();
 		osi3::Lane cur_lane;
-		cur_lane.CopyFrom( groundTruth->lane(i) );
+		cur_lane.CopyFrom(groundTruth->lane(i));
 		getXY(&cur_lane, centerline);
-		
+
 		Point2D closest;
-		closestCenterlinePoint(destination, centerline, closest);
-		double d = (closest.x - destination.x) * (closest.x - destination.x) + (closest.y - destination.y) * (closest.y - destination.y);
+		closestCenterlinePoint(point, centerline, closest);
+		double d = (closest.x - point.x) * (closest.x - point.x) + (closest.y - point.y) * (closest.y - point.y);
 		std::cout << "centerline pt count: " << centerline.size() << " with dist: " << d << " and id: " << cur_lane.id().value() << "\n";
 		if (distance > d) {
 			distance = d;
@@ -577,7 +527,28 @@ void futureLanes(osi3::SensorView& sensorView, osi3::TrafficCommand& commandData
 		}
 	}
 	std::cout << "distance = " << distance << std::endl;
-	dest = findLaneId(groundTruth, destId);
+	return destId;
+}
+
+/**
+ * @brief determines lanes along Trajectory passed by TrafficCommand
+ *
+ * @param groundTruth
+ * @param start index of starting lane
+ * @param destination point to be reached
+ * @param futureLanes
+ */
+void futureLanes(osi3::GroundTruth* groundTruth, const int& startIdx, const Point2D& destination, std::vector<int>& futureLanes) {
+
+	osi3::MovingObject host;
+	// destination INDEX
+	int destIdx;
+
+	
+	std::cout << "destination :" << destination.x << "," << destination.y << "\n";
+
+	int destId = closestLane(groundTruth, destination);
+	destIdx = findLaneId(groundTruth, destId);
 	std::cout<< " on lane " << destId << std::endl;
 	//Graph setup
 	//create adjacency list for graph representing lane connections
@@ -594,23 +565,27 @@ void futureLanes(osi3::SensorView& sensorView, osi3::TrafficCommand& commandData
 	int pred[groundTruth->lane_size()];
 	
 
-	if (BFS(adj, start, dest, groundTruth->lane_size(), pred) == false) {
-		
-		futureLanes.push_back(groundTruth->lane(start).id().value());
+	if (BFS(adj, startIdx, destIdx, groundTruth->lane_size(), pred) == false) {
+		//add starting lane into futureLanes if it is not already contained
+		if(!futureLanes.empty() && futureLanes.back() != groundTruth->lane(startIdx).id().value())
+			futureLanes.push_back(groundTruth->lane(startIdx).id().value());
 		return;
 	}
 
 	// vector path stores the shortest path 
 	std::vector<int> path;
-	int crawl = dest;
+	int crawl = destIdx;
 	path.push_back(crawl);
 	while (pred[crawl] != -1) {
 		path.push_back(pred[crawl]);
 		crawl = pred[crawl];
 	}
 
-	for (int i = path.size() - 1; i >= 0; i--)
+	for (int i = path.size() - 1; i >= 0; i--) {
+		if (!futureLanes.empty() && futureLanes.back() == groundTruth->lane(path[i]).id().value())
+			continue;
 		futureLanes.push_back(groundTruth->lane(path[i]).id().value());
+	}
 
 }
 

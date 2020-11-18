@@ -47,6 +47,9 @@ private:
     bool trajSet;
     bool initialized = false;
     osi3::FollowTrajectoryAction traj;
+    int trajActionId = 127;
+    int pathActionId = 127;
+    int speedActionId = 127;
     Pose pose;
 
     double lastS;
@@ -68,6 +71,7 @@ private:
     VehicleModel::Parameters *vehParam;
 
     int adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input& input, std::vector<int>& futureLanes, double time, int h_id);
+    int parseTrafficCommand(osi3::SensorView& sensorViewData, osi3::TrafficCommand& commandData);
 
     int getTrajPoint(double time, osi3::TrafficUpdate &out);
 	int applyDriverOutput(double time, osi3::TrafficUpdate &out);
