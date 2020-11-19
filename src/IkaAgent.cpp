@@ -222,7 +222,7 @@ int IkaAgent::parseTrafficCommand(osi3::SensorView& sensorViewData, osi3::Traffi
 				startingLaneIdx = findLaneId(groundTruth, host.assigned_lane_id(0).value());
 			}
 			else {
-				int id = closestLane(groundTruth, Point2D(traj.trajectory_point(0).position().x(), traj.trajectory_point(0).position().y()));
+				int id = closestLane(groundTruth, Point2D(path.path_point(0).position().x(), path.path_point(0).position().y()));
 				startingLaneIdx = findLaneId(groundTruth, id);
 			}
 
