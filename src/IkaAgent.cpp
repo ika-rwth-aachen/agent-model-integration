@@ -138,7 +138,7 @@ int IkaAgent::step(double time, double stepSize, osi3::SensorView &sensorViewDat
 	//Translate sensorViewData to agent_model::input
 	adapterOsiToInput(sensorViewData, _input, lanes , out.timestamp().seconds()+(out.timestamp().nanos()*0.000000001), sensorViewData.host_vehicle_id().value());
 	this->AgentModel::step(time);
-	
+	std::cout << "Vehicle before Step: x=\t" << vehState->position.x << ", y=\t" << vehState->position.y << ", psi=\t" << vehState->psi << std::endl;
 	pedalContr.step(stepSize);
 	steeringContr.step(stepSize);	
 	// Perform Vehicle Model step
@@ -169,8 +169,10 @@ int IkaAgent::step(double time, double stepSize, osi3::SensorView &sensorViewDat
     }*/
 
 	//return getTrajPoint(time, out);
-	dynOut.set_longitudinal_acceleration_target(drState->subconscious.a);
-	dynOut.set_curvature_target(drState->subconscious.kappa);
+	std::cout << "Driver out: pedal=\t" << vehInput->pedal << ", steer?\t" << vehInput->steer << std::endl;
+	std::cout << "Vehicle before Step: x=\t" << vehState->position.x << ", y=\t" << vehState->position.y << ", psi=\t" << vehState->psi << std::endl;
+	//dynOut.set_longitudinal_acceleration_target(drState->subconscious.a);
+	//dynOut.set_curvature_target(drState->subconscious.kappa);
 	return applyDriverOutput(time, out);
 }
 
