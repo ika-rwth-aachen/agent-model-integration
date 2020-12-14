@@ -162,8 +162,8 @@ int IkaAgent::step(double time, double stepSize, osi3::SensorView &sensorViewDat
 	
 	//std::cout << "Driver out: pedal=\t" << vehInput->pedal << ", steer?\t" << vehInput->steer << std::endl;
 	//std::cout << "Vehicle before Step: x=\t" << vehState->position.x << ", y=\t" << vehState->position.y << ", psi=\t" << vehState->psi << std::endl;
-	//dynOut.set_longitudinal_acceleration_target(drState->subconscious.a);
-	//dynOut.set_curvature_target(drState->subconscious.kappa);
+	dynOut.set_longitudinal_acceleration_target(drState->subconscious.a);
+	dynOut.set_curvature_target(drState->subconscious.kappa);
 	return applyDriverOutput(time, out);
 }
 
