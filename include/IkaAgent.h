@@ -35,15 +35,16 @@ struct Pose {
 
 class IkaAgent : public AgentModel {
 public:
-    explicit IkaAgent() {}
-    ~IkaAgent() override = default;
+    explicit IkaAgent() {};
+    ~IkaAgent() {};// = default;
 
-    virtual void init();
+    
     int step(double time, double stepSize, osi3::SensorView &sensorViewData, osi3::TrafficCommand &commandData, osi3::TrafficUpdate &out, setlevel4to5::DynamicsRequest & dynOut);
     int terminate();
 
 
 private:
+    void init();
     bool trajSet;
     bool initialized = false;
     osi3::FollowTrajectoryAction traj;

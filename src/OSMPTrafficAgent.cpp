@@ -113,7 +113,10 @@ bool COSMPTrafficAgent::get_fmi_sensor_view_in(osi3::SensorView& data)
     if (integer_vars[FMI_INTEGER_SENSORVIEW_IN_SIZE_IDX] > 0) {
         void* buffer = decode_integer_to_pointer(integer_vars[FMI_INTEGER_SENSORVIEW_IN_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORVIEW_IN_BASELO_IDX]);
         normal_log("OSMP","Got %08X %08X, reading from %p ...",integer_vars[FMI_INTEGER_SENSORVIEW_IN_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORVIEW_IN_BASELO_IDX],buffer);
-        data.ParseFromArray(buffer,integer_vars[FMI_INTEGER_SENSORVIEW_IN_SIZE_IDX]);
+        if( !data.ParseFromArray(buffer,integer_vars[FMI_INTEGER_SENSORVIEW_IN_SIZE_IDX]) ) {
+            normal_log("OSMP", "Could not deserialize SensorView");
+            return false;
+        }
         return true;
     } else {
         return false;
@@ -138,16 +141,17 @@ void COSMPTrafficAgent::set_fmi_traffic_update_out(const osi3::TrafficUpdate& da
     encode_pointer_to_integer(currentOutputBuffer.data(),integer_vars[FMI_INTEGER_TRAFFICUPDATE_OUT_BASEHI_IDX],integer_vars[FMI_INTEGER_TRAFFICUPDATE_OUT_BASELO_IDX]);
     integer_vars[FMI_INTEGER_TRAFFICUPDATE_OUT_SIZE_IDX]=(fmi2Integer)currentOutputBuffer.length();
     normal_log("OSMP","Providing %08X %08X, writing from %p ...",integer_vars[FMI_INTEGER_TRAFFICUPDATE_OUT_BASEHI_IDX],integer_vars[FMI_INTEGER_TRAFFICUPDATE_OUT_BASELO_IDX],currentOutputBuffer.data());
+    using std::swap;
     swap(currentOutputBuffer,lastOutputBuffer);
 }
 
 void COSMPTrafficAgent::set_fmi_dynamics_request_out(const setlevel4to5::DynamicsRequest& data)
 {
-    data.SerializeToString(&currentOutputBuffer);
-    encode_pointer_to_integer(currentOutputBuffer.data(),integer_vars[FMI_INTEGER_DYNAMICSREQUEST_OUT_BASEHI_IDX],integer_vars[FMI_INTEGER_DYNAMICSREQUEST_OUT_BASELO_IDX]);
-    integer_vars[FMI_INTEGER_DYNAMICSREQUEST_OUT_SIZE_IDX]=(fmi2Integer)currentOutputBuffer.length();
-    normal_log("OSMP","Providing %08X %08X, writing from %p ...",integer_vars[FMI_INTEGER_DYNAMICSREQUEST_OUT_BASEHI_IDX],integer_vars[FMI_INTEGER_DYNAMICSREQUEST_OUT_BASELO_IDX],currentOutputBuffer.data());
-    swap(currentOutputBuffer,lastOutputBuffer);
+    data.SerializeToString(&currentDynamicsRequestBuffer);
+    encode_pointer_to_integer(currentDynamicsRequestBuffer.data(),integer_vars[FMI_INTEGER_DYNAMICSREQUEST_OUT_BASEHI_IDX],integer_vars[FMI_INTEGER_DYNAMICSREQUEST_OUT_BASELO_IDX]);
+    integer_vars[FMI_INTEGER_DYNAMICSREQUEST_OUT_SIZE_IDX]=(fmi2Integer)currentDynamicsRequestBuffer.length();
+    normal_log("OSMP","Providing %08X %08X, writing from %p ...",integer_vars[FMI_INTEGER_DYNAMICSREQUEST_OUT_BASEHI_IDX],integer_vars[FMI_INTEGER_DYNAMICSREQUEST_OUT_BASELO_IDX],currentDynamicsRequestBuffer.data());
+    swap(currentDynamicsRequestBuffer,lastDynamicsRequestBuffer);
 }
 
 void COSMPTrafficAgent::reset_fmi_traffic_update_out()
@@ -317,7 +321,7 @@ COSMPTrafficAgent::COSMPTrafficAgent(fmi2String theinstanceName, fmi2Type thefmu
 
 COSMPTrafficAgent::~COSMPTrafficAgent()
 {
-
+    
 }
 
 

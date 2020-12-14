@@ -60,7 +60,7 @@ using namespace std;
 #define FMI_INTEGER_DYNAMICSREQUEST_OUT_BASELO_IDX 9
 #define FMI_INTEGER_DYNAMICSREQUEST_OUT_BASEHI_IDX 10
 #define FMI_INTEGER_DYNAMICSREQUEST_OUT_SIZE_IDX 11
-#define FMI_INTEGER_LAST_IDX FMI_INTEGER_TRAFFICUPDATE_OUT_SIZE_IDX
+#define FMI_INTEGER_LAST_IDX FMI_INTEGER_DYNAMICSREQUEST_OUT_SIZE_IDX
 #define FMI_INTEGER_VARS (FMI_INTEGER_LAST_IDX+1)
 
 /* Real Variables */
@@ -208,6 +208,8 @@ protected:
     string lastOutputBuffer;
     string currentConfigRequestBuffer;
     string lastConfigRequestBuffer;
+    string currentDynamicsRequestBuffer;
+    string lastDynamicsRequestBuffer;
 
     IkaAgent agentModel;
 
