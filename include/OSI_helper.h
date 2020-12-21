@@ -42,18 +42,18 @@ std::vector<double> gradient(std::vector<double> x, std::vector<double> y, int o
 	{
 		// calculate interior gradient values with central differences
 		for (int i = 1; i < n - 1; i++) {
-			double h1 = (x[i] - x[i-1]), h2 = (x[i + 1] - x[i]); 
+			double h1 = (x[i] - x[i - 1]), h2 = (x[i + 1] - x[i]);
 			res[i] = (2.0 / (h1 + h2)) * ((y[i + 1] - y[i]) / h2 - (y[i] - y[i - 1]) / h1);
 		}
 
 		// calculate gradient at edges with one sided differences
 		//res[0] = (y[2] - 2 * y[1] + y[0]) / pow(x[1] - x[0], 2);
 		double h1 = (x[1] - x[0]), h2 = (x[2] - x[1]);
-		res[0] = (2.0 / (h1 + h2)) * ( (y[2] - y[1]) / h2 - (y[1] - y[0]) / h1 );
-		h1 = (x[n-1] - x[n-2]), h2 = (x[n-2] - x[n-3]);
-		res[n - 1] = (2.0 / (h1 + h2)) * ( (y[n-1] - y[n-2]) / h1 - (y[n-2] - y[n-3]) / h2 );
+		res[0] = (2.0 / (h1 + h2)) * ((y[2] - y[1]) / h2 - (y[1] - y[0]) / h1);
+		h1 = (x[n - 1] - x[n - 2]), h2 = (x[n - 2] - x[n - 3]);
+		res[n - 1] = (2.0 / (h1 + h2)) * ((y[n - 1] - y[n - 2]) / h1 - (y[n - 2] - y[n - 3]) / h2);
 		//res[n - 1] = (y[n - 1] - 2 * y[n - 2] + y[n - 3]) / pow(x[n - 1] - x[n - 2], 2);
-		
+
 	}
 
 	return res;
@@ -62,7 +62,7 @@ std::vector<double> gradient(std::vector<double> x, std::vector<double> y, int o
 
 /**
  * @brief s, psi, kappa from xy coordinates
- *	
+ *
  *
  * @param pos position
  * @param s
@@ -84,7 +84,7 @@ int xy2curv(std::vector<Point2D> pos, std::vector<double>& s, std::vector<double
 
 		s.push_back(s.back() + sqrt(pow(dx, 2) + pow(dy, 2)));
 	}
-	
+
 
 	// calculate psi and kappa
 	std::vector<double> dxds = gradient(s, x, 1);
@@ -96,16 +96,16 @@ int xy2curv(std::vector<Point2D> pos, std::vector<double>& s, std::vector<double
 	for (int i = 0; i < pos.size(); i++)
 	{
 		if (pos.size() > 2) {
-		double top = dxds[i] * dyydss[i] - dxxdss[i] * dyds[i];
-		double bot = pow(dxds[i] * dxds[i] + dyds[i] * dyds[i], 1.5);
-		k.push_back(top / bot);
+			double top = dxds[i] * dyydss[i] - dxxdss[i] * dyds[i];
+			double bot = pow(dxds[i] * dxds[i] + dyds[i] * dyds[i], 1.5);
+			k.push_back(top / bot);
 		}
 		else {
 			k.push_back(0.0);
 		}
-		
+
 		double p = atan2(dyds[i], dxds[i]);
-		psi.push_back(p>=0?p:p+2* M_PI);
+		psi.push_back(p >= 0 ? p : p + 2 * M_PI);
 	}
 
 	return 0;
@@ -169,7 +169,7 @@ int closestCenterlinePoint(const Point2D point, const std::vector<Point2D>& cl, 
 			closest.y = cl[0].y + t * (cl[0].y - cl[1].y);
 			return 0;
 		}
-		
+
 	}
 
 	return 0;
@@ -193,27 +193,27 @@ int getXY(osi3::Lane* l, std::vector<Point2D>& pos)
 		return 0;
 	}
 	else {
-		for (int i = l->classification().centerline_size()-1; i >= 0; i--)
+		for (int i = l->classification().centerline_size() - 1; i >= 0; i--)
 		{
 			Point2D point(l->classification().centerline(i).x(), l->classification().centerline(i).y());
 			pos.push_back(point);
 		}
 		return 0;
-	}	
+	}
 
 }
 
 /**
  * @brief calculates width of lane at a point if the lane has adjascent lanes
- * 
- * 
+ *
+ *
  * @param point width at this point
  * @param lane lane corresponding to point
  * @param groundTruth
  * @return width
  */
 double calcWidth(const Point2D point, osi3::Lane* lane, osi3::GroundTruth* groundTruth) {
-	
+
 	std::vector<int> lBIds, rBIds;
 	std::vector<Point2D> lBPoints, rBPoints;
 
@@ -227,25 +227,26 @@ double calcWidth(const Point2D point, osi3::Lane* lane, osi3::GroundTruth* groun
 
 	if (lBIds.size() == 0 || rBIds.size() == 0) return 0;
 	
+
 	for (int i = 0; i < groundTruth->lane_boundary_size(); i++)
 	{
 		if (find(lBIds.begin(), lBIds.end(), groundTruth->lane_boundary(i).id().value()) != lBIds.end())
 		{
-			for (int i = 0; i < groundTruth->lane_boundary(i).boundary_line_size(); i++) {
-				Point2D point(
-					groundTruth->lane_boundary(i).boundary_line(i).position().x(),
-					groundTruth->lane_boundary(i).boundary_line(i).position().y());
-				lBPoints.push_back(point);
+			for (int k = 0; k < groundTruth->lane_boundary(i).boundary_line_size(); k++) {
+				Point2D tpoint(
+					groundTruth->lane_boundary(i).boundary_line(k).position().x(),
+					groundTruth->lane_boundary(i).boundary_line(k).position().y());
+				lBPoints.push_back(tpoint);
 			}
 		}
 		else if (find(rBIds.begin(), rBIds.end(), groundTruth->lane_boundary(i).id().value()) != rBIds.end())
 		{
-			for (int i = 0; i < groundTruth->lane_boundary(i).boundary_line_size(); i++) {
+			for (int k = 0; k < groundTruth->lane_boundary(i).boundary_line_size(); k++) {
 
-				Point2D point(
-					groundTruth->lane_boundary(i).boundary_line(i).position().x(),
-					groundTruth->lane_boundary(i).boundary_line(i).position().y());
-				rBPoints.push_back(point);
+				Point2D tpoint(
+					groundTruth->lane_boundary(i).boundary_line(k).position().x(),
+					groundTruth->lane_boundary(i).boundary_line(k).position().y());
+				rBPoints.push_back(tpoint);
 			}
 		}
 	}
@@ -266,83 +267,43 @@ double calcWidth(const Point2D point, osi3::Lane* lane, osi3::GroundTruth* groun
  * @param end
  * @param cl centerline
  */
-double xy2s(Point2D start, Point2D end, std::vector<Point2D>& cl) {
-
+double xy2s(const Point2D start, const Point2D end, const std::vector<Point2D>& cl) {
 	double s = 0;
-	double ds = 0;
-	int startIdx = -1, endIdx = -1;
-	bool foundS = false, foundE = false;
-	double sum_s = 0, sum_e = 0;
+	Point2D startCl, endCl;
+	int startIdx = closestCenterlinePoint(start, cl, startCl);
+	int endIdx = closestCenterlinePoint(end, cl, endCl);
 
+	if (startIdx == endIdx)
+		return sqrt((endCl.x - startCl.x) * (endCl.x - startCl.x) + (endCl.y - startCl.y) * (endCl.y - startCl.y));
 
-	for (int i = 1; i < cl.size(); i++) {	//IMPROVE finding correct points (x1,y1)(x2,y2) without iterating over entire centerline
-		double x1 = cl[i - 1].x;
-		double x2 = cl[i].x;
-		double y1 = cl[i - 1].y;
-		double y2 = cl[i].y;
-
-		//compute orthogonal projection of (x,y) onto the parameterized line connecting (x1,y1) and (x2,y2)
-		double l2 = (x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1);
-		double dot = (start.x - x1) * (x2 - x1) + (start.y - y1) * (y2 - y1);
-		double t_s = dot / l2;
-		sum_s += t_s;
-
-		l2 = (x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1);
-		dot = (end.x - x1) * (x2 - x1) + (end.y - y1) * (y2 - y1);
-		double t_e = dot / l2;
-		sum_e += t_e;
-
-		if (t_s >= 0 && t_s <= 1) { //correct points (x1,y1)(x2,y2) were found (projection is in segment)
-			ds = sqrt(pow(start.x - cl[i].x, 2) + pow(start.y - cl[i].y, 2));
-			s += ds;
-			startIdx = i;
-			foundS = true;
-		}
-
-		if (t_e >= 0 && t_e <= 1) { //correct points (x1,y1)(x2,y2) were found (projection is in segment)
-			ds = sqrt(pow(end.x - cl[i - 1].x, 2) + pow(end.y - cl[i - 1].y, 2));
-			endIdx = i - 1;
-			s += ds;
-			foundE = true;
-		}
-		
+	if (startIdx == 0) {
+		// starting point before scope of centerline
+		s += sqrt((cl.front().x - startCl.x) * (cl.front().x - startCl.x) + (cl.front().y - startCl.y) * (cl.front().y - startCl.y));
+	}
+	else if (startIdx < cl.size()) {
+		if (endIdx == 0) //this would mean end before cl, but start within/after cl. This should not happen
+			return -1;
+		// start/end points are most likely between two centerline points. Add distance to closest centerline point for start.
+		s += sqrt((cl[startIdx].x - startCl.x) * (cl[startIdx].x - startCl.x) + (cl[startIdx].y - startCl.y) * (cl[startIdx].y - startCl.y));
+	}
+	if (endIdx >= cl.size()) {
+		//ending point after scope of centerline
+		s += sqrt((endCl.x - cl.back().x) * (endCl.x - cl.back().x) + (endCl.y - cl.back().y) * (endCl.y - cl.back().y));
+	}
+	else if (endIdx != 0) {
+		// start/end points are most likely between two centerline points. Add distance to closest centerline point for end.
+		if (startIdx >= cl.size()) //this would mean start after cl, but end within/before cl. This should not happen
+			return -1;
+		s += sqrt((endCl.x - cl[endIdx - 1].x) * (endCl.x - cl[endIdx - 1].x) + (endCl.y - cl[endIdx - 1].y) * (endCl.y - cl[endIdx - 1].y));
 	}
 
-	//start, end beyond scope of cl. 
-	//Since cl is always in driving direction; start/ end can be before the scope of cl, in cl (then they were found before) or after cl ends.
-	if (!foundS && !foundE) {
-		if (sum_s < 0 && sum_e > 0) {
-			//start before cl, end after
-			s += sqrt(pow(start.x - cl.front().x, 2) + pow(start.y - cl.front().y, 2));
-			startIdx = -1;
-			s += sqrt(pow(end.x - cl.back().x, 2) + pow(end.y - cl.back().y, 2));
-			endIdx = cl.size() - 1;
-
-		}
-		else {
-			//start after, end before should not happen
-			//both after or both before:
-			return sqrt((start.x - end.x) * (start.x - end.x) + (start.y - end.y) * (start.y - end.y));
-		}
-	}
-	else if (!foundS && foundE) { //start before cl, end inside
-		s += sqrt(pow(start.x - cl.front().x, 2) + pow(start.y - cl.front().y, 2));
-		startIdx = -1;
-	}
-	else if (foundS && !foundE) { //start inside cl, end after
-		s += sqrt(pow(end.x - cl.back().x, 2) + pow(end.y - cl.back().y, 2));
-		endIdx = cl.size() - 1;
-	}
-		
-
-	for (int i = startIdx + 1; i <= endIdx; i++)
+	for (int i = startIdx + 1; i < endIdx; i++)
 	{
 		double dx = cl[i].x - cl[i - 1].x;
 		double dy = cl[i].y - cl[i - 1].y;
 
-		s += sqrt(pow(dx, 2) + pow(dy, 2));
+		s += sqrt(dx * dx + dy * dy);
 	}
-
 	return s;
 }
 
@@ -362,7 +323,7 @@ osi3::Lane* findLane(int id, osi3::GroundTruth* groundTruth) {
 }
 
 /**
- * @brief find a laneID in groundTruth.lane and return its index 
+ * @brief find a laneID in groundTruth.lane and return its index
  *
  * @param groundTruth
  * @param ID
@@ -382,15 +343,22 @@ int findLaneId(osi3::GroundTruth* groundTruth, int id) {
  * @param mapping map
  * @param egoLanePtr
  */
-void mapLanes(osi3::GroundTruth* groundTruth, std::unordered_map<int,int>& mapping, osi3::Lane* egoLanePtr) {
+void mapLanes(osi3::GroundTruth* groundTruth, std::unordered_map<int, int>& mapping, osi3::Lane* egoLanePtr, std::vector<int> futureLanes) {
 
-	osi3::Lane* current = egoLanePtr;
-	osi3::Lane* temp = nullptr;
+	osi3::Lane* current = nullptr;
 	int rightLaneCount = 0;
 	int leftLaneCount = 0;
 
-	do {//first iteration assigns egolane the id 0
-		mapping[current->id().value()] = rightLaneCount--;
+	//assigns all lanes along the path the id 0
+	for (int i = 0; i < futureLanes.size(); i++)
+		mapping[futureLanes[i]] = rightLaneCount;
+
+	if(egoLanePtr->classification().right_adjacent_lane_id_size() > 0)
+		current = findLane(egoLanePtr->classification().right_adjacent_lane_id(0).value(), groundTruth);
+
+	while (current != nullptr) {
+		
+		mapping[current->id().value()] = --rightLaneCount;
 		
 		if (current->classification().right_adjacent_lane_id_size() > 0) {
 			current = findLane(current->classification().right_adjacent_lane_id(0).value(), groundTruth);
@@ -398,11 +366,11 @@ void mapLanes(osi3::GroundTruth* groundTruth, std::unordered_map<int,int>& mappi
 		else {
 			current = nullptr;
 		}
-	} while (current != nullptr);
+	}
 
 
 	// reset current and do left lanes
-	if(egoLanePtr->classification().left_adjacent_lane_id_size() > 0)
+	if (egoLanePtr->classification().left_adjacent_lane_id_size() > 0)
 		current = findLane(egoLanePtr->classification().left_adjacent_lane_id(0).value(), groundTruth);
 
 	while (current != nullptr) {
@@ -437,16 +405,16 @@ void mapLanes(osi3::GroundTruth* groundTruth, std::unordered_map<int,int>& mappi
  * @brief creates adjacency list corresponding to lane_pairings
  *
  * @param groundTruth
- * @param adjacency 
+ * @param adjacency
  */
 void createGraph(osi3::GroundTruth* groundTruth, std::vector<int> adj[]) {
-	
+
 	for (int i = 0; i < groundTruth->lane_size(); i++) {
-		
+
 		for (int j = 0; j < groundTruth->lane(i).classification().lane_pairing_size(); j++) {
 
-			if (groundTruth->lane(i).classification().lane_pairing(j).antecessor_lane_id().value()== groundTruth->lane(i).id().value())
-				adj[i].push_back(findLaneId(groundTruth,groundTruth->lane(i).classification().lane_pairing(j).successor_lane_id().value()));
+			if (groundTruth->lane(i).classification().lane_pairing(j).antecessor_lane_id().value() == groundTruth->lane(i).id().value())
+				adj[i].push_back(findLaneId(groundTruth, groundTruth->lane(i).classification().lane_pairing(j).successor_lane_id().value()));
 
 			else adj[findLaneId(groundTruth, groundTruth->lane(i).classification().lane_pairing(j).antecessor_lane_id().value())].push_back(i);
 		}
@@ -467,23 +435,23 @@ bool BFS(std::vector<int> adj[], int src, int dest, int num_vertices,
 
 	for (int i = 0; i < num_vertices; i++) {
 		visited[i] = false;
-		
+
 		pred[i] = -1;
 	}
 
 	visited[src] = true;
-	
+
 	queue.push_back(src);
-	
+
 	// standard BFS algorithm 
 	while (!queue.empty()) {
-		
+
 		int u = queue.front();
 		queue.pop_front();
 		for (int i = 0; i < adj[u].size(); i++) {
 			if (visited[adj[u][i]] == false) {
 				visited[adj[u][i]] = true;
-				
+
 				pred[adj[u][i]] = u;
 				queue.push_back(adj[u][i]);
 
@@ -519,14 +487,14 @@ int closestLane(osi3::GroundTruth* groundTruth, const Point2D& point) {
 		Point2D closest;
 		closestCenterlinePoint(point, centerline, closest);
 		double d = (closest.x - point.x) * (closest.x - point.x) + (closest.y - point.y) * (closest.y - point.y);
-		std::cout << "centerline pt count: " << centerline.size() << " with dist: " << d << " and id: " << cur_lane.id().value() << "\n";
+		//std::cout << "centerline pt count: " << centerline.size() << " with dist: " << d << " and id: " << cur_lane.id().value() << "\n";
 		if (distance > d) {
 			distance = d;
 			destId = cur_lane.id().value();
 			//std::cout << "new lane " <<destId << " with distance " << distance << std::endl;
 		}
 	}
-	std::cout << "distance = " << distance << std::endl;
+	//std::cout << "distance = " << distance << std::endl;
 	return destId;
 }
 
@@ -544,18 +512,14 @@ void futureLanes(osi3::GroundTruth* groundTruth, const int& startIdx, const Poin
 	// destination INDEX
 	int destIdx;
 
-	
 	std::cout << "destination :" << destination.x << "," << destination.y << "\n";
-
 	int destId = closestLane(groundTruth, destination);
 	destIdx = findLaneId(groundTruth, destId);
-	std::cout<< " on lane " << destId << std::endl;
+	std::cout << " on lane " << destId << std::endl;
 	//Graph setup
 	//create adjacency list for graph representing lane connections
 	std::vector<int> adj[groundTruth->lane_size()];
-	
 	createGraph(groundTruth, adj);
-
 	//remove possible dublicates in adj[i]
 	for (int i = 0; i < groundTruth->lane_size(); i++) {
 		std::sort(adj[i].begin(), adj[i].end());
@@ -563,11 +527,11 @@ void futureLanes(osi3::GroundTruth* groundTruth, const int& startIdx, const Poin
 	}
 
 	int pred[groundTruth->lane_size()];
-	
+
 
 	if (BFS(adj, startIdx, destIdx, groundTruth->lane_size(), pred) == false) {
 		//add starting lane into futureLanes if it is not already contained
-		if(!futureLanes.empty() && futureLanes.back() != groundTruth->lane(startIdx).id().value())
+		if (!futureLanes.empty() && futureLanes.back() != groundTruth->lane(startIdx).id().value())
 			futureLanes.push_back(groundTruth->lane(startIdx).id().value());
 		return;
 	}
@@ -586,7 +550,6 @@ void futureLanes(osi3::GroundTruth* groundTruth, const int& startIdx, const Poin
 			continue;
 		futureLanes.push_back(groundTruth->lane(path[i]).id().value());
 	}
-
 }
 
 
@@ -595,7 +558,7 @@ void futureLanes(osi3::GroundTruth* groundTruth, const int& startIdx, const Poin
  *
  * @param pre-rotation point
  * @param post-rotation point
- * @param angle 
+ * @param angle
  */
 void transform(Point2D& pre, Point2D& post, double phi) {
 	double c = std::cos(phi);
@@ -618,7 +581,7 @@ void spline3(Point2D start, Point2D end, Point2D dStart, Point2D dEnd, std::vect
 
 	//angle between coordinate systems. Ensured that start --> end is positive x-direction in new coordiante system
 	double phi = (se.y > 0) ? std::acos(se.x / sqrt(se.x * se.x + se.y * se.y)) : -1 * std::acos(se.x / sqrt(se.x * se.x + se.y * se.y));
-	
+
 
 	transform(start, s, phi);
 	transform(end, e, phi);
@@ -628,7 +591,7 @@ void spline3(Point2D start, Point2D end, Point2D dStart, Point2D dEnd, std::vect
 	//maximum derivative is set to 50 ~ 89 degrees
 	der.x = abs(ds.x) > abs(ds.y / 50.0) ? ds.y / ds.x : std::copysignf(1, ds.x * ds.y) * 50;
 	der.y = abs(de.x) > abs(de.y / 50.0) ? de.y / de.x : std::copysignf(1, de.x * de.y) * 50;
-	
+
 	// creating spline of form f(x)= a + bx + cx^2 + dx^3, der.x contains f'(start.x), der.y contains f'(end.x)
 
 	double tmp = 1.0 / (pow(s.x - e.x, 3));
@@ -660,13 +623,13 @@ void spline3(Point2D start, Point2D end, Point2D dStart, Point2D dEnd, std::vect
 	}
 
 	// transform back
-	
+
 	Point2D temp;
 	for (int i = 0; i < cl.size(); i++) {
 		transform(cl[i], temp, -1.0 * phi);
 		cl[i] = temp;
 	}
- }
+}
 
 /**
  * @brief create linear spline connecting start and end
@@ -688,7 +651,7 @@ void spline1(Point2D start, Point2D end, std::vector<Point2D>& cl) {
 	for (int i = 1; i < norm; i++) {
 		cl.push_back(Point2D(start.x + i * se.x, start.y + i * se.y));
 	}
-	
+
 }
 
 /**
@@ -710,37 +673,37 @@ int horizonKnots(std::vector<Point2D> cl, std::vector<double>& s, std::vector<do
 
 	bool stop = false;
 	std::vector<double> interpolation(agent_model::NOH, 0);
-	
-		for (int i = 1; i < s.size() && !stop; i++) {
 
-			while ((s[i - 1] <= nextS) && (s[i] >= nextS)) {
-				
-				if (s[i - 1] == s[i]) s[i] += 0.3;
+	for (int i = 1; i < s.size() && !stop; i++) {
 
-				interpolation[j] = (nextS - s[i - 1]) / (s[i] - s[i - 1]);
+		while ((s[i - 1] <= nextS) && (s[i] >= nextS)) {
 
-				Point2D hKnot(cl[i - 1].x + interpolation[j] * (cl[i].x - cl[i - 1].x),
-					cl[i - 1].y + interpolation[j] * (cl[i].y - cl[i - 1].y));
+			if (s[i - 1] == s[i]) s[i] += 0.3;
 
-				horizon_global.push_back(hKnot);
+			interpolation[j] = (nextS - s[i - 1]) / (s[i] - s[i - 1]);
+
+			Point2D hKnot(cl[i - 1].x + interpolation[j] * (cl[i].x - cl[i - 1].x),
+				cl[i - 1].y + interpolation[j] * (cl[i].y - cl[i - 1].y));
+
+			horizon_global.push_back(hKnot);
 
 
-				horizon.x[j] = horizon_global.back().x;
-				horizon.y[j] = horizon_global.back().y;
-				horizon.ds[j] = ds[j];
+			horizon.x[j] = horizon_global.back().x;
+			horizon.y[j] = horizon_global.back().y;
+			horizon.ds[j] = ds[j];
 
-				horizon.psi[j] = psi[i - 1] + interpolation[j] * (psi[i] - psi[i - 1]);
-				horizon.kappa[j] = k[i - 1] + interpolation[j] * (k[i] - k[i - 1]);
+			horizon.psi[j] = psi[i - 1] + interpolation[j] * (psi[i] - psi[i - 1]);
+			horizon.kappa[j] = k[i - 1] + interpolation[j] * (k[i] - k[i - 1]);
 
-				j++;
-				if (j >= agent_model::NOH) {
-					stop = true;
-					return 0;
-				}
-				nextS += ds[j] - ds[j - 1];
+			j++;
+			if (j >= agent_model::NOH) {
+				stop = true;
+				return 0;
 			}
+			nextS += ds[j] - ds[j - 1];
 		}
-	
+	}
+
 	return 0;
 
 }

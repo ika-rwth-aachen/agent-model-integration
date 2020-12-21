@@ -455,7 +455,7 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 	if (false)return 0;
 	static int count = 0;
 	count++;
-	//if (count >1)return 0;
+	//if (count >1)return 0; 
 	osi3::GroundTruth* groundTruth = sensorView.mutable_global_ground_truth();
 
 	std::ofstream horizon_out("horizon.txt", std::ofstream::out | std::ofstream::app);
@@ -573,66 +573,99 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 	
 	// --- signals --- 
 
+	int signal = 0;
 
-	for (int i = 0; i < agent_model::NOS; i++)
+	for (int i = 0; i < groundTruth->traffic_sign_size(); i++)
 	{
-		if (i < groundTruth->traffic_sign_size())
-		{
-			osi3::TrafficSign sign = groundTruth->traffic_sign(i);
-			osi3::TrafficSign_MainSign_Classification clas = sign.main_sign().classification();
+		if (signal >= agent_model::NOS)break;
 
-			// check that sign is assigned to current ego lane. lane changes in the future are not considered currently
-			bool assigned = false;
-			for (int j = 0; j < clas.assigned_lane_id_size(); j++)
-				if (clas.assigned_lane_id(j).value() == egoLanePtr->id().value())
-					assigned = true;
+		osi3::TrafficSign sign = groundTruth->traffic_sign(i);
+		osi3::TrafficSign_MainSign_Classification clas = sign.main_sign().classification();
 
-			if (!assigned) continue;
-
-			input.signals[i].id = sign.id().value();
-
-
-			//projection of signal position on centerline
-			Point2D cPoint;
-			Point2D sPoint(sign.main_sign().base().position().x(), sign.main_sign().base().position().y());
-
-			closestCenterlinePoint(sPoint, elPoints, cPoint);
-
-			double sSig = 0;
-
-			sSig = xy2s(egoClPoint, cPoint, elPoints);
-
-			input.signals[i].ds = sSig;
-
-
-			// calculate type
-			if (clas.type() == osi3::TrafficSign_MainSign_Classification_Type_TYPE_STOP)
-				input.signals[i].type = agent_model::SIGNAL_STOP;
-			else if (clas.type() == osi3::TrafficSign_MainSign_Classification_Type_TYPE_SPEED_LIMIT_BEGIN)
-				input.signals[i].type = agent_model::SIGNAL_SPEED_LIMIT;
-			else
-				input.signals[i].type = agent_model::SIGNAL_NOT_SET;
-
-			// TODO? calculate value
-			input.signals[i].value = clas.value().value();
-
-		}
-		else
-		{
-			input.signals[i].id = 127;						 //TODO what value for unset
-			input.signals[i].ds = INFINITY;
-			input.signals[i].type = agent_model::SIGNAL_NOT_SET;
-			input.signals[i].value = 0;
+		auto it = futureLanes.end();
+		// check that the sign is assigned to a lane along the route. 
+		bool assigned = false;
+		// sSig will hold s value along centerlines to reach the signal
+		double sSig = 0;
+		for (int j = 0; j < clas.assigned_lane_id_size(); j++) {
+			it = find(futureLanes.begin(), futureLanes.end(), clas.assigned_lane_id(j).value());
+			if (it != futureLanes.end()) {
+				assigned = true;
+				//std::cout << "\nsignal on lane: " << clas.assigned_lane_id(j).value() << std::endl;
+				break;
+			}
 		}
 
+		if (!assigned) continue;
+
+		
+
+		//projection of signal position on centerline: cPoint
+		Point2D cPoint;
+		Point2D sPoint(sign.main_sign().base().position().x(), sign.main_sign().base().position().y());
+		//closestCenterlinePoint(sPoint, elPoints, cPoint);
+		Point2D target = sPoint;
+		//std::cout << "Spoint: (" << sPoint.x << "," << sPoint.y << ")" << std::endl;
+		//signal on future lane
+		if (*it != egoLanePtr->id().value()) {
+			// signal is not assigned to the current lane -> add distance along the signal's assigned lane
+			// meaning assigned_lane beginning to sPoint
+			std::vector<Point2D> pos;
+			getXY(findLane(*it, groundTruth), pos);
+			sSig += xy2s(pos.front(), sPoint, pos);
+			pos.clear();
+		}
+		while (it != futureLanes.begin() && *(it - 1) != egoLanePtr->id().value()) {
+			it--;
+			std::vector<Point2D> pos;
+			getXY(findLane(*it, groundTruth), pos);
+			sSig += xy2s(pos.front(), pos.back(), pos);
+			target = pos.front();
+		}
+
+
+		//std::cout << "\nhost : (" << lastPosition.x << "," << lastPosition.y << ")\nsignal: (" << sPoint.x << "," << sPoint.y << ") " << "\ntarget (" << target.x << "," << target.y << ") " << std::endl;
+
+		sSig += xy2s(egoClPoint, target, elPoints);
+
+		input.signals[signal].id = sign.id().value(); //could also take the index 'signal' as id here, OSI ids are often larger numbers
+		input.signals[signal].ds = sSig;
+		
+		// calculate type 
+		if (clas.type() == osi3::TrafficSign_MainSign_Classification_Type_TYPE_STOP) {
+			input.signals[signal].type = agent_model::SIGNAL_STOP;
+			//no value for stop
+			input.signals[signal].value = 0;
+		}
+		else if (clas.type() == osi3::TrafficSign_MainSign_Classification_Type_TYPE_SPEED_LIMIT_BEGIN) {
+			input.signals[signal].type = agent_model::SIGNAL_SPEED_LIMIT;
+			input.signals[signal].value = clas.value().value();
+		}
+		else {
+			input.signals[signal].type = agent_model::SIGNAL_NOT_SET;
+			//no value for unset type
+			input.signals[signal].value = 0;
+		}
+
+		signal++;
+	}
+	//fill remaining signals with default values
+	for (i = signal; i < agent_model::NOS; i++) {
+		input.signals[i].id = 127;
+		input.signals[i].ds = INFINITY;
+		input.signals[i].type = agent_model::SIGNAL_NOT_SET;
+		input.signals[i].value = 0;
 	}
 
+	for (i = 0; i < agent_model::NOS; i++) {
+		//std::cout << "Signal " << input.signals[i].id << " ds=" << input.signals[i].ds << " type: " << input.signals[i].type << " value: " << input.signals[signal].value << std::endl;
+	}
 
 
 	// --- traffic ---
 	std::unordered_map<int, int> laneMapping;
 
-	mapLanes(groundTruth, laneMapping, egoLanePtr);
+	mapLanes(groundTruth, laneMapping, egoLanePtr, futureLanes);
 
 
 	for (int i = 0; i < agent_model::NOT; i++)
@@ -662,17 +695,49 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 
 			input.targets[i].id = obj.id().value();
 
+			auto it = futureLanes.end(); 
+			bool assigned = false;
+
+			double sTar = 0;
+
+			for (int j = 0; j < obj.assigned_lane_id_size(); j++) {
+
+				it = find(futureLanes.begin(), futureLanes.end(), obj.assigned_lane_id(j).value());
+
+				if (it != futureLanes.end()) {
+					assigned = true;
+					break;
+				}
+			}
+
+			if (!assigned) continue; 
 
 			Point2D cPoint;
-			Point2D bPoint; bPoint.x = base.position().x(); bPoint.y = base.position().y();
+			Point2D bPoint(base.position().x(), base.position().y());
 
 			closestCenterlinePoint(bPoint, elPoints, cPoint);
 
 			osi3::Lane* tarLane = findLane(obj.assigned_lane_id(0).value(), groundTruth);
 
-			double sTar = 0;
+			Point2D current = bPoint;
+	
+			if (*it != egoLanePtr->id().value()) {
+				// target is not assigned to the current lane -> add distance along the target's assigned lane
+				// meaning assigned_lane's beginning to bPoint
+				std::vector<Point2D> pos;
+				getXY(findLane(*it, groundTruth), pos);
+				sTar += xy2s(pos.front(), bPoint, pos);
+				pos.clear();
+			}
+			while (it != futureLanes.begin() && *(it - 1) != egoLanePtr->id().value()) {
+				it--;
+				std::vector<Point2D> pos;
+				getXY(findLane(*it, groundTruth), pos);
+				sTar += xy2s(pos.front(), pos.back(), pos);
+				current = pos.front();
+			}
 
-			sTar = xy2s(egoClPoint, cPoint, elPoints);
+			sTar += xy2s(egoClPoint, current, elPoints);
 
 			input.targets[i].ds = sTar;
 			input.targets[i].d = sqrt(pow(base.position().x() - cPoint.x, 2) + pow(base.position().y() - cPoint.y, 2));
@@ -777,8 +842,8 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 		sStart = s[idx - 1] + sqrt((lastPosition.x - elPoints[idx - 1].x) * (lastPosition.x - elPoints[idx - 1].x) + (lastPosition.y - elPoints[idx - 1].y) * (lastPosition.y - elPoints[idx - 1].y));
 	}
 	
-	double defaultWidth = 4.0;
-	
+	double defaultWidth = 3.5;
+
 	[&] {
 		for (int i = 0; i < agent_model::NOH; i++) {
 			//determine correct lane. If s is already of the correct lane for this horizon point, the loop is not executed
@@ -803,10 +868,11 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 
 			//setup for width calculation
 			osi3::Lane* lane = findLane(currentLane, groundTruth);
-			//std::cout << "lane Boundaries:"<<lane->classification().left_lane_boundary_id(0).value()<<" and "<< lane->classification().right_lane_boundary_id(0).value()<<"\n";
+			if (lane == nullptr)std::cout << "ERROR lane not found!" << std::endl;
+			
 			//actual horizon
 			for (int k = 1; k < s.size(); k++) {
-
+				
 				if ((s[k - 1] + sPast - sStart < ds[i]) && (s[k] + sPast - sStart >= ds[i])) {
 
 					if (s[k - 1] == s[k]) s[k] += 0.3;
@@ -827,12 +893,39 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 
 
 					input.horizon.kappa[i] = kappa[k - 1] + interpolation * (kappa[k] - kappa[k - 1]);
+
 					//width calculation
 					
-					//std::cout << calcWidth(hKnot, lane, groundTruth) << std::endl;
-					//input.horizon.egoLaneWidth[i] = width(hKnot, lane, groundTruth);
-					input.horizon.egoLaneWidth[i] = defaultWidth;
-					if (input.horizon.egoLaneWidth[i] == 0) input.horizon.egoLaneWidth[i] = defaultWidth;
+					input.horizon.egoLaneWidth[i] = calcWidth(hKnot, lane, groundTruth);
+					
+					if (input.horizon.egoLaneWidth[i] == 0) {
+						//lane has no boundaries. Take last width value if available or default value
+						if (i > 0)
+							input.horizon.egoLaneWidth[i] = input.horizon.egoLaneWidth[i - 1];
+						else
+							input.horizon.egoLaneWidth[i] = defaultWidth;
+					}
+					//left and right lanes
+					osi3::Lane* lLane = lane->classification().left_adjacent_lane_id_size() > 0 ?
+						findLane(lane->classification().left_adjacent_lane_id(0).value(), groundTruth) : nullptr;
+					osi3::Lane* rLane = lane->classification().right_adjacent_lane_id_size() > 0 ?
+						findLane(lane->classification().right_adjacent_lane_id(0).value(), groundTruth) : nullptr;
+
+					input.horizon.rightLaneWidth[i] = rLane != nullptr ? calcWidth(hKnot, rLane, groundTruth) : defaultWidth;
+					if (input.horizon.rightLaneWidth[i] == 0) {
+						if (i > 0)
+							input.horizon.rightLaneWidth[i] = input.horizon.rightLaneWidth[i - 1];
+						else
+							input.horizon.rightLaneWidth[i] = defaultWidth;
+					}
+
+					input.horizon.leftLaneWidth[i] = lLane != nullptr ? calcWidth(hKnot, lLane, groundTruth) : defaultWidth;
+					if (input.horizon.leftLaneWidth[i] == 0) {
+						if (i > 0)
+							input.horizon.leftLaneWidth[i] = input.horizon.leftLaneWidth[i - 1];
+						else
+							input.horizon.leftLaneWidth[i] = defaultWidth;
+					}
 
 				}
 			}
@@ -951,13 +1044,13 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 
 
 	horizon_out.close();
-	int l, e, r;
+	/*int l, e, r;
 
 	l = egoLanePtr->classification().left_adjacent_lane_id_size() > 0 ?
 		egoLanePtr->classification().left_adjacent_lane_id(0).value() : 127;
 	e = egoLanePtr->id().value();
 	r = egoLanePtr->classification().right_adjacent_lane_id_size() > 0 ?
-		egoLanePtr->classification().right_adjacent_lane_id(0).value() : 127;
+		egoLanePtr->classification().right_adjacent_lane_id(0).value() : 127;*/
 
 
 	// --- lanes ---
@@ -1047,14 +1140,14 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 		laneCounter++;
 	}
 
-	//if egolane has no right/left adjacent lane
-	if (l == 127)
-		for (int i = 0; i < agent_model::NOH; i++)
-			input.horizon.leftLaneWidth[i] = 0;
+	////if egolane has no right/left adjacent lane
+	//if (l == 127)
+	//	for (int i = 0; i < agent_model::NOH; i++)
+	//		input.horizon.leftLaneWidth[i] = 0;
 
-	if (r == 127)
-		for (int i = 0; i < agent_model::NOH; i++)
-			input.horizon.rightLaneWidth[i] = 0;
+	//if (r == 127)
+	//	for (int i = 0; i < agent_model::NOH; i++)
+	//		input.horizon.rightLaneWidth[i] = 0;
 
 	/*for (int i = 0; i < width.size(); i++) {
 		std::cout << "w: " << width[i] << std::endl;
