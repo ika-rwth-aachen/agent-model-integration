@@ -759,7 +759,7 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 				input.targets[i].a = 0;
 				input.targets[i].d = 0;
 				input.targets[i].psi = 0;
-				input.targets[i].lane = 0;
+				input.targets[i].lane = 127;
 				input.targets[i].size.width = 0;
 				input.targets[i].size.length = 0;
 				continue;
@@ -866,7 +866,7 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 			input.targets[i].a = 0;
 			input.targets[i].d = 0;
 			input.targets[i].psi = 0;
-			input.targets[i].lane = 0;
+			input.targets[i].lane = 127;
 			input.targets[i].size.width = 0;
 			input.targets[i].size.length = 0;
 		}
