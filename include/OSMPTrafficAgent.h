@@ -60,7 +60,14 @@ using namespace std;
 #define FMI_INTEGER_DYNAMICSREQUEST_OUT_BASELO_IDX 9
 #define FMI_INTEGER_DYNAMICSREQUEST_OUT_BASEHI_IDX 10
 #define FMI_INTEGER_DYNAMICSREQUEST_OUT_SIZE_IDX 11
-#define FMI_INTEGER_LAST_IDX FMI_INTEGER_DYNAMICSREQUEST_OUT_SIZE_IDX
+#define FMI_INTEGER_SENSORVIEW_CONFIG_REQUEST_BASELO_IDX 12
+#define FMI_INTEGER_SENSORVIEW_CONFIG_REQUEST_BASEHI_IDX 13
+#define FMI_INTEGER_SENSORVIEW_CONFIG_REQUEST_SIZE_IDX 14
+#define FMI_INTEGER_SENSORVIEW_CONFIG_BASELO_IDX 15
+#define FMI_INTEGER_SENSORVIEW_CONFIG_BASEHI_IDX 16
+#define FMI_INTEGER_SENSORVIEW_CONFIG_SIZE_IDX 17
+#define FMI_INTEGER_COUNT_IDX 18
+#define FMI_INTEGER_LAST_IDX FMI_INTEGER_COUNT_IDX
 #define FMI_INTEGER_VARS (FMI_INTEGER_LAST_IDX+1)
 
 /* Real Variables */
@@ -218,9 +225,9 @@ protected:
     void set_fmi_valid(fmi2Boolean value) { boolean_vars[FMI_BOOLEAN_VALID_IDX]=value; }
     
     /* Protocol Buffer Accessors */
-    //bool get_fmi_sensor_view_config(osi3::SensorViewConfiguration& data);
-    //void set_fmi_sensor_view_config_request(const osi3::SensorViewConfiguration& data);
-    //void reset_fmi_sensor_view_config_request();
+    bool get_fmi_sensor_view_config(osi3::SensorViewConfiguration& data);
+    void set_fmi_sensor_view_config_request(const osi3::SensorViewConfiguration& data);
+    void reset_fmi_sensor_view_config_request();
     bool get_fmi_sensor_view_in(osi3::SensorView& data);
     bool get_fmi_traffic_command_in(osi3::TrafficCommand& data);
     void set_fmi_traffic_update_out(const osi3::TrafficUpdate& data);
@@ -229,5 +236,5 @@ protected:
     void reset_fmi_dynamics_request_out();
 
     /* Refreshing of Calculated Parameters */
-    //void refresh_fmi_sensor_view_config_request();
+    void refresh_fmi_sensor_view_config_request();
 };

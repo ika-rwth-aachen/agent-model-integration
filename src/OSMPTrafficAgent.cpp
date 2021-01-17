@@ -100,13 +100,34 @@ void encode_pointer_to_integer(const void* ptr,fmi2Integer& hi,fmi2Integer& lo)
 #error "Cannot determine 32bit or 64bit environment!"
 #endif
 }
-/*
+
+bool COSMPTrafficAgent::get_fmi_sensor_view_config(osi3::SensorViewConfiguration& data)
+{
+    if (integer_vars[FMI_INTEGER_SENSORVIEW_CONFIG_SIZE_IDX] > 0) {
+        void* buffer = decode_integer_to_pointer(integer_vars[FMI_INTEGER_SENSORVIEW_CONFIG_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORVIEW_CONFIG_BASELO_IDX]);
+        normal_log("OSMP","Got %08X %08X, reading from %p ...",integer_vars[FMI_INTEGER_SENSORVIEW_CONFIG_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORVIEW_CONFIG_BASELO_IDX],buffer);
+        data.ParseFromArray(buffer,integer_vars[FMI_INTEGER_SENSORVIEW_CONFIG_SIZE_IDX]);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+void COSMPTrafficAgent::set_fmi_sensor_view_config_request(const osi3::SensorViewConfiguration& data)
+{
+    data.SerializeToString(&currentConfigRequestBuffer);
+    encode_pointer_to_integer(currentConfigRequestBuffer.data(),integer_vars[FMI_INTEGER_SENSORVIEW_CONFIG_REQUEST_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORVIEW_CONFIG_REQUEST_BASELO_IDX]);
+    integer_vars[FMI_INTEGER_SENSORVIEW_CONFIG_REQUEST_SIZE_IDX]=(fmi2Integer)currentConfigRequestBuffer.length();
+    normal_log("OSMP","Providing %08X %08X, writing from %p ...",integer_vars[FMI_INTEGER_SENSORVIEW_CONFIG_REQUEST_BASEHI_IDX],integer_vars[FMI_INTEGER_SENSORVIEW_CONFIG_REQUEST_BASELO_IDX],currentConfigRequestBuffer.data());
+    swap(currentConfigRequestBuffer,lastConfigRequestBuffer);
+}
+
 void COSMPTrafficAgent::reset_fmi_sensor_view_config_request()
 {
     integer_vars[FMI_INTEGER_SENSORVIEW_CONFIG_REQUEST_SIZE_IDX]=0;
     integer_vars[FMI_INTEGER_SENSORVIEW_CONFIG_REQUEST_BASEHI_IDX]=0;
     integer_vars[FMI_INTEGER_SENSORVIEW_CONFIG_REQUEST_BASELO_IDX]=0;
-}*/
+}
 
 bool COSMPTrafficAgent::get_fmi_sensor_view_in(osi3::SensorView& data)
 {
@@ -168,6 +189,22 @@ void COSMPTrafficAgent::reset_fmi_dynamics_request_out()
     integer_vars[FMI_INTEGER_DYNAMICSREQUEST_OUT_BASELO_IDX]=0;
 }
 
+void COSMPTrafficAgent::refresh_fmi_sensor_view_config_request()
+{
+    osi3::SensorViewConfiguration config;
+    if (get_fmi_sensor_view_config(config))
+        set_fmi_sensor_view_config_request(config);
+    else {
+        osi3::SensorViewConfiguration config;
+        config.Clear();
+        config.mutable_version()->CopyFrom(osi3::InterfaceVersion::descriptor()->file()->options().GetExtension(osi3::current_interface_version));
+        config.set_field_of_view_horizontal(3.14);
+        config.set_field_of_view_vertical(3.14);
+        config.set_range(1000.0);
+        set_fmi_sensor_view_config_request(config);
+    }
+}
+
 /*
  * Actual Core Content
  */
@@ -213,7 +250,7 @@ fmi2Status COSMPTrafficAgent::doExitInitializationMode()
 {
     DEBUGBREAK();
 
-    /*osi3::SensorViewConfiguration config;
+    osi3::SensorViewConfiguration config;
     if (!get_fmi_sensor_view_config(config))
         normal_log("OSI","Received no valid SensorViewConfiguration from Simulation Environment, assuming everything checks out.");
     else {
@@ -221,7 +258,7 @@ fmi2Status COSMPTrafficAgent::doExitInitializationMode()
         normal_log("OSI","SVC Ground Truth FoV Horizontal %f, FoV Vertical %f, Range %f",config.field_of_view_horizontal(),config.field_of_view_vertical(),config.range());
         normal_log("OSI","SVC Mounting Position: (%f, %f, %f)",config.mounting_position().position().x(),config.mounting_position().position().y(),config.mounting_position().position().z());
         normal_log("OSI","SVC Mounting Orientation: (%f, %f, %f)",config.mounting_position().orientation().roll(),config.mounting_position().orientation().pitch(),config.mounting_position().orientation().yaw());
-    }*/
+    }
 
     return fmi2OK;
 }
@@ -441,10 +478,10 @@ fmi2Status COSMPTrafficAgent::GetInteger(const fmi2ValueReference vr[], size_t n
     bool need_refresh = !simulation_started;
     for (size_t i = 0; i<nvr; i++) {
         if (vr[i]<FMI_INTEGER_VARS) {
-            /*if (need_refresh && (vr[i] == FMI_INTEGER_SENSORVIEW_CONFIG_REQUEST_BASEHI_IDX || vr[i] == FMI_INTEGER_SENSORVIEW_CONFIG_REQUEST_BASELO_IDX || vr[i] == FMI_INTEGER_SENSORVIEW_CONFIG_REQUEST_SIZE_IDX)) {
+            if (need_refresh && (vr[i] == FMI_INTEGER_SENSORVIEW_CONFIG_REQUEST_BASEHI_IDX || vr[i] == FMI_INTEGER_SENSORVIEW_CONFIG_REQUEST_BASELO_IDX || vr[i] == FMI_INTEGER_SENSORVIEW_CONFIG_REQUEST_SIZE_IDX)) {
                 refresh_fmi_sensor_view_config_request();
                 need_refresh = false;
-            }*/
+            }
             value[i] = integer_vars[vr[i]];
         } else
             return fmi2Error;
