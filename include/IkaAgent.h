@@ -41,16 +41,16 @@ public:
     
     int step(double time, double stepSize, osi3::SensorView &sensorViewData, osi3::TrafficCommand &commandData, osi3::TrafficUpdate &out, setlevel4to5::DynamicsRequest & dynOut);
     int terminate();
-
+   
 
 private:
     void init();
     bool trajSet;
     bool initialized = false;
     osi3::FollowTrajectoryAction traj;
-    int trajActionId = 127;
-    int pathActionId = 127;
-    int speedActionId = 127;
+    int trajActionId = -1;
+    int pathActionId = -1;
+    int speedActionId = -1;
     Pose pose;
 
     double lastS;
@@ -73,6 +73,7 @@ private:
 
     int adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input& input, std::vector<int>& futureLanes, double time, int h_id);
     int parseTrafficCommand(osi3::SensorView& sensorViewData, osi3::TrafficCommand& commandData);
+    void classifyManeuver(osi3::SensorView& sensorViewData);
 
     int getTrajPoint(double time, osi3::TrafficUpdate &out);
 	int applyDriverOutput(double time, osi3::TrafficUpdate &out);

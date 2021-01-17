@@ -100,6 +100,8 @@ void IkaAgent::init()
 	pedalContr.reset();
     steeringContr.reset();
 
+	_input.vehicle.maneuver = agent_model::Maneuver::STRAIGHT;
+
 	// clean output file
 	std::ofstream output("debug.txt", std::ofstream::out | std::ofstream::trunc);
 	output.close();
@@ -133,8 +135,12 @@ int IkaAgent::step(double time, double stepSize, osi3::SensorView &sensorViewDat
 	
 	std::cout << "------------ time: " << out.timestamp().seconds() + (out.timestamp().nanos() * 0.000000001) << "---------------" << std::endl;
 	//check for new traffic command
-	if ( commandData.action_size() > 0)	//&&commandData.traffic_participant_id().value() == sensorViewData.host_vehicle_id().value(), traffic_participant not set currently
+	if (commandData.action_size() > 0) {	//&&commandData.traffic_participant_id().value() == sensorViewData.host_vehicle_id().value(), traffic_participant not set currently
 		parseTrafficCommand(sensorViewData, commandData);
+		//determine type of maneuver (if crossing intersection)
+		classifyManeuver(sensorViewData);
+	}
+	
 
 	//Translate sensorViewData to agent_model::input
 	adapterOsiToInput(sensorViewData, _input, lanes , out.timestamp().seconds()+(out.timestamp().nanos()*0.000000001), sensorViewData.host_vehicle_id().value());
@@ -194,7 +200,7 @@ int IkaAgent::parseTrafficCommand(osi3::SensorView& sensorViewData, osi3::Traffi
 			}
 			
 			destPoint = Point2D(traj.trajectory_point(traj.trajectory_point_size() - 1).position().x(), traj.trajectory_point(traj.trajectory_point_size() - 1).position().y());
-
+			lanes.clear();
 			futureLanes(groundTruth, startingLaneIdx, destPoint, lanes);
 			
 
@@ -220,6 +226,7 @@ int IkaAgent::parseTrafficCommand(osi3::SensorView& sensorViewData, osi3::Traffi
 			}
 
 			destPoint = Point2D(path.path_point(path.path_point_size() - 1).position().x(), path.path_point(path.path_point_size() - 1).position().y());
+			lanes.clear();
 			futureLanes(groundTruth, startingLaneIdx, destPoint, lanes);
 		}
 		if (commandData.action(i).has_speed_action() && (commandData.action(i).speed_action().action_header().action_id().value() != speedActionId)) {
@@ -227,11 +234,54 @@ int IkaAgent::parseTrafficCommand(osi3::SensorView& sensorViewData, osi3::Traffi
 			osi3::SpeedAction speed = commandData.action(i).speed_action();
 			speedActionId = speed.action_header().action_id().value();
 
-			//TODO: set v_desired not absolute speed!
-			vehState->v = speed.absolute_target_speed();
+			//vehState->v = speed.absolute_target_speed();
+			drParam->velocity.vComfort = speed.absolute_target_speed();
 		}
 	}
 	return 0;
+}
+
+void IkaAgent::classifyManeuver(osi3::SensorView& sensorViewData) {
+
+	osi3::GroundTruth* groundTruth = sensorViewData.mutable_global_ground_truth();
+
+	// Maneuver is only applicable when the host traverses an intersection --> one futureLane must be of type INTERSECION
+	// Assuming there is only one intersection along the path
+	std::vector<Point2D> pos;
+	std::vector<double> s, k, p;
+	for (auto it : lanes) {
+		osi3::Lane* lane = findLane(it, groundTruth);
+		//if (lane->classification().type() == osi3::Lane_Classification_Type_TYPE_INTERSECTION && lane->classification().centerline_size() > 2) {
+		if(lane->id().value() == 200029 || lane->id().value() == 200030 || lane->id().value() == 200002 || lane->id().value() == 200009 || lane->id().value() == 200010 ||
+			lane->id().value() == 200000 || lane->id().value() == 200025 || lane->id().value() == 200001 || lane->id().value() == 200008 || lane->id().value() == 200028 ||
+			lane->id().value() == 200026 || lane->id().value() == 200027){
+
+			// take three points of the centerline in the intersection and calculate (potential) turn direction from curvature
+			if (lane->classification().centerline_size() <= 2) {
+				_input.vehicle.maneuver = agent_model::Maneuver::STRAIGHT;
+				break;
+			}
+
+			double cl_size = lane->classification().centerline_size();
+			pos.push_back(Point2D(lane->classification().centerline(0).x(), lane->classification().centerline(0).y()));
+			pos.push_back(Point2D(lane->classification().centerline(cl_size / 2).x(), lane->classification().centerline(cl_size / 2).y()));
+			pos.push_back(Point2D(lane->classification().centerline(cl_size - 1).x(), lane->classification().centerline(cl_size - 1).y()));
+
+			xy2curv(pos, s, p, k);
+
+			double avg = std::accumulate(k.cbegin(), k.cend(), 0.0) / k.size();
+			double eps = 0.001;
+			if (avg > eps)
+				_input.vehicle.maneuver = agent_model::Maneuver::TURN_RIGHT;
+			else if(avg < (-1*eps))
+				_input.vehicle.maneuver = agent_model::Maneuver::TURN_LEFT;
+			else
+				_input.vehicle.maneuver = agent_model::Maneuver::STRAIGHT;
+
+			
+		}
+	}
+	std::cout << "\nMANEUVER (0=straight, 1=left, 2=right): " << _input.vehicle.maneuver << std::endl;
 }
 
 int IkaAgent::terminate()
@@ -572,6 +622,9 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 
 	
 	// --- signals --- 
+	std::vector<int> priorityLanes;
+	std::vector<int> yieldingLanes;	// TODO applicable for entire lane?
+	
 
 	int signal = 0;
 
@@ -628,7 +681,7 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 
 		sSig += xy2s(egoClPoint, target, elPoints);
 
-		input.signals[signal].id = sign.id().value(); //could also take the index 'signal' as id here, OSI ids are often larger numbers
+		input.signals[signal].id = signal; //could also take sign.id().value() as id here, OSI ids are often larger numbers
 		input.signals[signal].ds = sSig;
 		
 		// calculate type 
@@ -640,6 +693,16 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 		else if (clas.type() == osi3::TrafficSign_MainSign_Classification_Type_TYPE_SPEED_LIMIT_BEGIN) {
 			input.signals[signal].type = agent_model::SIGNAL_SPEED_LIMIT;
 			input.signals[signal].value = clas.value().value();
+		}
+		else if (clas.type() == osi3::TrafficSign_MainSign_Classification_Type_TYPE_RIGHT_OF_WAY_BEGIN) {
+			for (int j = 0; j < clas.assigned_lane_id_size(); j++)
+				priorityLanes.push_back(clas.assigned_lane_id(j).value());
+		}
+		else if (clas.type() == osi3::TrafficSign_MainSign_Classification_Type_TYPE_GIVE_WAY ||
+			clas.type() == osi3::TrafficSign_MainSign_Classification_Type_TYPE_RIGHT_BEFORE_LEFT_NEXT_INTERSECTION) {
+
+			for (int j = 0; j < clas.assigned_lane_id_size(); j++)
+				yieldingLanes.push_back(clas.assigned_lane_id(j).value());
 		}
 		else {
 			input.signals[signal].type = agent_model::SIGNAL_NOT_SET;
@@ -657,9 +720,9 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 		input.signals[i].value = 0;
 	}
 
-	for (i = 0; i < agent_model::NOS; i++) {
+	//for (i = 0; i < agent_model::NOS; i++) {
 		//std::cout << "Signal " << input.signals[i].id << " ds=" << input.signals[i].ds << " type: " << input.signals[i].type << " value: " << input.signals[signal].value << std::endl;
-	}
+	//}
 
 
 	// --- traffic ---
@@ -667,6 +730,17 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 
 	mapLanes(groundTruth, laneMapping, egoLanePtr, futureLanes);
 
+	std::vector<int> lanesEnteringIntersection;
+
+	for (int i = 0; i < groundTruth->lane_size(); i++) {
+		osi3::Lane lane = groundTruth->lane(i);
+		for (int j = 0; j < lane.classification().lane_pairing_size(); j++) {
+			if (findLane(lane.classification().lane_pairing(j).successor_lane_id().value(), groundTruth)->classification().type() == osi3::Lane_Classification_Type_TYPE_INTERSECTION) {
+				lanesEnteringIntersection.push_back(lane.id().value());
+			}
+		}
+	}
+	
 
 	for (int i = 0; i < agent_model::NOT; i++)
 	{
@@ -691,9 +765,10 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 				continue;
 			}
 
+			input.targets[i].priority = agent_model::TARGET_PRIORITY_NOT_SET;
 			osi3::BaseMoving base = obj.base();
 
-			input.targets[i].id = obj.id().value();
+			input.targets[i].id = i+1;//obj.id().value();
 
 			auto it = futureLanes.end(); 
 			bool assigned = false;
@@ -710,7 +785,31 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 				}
 			}
 
-			if (!assigned) continue; 
+			if (!assigned) {//the target is not on the host's path, but can still intersect with it
+				for (int j = 0; j < obj.assigned_lane_id_size(); j++) {
+					if (find(lanesEnteringIntersection.begin(), lanesEnteringIntersection.end(), obj.assigned_lane_id(j).value())
+						!= lanesEnteringIntersection.end()) {
+						//target is on a lane ending in an intersection
+
+						std::vector<Point2D> cl;
+						getXY(findLane(obj.assigned_lane_id(j).value(), groundTruth), cl);
+						input.targets[i].dsIntersection = xy2s(Point2D(base.position().x(), base.position().y()), cl.back(), cl);
+						
+						if (find(priorityLanes.begin(), priorityLanes.end(), obj.assigned_lane_id(j).value())
+							!= priorityLanes.end())
+							input.targets[i].priority = agent_model::TARGET_ON_PRIORITY_LANE;
+						else if(find(yieldingLanes.begin(), yieldingLanes.end(), obj.assigned_lane_id(j).value())
+							!= yieldingLanes.end())
+							input.targets[i].priority = agent_model::TARGET_ON_GIVE_WAY_LANE;
+
+						break;
+					}
+					else if (findLane(obj.assigned_lane_id(j).value(), groundTruth)->classification().type() == osi3::Lane_Classification_Type_TYPE_INTERSECTION) {
+						input.targets[i].priority = agent_model::TARGET_ON_INTERSECTION;
+					}
+				}
+				continue;
+			}
 
 			Point2D cPoint;
 			Point2D bPoint(base.position().x(), base.position().y());
@@ -739,7 +838,7 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 
 			sTar += xy2s(egoClPoint, current, elPoints);
 
-			input.targets[i].ds = sTar;
+			input.targets[i].ds = sTar; //TODO: check what happens when target is behind host vehicle
 			input.targets[i].d = sqrt(pow(base.position().x() - cPoint.x, 2) + pow(base.position().y() - cPoint.y, 2));
 
 
@@ -1044,18 +1143,11 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 
 
 	horizon_out.close();
-	/*int l, e, r;
-
-	l = egoLanePtr->classification().left_adjacent_lane_id_size() > 0 ?
-		egoLanePtr->classification().left_adjacent_lane_id(0).value() : 127;
-	e = egoLanePtr->id().value();
-	r = egoLanePtr->classification().right_adjacent_lane_id_size() > 0 ?
-		egoLanePtr->classification().right_adjacent_lane_id(0).value() : 127;*/
-
+	
 
 	// --- lanes ---
-	std::vector<double> width(agent_model::NOL, 4.0); //instead: call calcWidth whenever appending orizon knot. use default value when on spline, later replace dafault with average
-	//calcWidth(horizon, egoLanePtr->id().value(), futureLanes, width, groundTruth);
+	//std::vector<double> width(agent_model::NOL, defaultWidth); 
+	
 
 	int laneCounter = 0;
 	while(laneCounter<futureLanes.size() && laneCounter < agent_model::NOL){
@@ -1063,14 +1155,13 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 		input.lanes[laneCounter].id = laneMapping[futureLanes[laneCounter]];
 
 		input.lanes[laneCounter].access = agent_model::Accessibility::ACC_ACCESSIBLE; //lanes along route are accessible by definition
-		input.lanes[laneCounter].width = 4.0;
+		input.lanes[laneCounter].width = defaultWidth;
 
 		if (lane.classification().centerline_is_driving_direction() == egoLanePtr->classification().centerline_is_driving_direction())
 			input.lanes[laneCounter].dir = agent_model::DrivingDirection::DD_FORWARDS;
 		else
 			input.lanes[laneCounter].dir = agent_model::DrivingDirection::DD_BACKWARDS;
 
-		//input.lanes[i].width = accumulate(width.begin(), width.end(), 0.0) / width.size();
 
 		std::vector<Point2D> lPoints;
 
@@ -1118,7 +1209,7 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 
 
 		// save average of width
-		input.lanes[i].width = accumulate(width.begin(), width.end(), 0.0) / width.size();
+		input.lanes[i].width = defaultWidth;
 
 		std::vector<Point2D> lPoints;
 
@@ -1140,14 +1231,7 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 		laneCounter++;
 	}
 
-	////if egolane has no right/left adjacent lane
-	//if (l == 127)
-	//	for (int i = 0; i < agent_model::NOH; i++)
-	//		input.horizon.leftLaneWidth[i] = 0;
-
-	//if (r == 127)
-	//	for (int i = 0; i < agent_model::NOH; i++)
-	//		input.horizon.rightLaneWidth[i] = 0;
+	
 
 	/*for (int i = 0; i < width.size(); i++) {
 		std::cout << "w: " << width[i] << std::endl;

@@ -408,17 +408,24 @@ void mapLanes(osi3::GroundTruth* groundTruth, std::unordered_map<int, int>& mapp
  * @param adjacency
  */
 void createGraph(osi3::GroundTruth* groundTruth, std::vector<int> adj[]) {
-
+	
 	for (int i = 0; i < groundTruth->lane_size(); i++) {
 
 		for (int j = 0; j < groundTruth->lane(i).classification().lane_pairing_size(); j++) {
+			if (groundTruth->lane(i).classification().centerline_is_driving_direction()) {
 
-			if (groundTruth->lane(i).classification().lane_pairing(j).antecessor_lane_id().value() == groundTruth->lane(i).id().value())
-				adj[i].push_back(findLaneId(groundTruth, groundTruth->lane(i).classification().lane_pairing(j).successor_lane_id().value()));
+				if (groundTruth->lane(i).classification().lane_pairing(j).antecessor_lane_id().value() == groundTruth->lane(i).id().value())
+					adj[i].push_back(findLaneId(groundTruth, groundTruth->lane(i).classification().lane_pairing(j).successor_lane_id().value()));
 
-			else adj[findLaneId(groundTruth, groundTruth->lane(i).classification().lane_pairing(j).antecessor_lane_id().value())].push_back(i);
+			}
+			else {
+				if (groundTruth->lane(i).classification().lane_pairing(j).successor_lane_id().value() == groundTruth->lane(i).id().value())
+					adj[i].push_back(findLaneId(groundTruth, groundTruth->lane(i).classification().lane_pairing(j).antecessor_lane_id().value()));
+
+			}
 		}
 	}
+
 }
 
 /**
@@ -531,7 +538,7 @@ void futureLanes(osi3::GroundTruth* groundTruth, const int& startIdx, const Poin
 
 	if (BFS(adj, startIdx, destIdx, groundTruth->lane_size(), pred) == false) {
 		//add starting lane into futureLanes if it is not already contained
-		if (!futureLanes.empty() && futureLanes.back() != groundTruth->lane(startIdx).id().value())
+		if (futureLanes.empty()||(!futureLanes.empty() && futureLanes.back() != groundTruth->lane(startIdx).id().value())) //if(futureLanes.empty() || futureLanes.back() != groundTruth->lane(startIdx).id().value()) here?
 			futureLanes.push_back(groundTruth->lane(startIdx).id().value());
 		return;
 	}
