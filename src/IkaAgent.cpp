@@ -697,12 +697,14 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 		else if (clas.type() == osi3::TrafficSign_MainSign_Classification_Type_TYPE_RIGHT_OF_WAY_BEGIN) {
 			for (int j = 0; j < clas.assigned_lane_id_size(); j++)
 				priorityLanes.push_back(clas.assigned_lane_id(j).value());
+			input.signals[signal].type = agent_model::SIGNAL_PRIORITY;
 		}
 		else if (clas.type() == osi3::TrafficSign_MainSign_Classification_Type_TYPE_GIVE_WAY ||
 			clas.type() == osi3::TrafficSign_MainSign_Classification_Type_TYPE_RIGHT_BEFORE_LEFT_NEXT_INTERSECTION) {
 
 			for (int j = 0; j < clas.assigned_lane_id_size(); j++)
 				yieldingLanes.push_back(clas.assigned_lane_id(j).value());
+			input.signals[signal].type = agent_model::SIGNAL_YIELD;
 		}
 		else {
 			input.signals[signal].type = agent_model::SIGNAL_NOT_SET;
@@ -854,12 +856,13 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 
 
 			input.targets[i].lane = laneMapping[obj.assigned_lane_id(0).value()];
+			input.targets[i].dsIntersection = 0;
 
 		}
 		else
 		{
 			input.targets[i].id = 0;
-			input.targets[i].ds = 0;
+			input.targets[i].ds = INFINITY;
 			input.targets[i].xy.x = 0;
 			input.targets[i].xy.y = 0;
 			input.targets[i].v = 0;
@@ -869,6 +872,7 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 			input.targets[i].lane = 127;
 			input.targets[i].size.width = 0;
 			input.targets[i].size.length = 0;
+			input.targets[i].dsIntersection = 0;
 		}
 	}
 
