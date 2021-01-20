@@ -198,8 +198,8 @@ void COSMPTrafficAgent::refresh_fmi_sensor_view_config_request()
         osi3::SensorViewConfiguration config;
         config.Clear();
         config.mutable_version()->CopyFrom(osi3::InterfaceVersion::descriptor()->file()->options().GetExtension(osi3::current_interface_version));
-        config.set_field_of_view_horizontal(3.14);
-        config.set_field_of_view_vertical(3.14);
+        config.set_field_of_view_horizontal(6.2832);
+        config.set_field_of_view_vertical(6.2832);
         config.set_range(1000.0);
         set_fmi_sensor_view_config_request(config);
     }
