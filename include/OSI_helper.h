@@ -16,8 +16,8 @@ using Point2D = agent_model::Position;
  *
  * @param x
  * @param y
- * @param order
- * @return std::vector<double>
+ * @param order of differetiation
+ * @return gradient at every point
  */
 std::vector<double> gradient(std::vector<double> x, std::vector<double> y, int order)
 {
@@ -61,14 +61,14 @@ std::vector<double> gradient(std::vector<double> x, std::vector<double> y, int o
 
 
 /**
- * @brief s, psi, kappa from xy coordinates
+ * @brief calculates s (distance), psi (global angle w.r.t. x-axis), kappa (curvature) from xy coordinates
  *
  *
- * @param pos position
- * @param s
- * @param psi
- * @param k
- * @return int
+ * @param pos position points in global xy-coordinates
+ * @param s distance result
+ * @param psi angle result
+ * @param k curvature result
+ * @return int success
  */
 int xy2curv(std::vector<Point2D> pos, std::vector<double>& s, std::vector<double>& psi, std::vector<double>& k)
 {
@@ -112,15 +112,16 @@ int xy2curv(std::vector<Point2D> pos, std::vector<double>& s, std::vector<double
 }
 
 /**
- * @brief find clostest point on centerline of current lane to a point(x,y)
+ * @brief find closest point on centerline of current lane to a point(x,y)
  *
- * @param point
+ * @param point	
  * @param cl centerline (can also be boundary line)
- * @param closest
+ * @param closest point
+ * @return index of the next centerline point following the projected point. 0 when before scope of cl, cl.size() when after
  */
 int closestCenterlinePoint(const Point2D point, const std::vector<Point2D>& cl, Point2D& closest) {
 
-	for (int i = 1; i < cl.size(); i++) {	//IMPROVE finding correct points (x1,y1)(x2,y2) without iterating over entire centerline
+	for (int i = 1; i < cl.size(); i++) {	
 		double x1 = cl[i - 1].x;
 		double x2 = cl[i].x;
 		double y1 = cl[i - 1].y;
@@ -176,11 +177,11 @@ int closestCenterlinePoint(const Point2D point, const std::vector<Point2D>& cl, 
 }
 
 /**
- * @brief get x y  centerline-coordinates of lane
+ * @brief get vector of x y  centerline-coordinates of a lane
  *
- * @param lane
- * @param pos
- * @return int
+ * @param lane pointer
+ * @param pos result vector
+ * @return success
  */
 int getXY(osi3::Lane* l, std::vector<Point2D>& pos)
 {
@@ -260,12 +261,13 @@ double calcWidth(const Point2D point, osi3::Lane* lane, osi3::GroundTruth* groun
 
 
 /**
- * @brief ds along curved centerline starting at (startX,startY) and ending at (endX,endY)
+ * @brief ds along centerline starting at (startX,startY) and ending at (endX,endY)
  *
  *
- * @param start
- * @param end
+ * @param start point
+ * @param end point
  * @param cl centerline
+ * @return resulting distance
  */
 double xy2s(const Point2D start, const Point2D end, const std::vector<Point2D>& cl) {
 	double s = 0;
@@ -281,8 +283,8 @@ double xy2s(const Point2D start, const Point2D end, const std::vector<Point2D>& 
 		s += sqrt((cl.front().x - startCl.x) * (cl.front().x - startCl.x) + (cl.front().y - startCl.y) * (cl.front().y - startCl.y));
 	}
 	else if (startIdx < cl.size()) {
-		if (endIdx == 0) //this would mean end before cl, but start within/after cl. This should not happen
-			return -1;
+		if (endIdx == 0 || startIdx > endIdx) //this means end before cl, but start within/after cl. 
+			return xy2s(end, start, cl);
 		// start/end points are most likely between two centerline points. Add distance to closest centerline point for start.
 		s += sqrt((cl[startIdx].x - startCl.x) * (cl[startIdx].x - startCl.x) + (cl[startIdx].y - startCl.y) * (cl[startIdx].y - startCl.y));
 	}
@@ -292,8 +294,8 @@ double xy2s(const Point2D start, const Point2D end, const std::vector<Point2D>& 
 	}
 	else if (endIdx != 0) {
 		// start/end points are most likely between two centerline points. Add distance to closest centerline point for end.
-		if (startIdx >= cl.size()) //this would mean start after cl, but end within/before cl. This should not happen
-			return -1;
+		if (startIdx >= cl.size() || startIdx > endIdx) //this means start after cl, but end within/before cl. 
+			return xy2s(end, start, cl);
 		s += sqrt((endCl.x - cl[endIdx - 1].x) * (endCl.x - cl[endIdx - 1].x) + (endCl.y - cl[endIdx - 1].y) * (endCl.y - cl[endIdx - 1].y));
 	}
 
@@ -342,6 +344,7 @@ int findLaneId(osi3::GroundTruth* groundTruth, int id) {
  * @param groundTruth
  * @param mapping map
  * @param egoLanePtr
+ * @param futureLanes vector of all lanes along the host's path
  */
 void mapLanes(osi3::GroundTruth* groundTruth, std::unordered_map<int, int>& mapping, osi3::Lane* egoLanePtr, std::vector<int> futureLanes) {
 
@@ -431,6 +434,12 @@ void createGraph(osi3::GroundTruth* groundTruth, std::vector<int> adj[]) {
 /**
 *  @brief a modified version of BFS that determines a path from src to dest and
 *  stores predecessor of each vertex in array pred
+* 
+* @param adj adjacency list
+* @param src starting vertex
+* @param dest destination vertex
+* @param num_vertices number of vertices
+* @param pred predecessor array
 *
 */
 bool BFS(std::vector<int> adj[], int src, int dest, int num_vertices,
@@ -474,7 +483,9 @@ bool BFS(std::vector<int> adj[], int src, int dest, int num_vertices,
 }
 
 /**
- * @brief determines lane closest to a point
+ * @brief determines lane closest to a point according to cartesian distance
+ * 
+ * caution: some lanes may share points causing the result to be unreliable. Only use when necessary.
  *
  * @param groundTruth
  * @param point
@@ -494,24 +505,25 @@ int closestLane(osi3::GroundTruth* groundTruth, const Point2D& point) {
 		Point2D closest;
 		closestCenterlinePoint(point, centerline, closest);
 		double d = (closest.x - point.x) * (closest.x - point.x) + (closest.y - point.y) * (closest.y - point.y);
-		//std::cout << "centerline pt count: " << centerline.size() << " with dist: " << d << " and id: " << cur_lane.id().value() << "\n";
+		
 		if (distance > d) {
 			distance = d;
 			destId = cur_lane.id().value();
-			//std::cout << "new lane " <<destId << " with distance " << distance << std::endl;
+			
 		}
 	}
-	//std::cout << "distance = " << distance << std::endl;
+	
 	return destId;
 }
 
 /**
- * @brief determines lanes along Trajectory passed by TrafficCommand
- *
+ * @brief determines lanes along Trajectory from the lane with startIdx to the (x,y) point destination.
+ * 
+ * 
  * @param groundTruth
- * @param start index of starting lane
+ * @param start index of starting lane (index in groundTruth->lane field)
  * @param destination point to be reached
- * @param futureLanes
+ * @param futureLanes result
  */
 void futureLanes(osi3::GroundTruth* groundTruth, const int& startIdx, const Point2D& destination, std::vector<int>& futureLanes) {
 
@@ -538,7 +550,7 @@ void futureLanes(osi3::GroundTruth* groundTruth, const int& startIdx, const Poin
 
 	if (BFS(adj, startIdx, destIdx, groundTruth->lane_size(), pred) == false) {
 		//add starting lane into futureLanes if it is not already contained
-		if (futureLanes.empty()||(!futureLanes.empty() && futureLanes.back() != groundTruth->lane(startIdx).id().value())) //if(futureLanes.empty() || futureLanes.back() != groundTruth->lane(startIdx).id().value()) here?
+		if (futureLanes.empty()||(!futureLanes.empty() && futureLanes.back() != groundTruth->lane(startIdx).id().value())) 
 			futureLanes.push_back(groundTruth->lane(startIdx).id().value());
 		return;
 	}
@@ -577,6 +589,12 @@ void transform(Point2D& pre, Point2D& post, double phi) {
 /**
  * @brief create 3rd order spline connecting start and end
  * dStart, dEnd contain direction vectors in Start and End point. Spline points are generated in vector cl
+ * 
+ * @param start point
+ * @param end point
+ * @param dStart heading at start
+ * @param dEnd heading at end
+ * @param cl resulting spline
  *
  */
 void spline3(Point2D start, Point2D end, Point2D dStart, Point2D dEnd, std::vector<Point2D>& cl) {
@@ -640,6 +658,10 @@ void spline3(Point2D start, Point2D end, Point2D dStart, Point2D dEnd, std::vect
 
 /**
  * @brief create linear spline connecting start and end
+ * 
+ * @param start point
+ * @param end point
+ * @param cl resulting spline
  *
  */
 void spline1(Point2D start, Point2D end, std::vector<Point2D>& cl) {
@@ -661,56 +683,3 @@ void spline1(Point2D start, Point2D end, std::vector<Point2D>& cl) {
 
 }
 
-/**
- * @brief create horizon knots according to distances in ds vector
- *
- * @param centerline
- * @param s
- * @param psi
- * @param kappa
- * @param ds to horizon points
- * @param horizon
- * @param environment
- * @param nextS
- * @param index in ds vector
- *
- */
-int horizonKnots(std::vector<Point2D> cl, std::vector<double>& s, std::vector<double>& psi, std::vector<double>& k, std::vector<double>& ds, std::vector<Point2D>& horizon_global,
-	agent_model::Horizon& horizon, double& nextS, int& j) {
-
-	bool stop = false;
-	std::vector<double> interpolation(agent_model::NOH, 0);
-
-	for (int i = 1; i < s.size() && !stop; i++) {
-
-		while ((s[i - 1] <= nextS) && (s[i] >= nextS)) {
-
-			if (s[i - 1] == s[i]) s[i] += 0.3;
-
-			interpolation[j] = (nextS - s[i - 1]) / (s[i] - s[i - 1]);
-
-			Point2D hKnot(cl[i - 1].x + interpolation[j] * (cl[i].x - cl[i - 1].x),
-				cl[i - 1].y + interpolation[j] * (cl[i].y - cl[i - 1].y));
-
-			horizon_global.push_back(hKnot);
-
-
-			horizon.x[j] = horizon_global.back().x;
-			horizon.y[j] = horizon_global.back().y;
-			horizon.ds[j] = ds[j];
-
-			horizon.psi[j] = psi[i - 1] + interpolation[j] * (psi[i] - psi[i - 1]);
-			horizon.kappa[j] = k[i - 1] + interpolation[j] * (k[i] - k[i - 1]);
-
-			j++;
-			if (j >= agent_model::NOH) {
-				stop = true;
-				return 0;
-			}
-			nextS += ds[j] - ds[j - 1];
-		}
-	}
-
-	return 0;
-
-}

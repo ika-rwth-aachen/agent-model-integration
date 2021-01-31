@@ -20,19 +20,6 @@
 #include <cmath>
 
 
-
-struct Pose {
-    double x;
-    double y;
-	double yaw;
-	double dyaw;
-	double vx;
-	double vy;
-	double ax;
-	double ay;
-
-};
-
 class IkaAgent : public AgentModel {
 public:
     explicit IkaAgent() {};
@@ -45,13 +32,13 @@ public:
 
 private:
     void init();
-    bool trajSet;
     bool initialized = false;
-    osi3::FollowTrajectoryAction traj;
+
+    // Ids identifying the last processed TrafficCommands
     int trajActionId = -1;
     int pathActionId = -1;
     int speedActionId = -1;
-    Pose pose;
+    int hostVehicleId;
 
     double lastS;
     double horizonTHW;
@@ -59,6 +46,7 @@ private:
     double v;
     agent_model::Position lastPosition;
 
+    // lanes along the path of the agent
     std::vector<int> lanes;
     
 
@@ -71,12 +59,9 @@ private:
     VehicleModel::State      *vehState;
     VehicleModel::Parameters *vehParam;
 
-    int adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input& input, std::vector<int>& futureLanes, double time, int h_id);
+    int adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input& input, std::vector<int>& futureLanes, double time);
     int parseTrafficCommand(osi3::SensorView& sensorViewData, osi3::TrafficCommand& commandData);
     void classifyManeuver(osi3::SensorView& sensorViewData);
 
-    int getTrajPoint(double time, osi3::TrafficUpdate &out);
 	int applyDriverOutput(double time, osi3::TrafficUpdate &out);
-	int interpolateState(int iStart, double t);
-	int interpolateStateLinear(double t);
 };
