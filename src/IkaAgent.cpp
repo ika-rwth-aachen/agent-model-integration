@@ -36,7 +36,7 @@ void IkaAgent::init()
 
 	// stop control
 	drParam->stop.T = 2.0;
-	drParam->stop.TMax = 10.0;
+	drParam->stop.TMax = 7.0;
 	drParam->stop.tSign = 0.5;
 	drParam->stop.pedalDuringStanding = -0.3;
 
@@ -392,7 +392,6 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 	//save angle of ego x-Axis/s-Axix because targets.psi and horizon.psi are relative to it
 	double egoPsi = base.orientation().yaw();
 
-
 	input.vehicle.dPsi = base.orientation_rate().yaw();
 
 	//projection of ego coordiantes on centerline
@@ -400,8 +399,7 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 	Point2D egoClPoint;
 	closestCenterlinePoint(lastPosition, elPoints, egoClPoint);
 	input.vehicle.d = sqrt(pow(lastPosition.x - egoClPoint.x, 2) + pow(lastPosition.y - egoClPoint.y, 2));
-	//std::cout << "d=" << input.vehicle.d <<" dPsi="<< input.vehicle.dPsi<<std::endl;
-
+	
 	// calculate s, psi, k of ego lane
 	std::vector<double> s, psi, k;
 	xy2curv(elPoints, s, psi, k);
