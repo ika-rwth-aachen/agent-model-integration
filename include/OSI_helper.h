@@ -121,6 +121,8 @@ int xy2curv(std::vector<Point2D> pos, std::vector<double>& s, std::vector<double
  */
 int closestCenterlinePoint(const Point2D point, const std::vector<Point2D>& cl, Point2D& closest) {
 
+	double apprL_min=INFINITY;
+	int min_i=0;
 	for (int i = 1; i < cl.size(); i++) {	
 		double x1 = cl[i - 1].x;
 		double x2 = cl[i].x;
@@ -131,13 +133,18 @@ int closestCenterlinePoint(const Point2D point, const std::vector<Point2D>& cl, 
 		double l2 = (x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1);
 		double dot = (point.x - x1) * (x2 - x1) + (point.y - y1) * (y2 - y1);
 		double t = dot / l2;
-
+		
 		if (t >= 0 && t <= 1) { //correct points (x1,y1)(x2,y2) were found (projection is in segment)
-			closest.x = x1 + t * (x2 - x1);
-			closest.y = y1 + t * (y2 - y1);
-			return i;
+			double apprL = (point.x - x1) * (point.x - x1) + (point.y - y1) * (point.y - y1);
+			if(apprL < apprL_min) {
+				apprL_min = apprL;
+				closest.x = x1 + t * (x2 - x1);
+				closest.y = y1 + t * (y2 - y1);
+				min_i = i;
+			}
 		}
 	}
+	if (min_i > 0) return min_i;
 
 	//x,y beyond scope of cl
 	if ((pow(point.x - cl.back().x, 2) + pow(point.y - cl.back().y, 2))
