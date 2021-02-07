@@ -18,6 +18,7 @@
 #include "PrimaryController.h"
 #include <vector>
 #include <cmath>
+using Point2D = agent_model::Position;
 
 
 class IkaAgent : public AgentModel {
@@ -45,6 +46,10 @@ private:
     double psi;
     double v;
     agent_model::Position lastPosition;
+    std::vector<Point2D> pathCenterLine;
+    std::vector<double> pathKappa;
+	std::vector<double> pathS;
+	std::vector<double> pathPsi;
 
     // lanes along the path of the agent
     std::vector<int> lanes;
@@ -62,6 +67,7 @@ private:
     int adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input& input, std::vector<int>& futureLanes, double time);
     int parseTrafficCommand(osi3::SensorView& sensorViewData, osi3::TrafficCommand& commandData);
     void classifyManeuver(osi3::SensorView& sensorViewData);
+    generateHorizon(osi3::SensorView& sensorView, agent_model::Input& input, std::vector<int>& futureLanes);
 
 	int applyDriverOutput(double time, osi3::TrafficUpdate &out);
 };

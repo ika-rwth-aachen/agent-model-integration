@@ -14,7 +14,7 @@
 
 constexpr double EPSILON = 0.000000000000001;
 
-using Point2D = agent_model::Position;
+//using Point2D = agent_model::Position;
 
 
 void IkaAgent::init()
@@ -32,7 +32,7 @@ void IkaAgent::init()
 	drParam->velocity.delta = 4.0;
 	drParam->velocity.deltaPred = 3.0;
 	drParam->velocity.vComfort = 50.0 / 3.6;
-	drParam->velocity.ayMax = 1.3;
+	drParam->velocity.ayMax = 1.5;
 
 	// stop control
 	drParam->stop.T = 2.0;
@@ -46,14 +46,14 @@ void IkaAgent::init()
 	drParam->follow.timeHeadway = 1.8;
 	
 	// steering
-	drParam->steering.thw[0] = 0.5;
-	drParam->steering.thw[1] = 1.0;
+	drParam->steering.thw[0] = 1.0;
+	drParam->steering.thw[1] = 3.0;
 	drParam->steering.dsMin[0] = 1.0;
-	drParam->steering.dsMin[1] = 4.0;
+	drParam->steering.dsMin[1] = 3.0;
    	drParam->steering.P[0] = 0.03 * l;
     drParam->steering.P[1] = 0.015 * l;
-    drParam->steering.D[0] = 0.00001;
-    drParam->steering.D[1] = 0.00001;
+    drParam->steering.D[0] = 0.1;
+    drParam->steering.D[1] = 0.1;
 
 	AgentModel::init();
    	vehInput = _vehicle.getInput();
@@ -107,6 +107,8 @@ void IkaAgent::init()
 	output.close();
 	std::ofstream hor("horizon" + std::to_string(hostVehicleId) + ".txt", std::ofstream::out | std::ofstream::trunc);
 	hor.close();
+	std::ofstream hor_test("test_horizon" + std::to_string(hostVehicleId) + ".txt", std::ofstream::out | std::ofstream::trunc);
+	hor.close();
 }
 
 
@@ -134,12 +136,15 @@ int IkaAgent::step(double time, double stepSize, osi3::SensorView &sensorViewDat
 		initialized = true;
 	}	
 	std::ofstream output("debug" + std::to_string(hostVehicleId) + ".txt", std::ofstream::out | std::ofstream::app);
-	std::cout << "------------ time: " << out.timestamp().seconds() + (out.timestamp().nanos() * 0.000000001) << "---------------" << std::endl;
+	std::cout << "------------ time: " << out.timestamp().seconds() + (out.timestamp().nanos() * 0.000000001) << " ---------------" << std::endl;
 	//check for new traffic command
 	if (commandData.action_size() > 0) {	//&&commandData.traffic_participant_id().value() == sensorViewData.host_vehicle_id().value(), traffic_participant not set currently
 		parseTrafficCommand(sensorViewData, commandData);
 		//determine type of maneuver (if crossing intersection)
 		classifyManeuver(sensorViewData);
+		for (auto& lane:lanes) std::cout << lane << " ";
+		std::cout << std::endl;
+		generateHorizon(sensorViewData, _input, lanes);
 	}
 	
 
@@ -186,7 +191,7 @@ int IkaAgent::parseTrafficCommand(osi3::SensorView& sensorViewData, osi3::Traffi
 	osi3::MovingObject host;
 	int startingLaneIdx;
 	Point2D destPoint;
-
+	
 	for (int i = 0; i < commandData.action_size(); i++) {
 		if (commandData.action(i).has_follow_trajectory_action() && (commandData.action(i).follow_trajectory_action().action_header().action_id().value() != trajActionId)) {
 
@@ -265,7 +270,40 @@ void IkaAgent::classifyManeuver(osi3::SensorView& sensorViewData) {
 	std::vector<double> s, k, p;
 	for (auto it : lanes) {
 		osi3::Lane* lane = findLane(it, groundTruth);
-		if (lane->classification().type() == osi3::Lane_Classification_Type_TYPE_INTERSECTION && lane->classification().centerline_size() > 2) {
+		if (lane->classification().type() == osi3::Lane_Classification_Type_TYPE_INTERSECTION)
+			getXY(lane, pos);
+	}	
+	/*std::cout << "curve: ";
+	for (auto& p:pos) std::cout << p.x << "," << p.y << " ";
+	std::cout << "\n";*/
+	for (int i = 0; i < pos.size()-1; i++) 
+	{
+		double dsNext = (pos[i+1].x - pos[i].x) * (pos[i+1].x - pos[i].x)
+					  + (pos[i+1].y - pos[i].y) * (pos[i+1].y - pos[i].y);
+
+		if (dsNext < 0.1) {
+			pos.erase(pos.begin()+i+1);
+			i++;
+		}
+	}
+	if (pos.size() <= 2) 
+		_input.vehicle.maneuver = agent_model::Maneuver::STRAIGHT;
+	else
+	{
+		xy2curv(pos, s, p, k);
+		double avg = std::accumulate(k.cbegin(), k.cend(), 0.0) / k.size();
+		std::cout << "avg: " << avg << "\n";
+		double eps = 0.0000001;
+		if (avg > eps)
+			_input.vehicle.maneuver = agent_model::Maneuver::TURN_LEFT;
+		else if(avg < (-1*eps))
+			_input.vehicle.maneuver = agent_model::Maneuver::TURN_RIGHT;
+		else
+			_input.vehicle.maneuver = agent_model::Maneuver::STRAIGHT;
+	}
+	
+
+		/*if (lane->classification().type() == osi3::Lane_Classification_Type_TYPE_INTERSECTION && lane->classification().centerline_size() > 2) {
 		//if(lane->id().value() == 200029 || lane->id().value() == 200030 || lane->id().value() == 200002 || lane->id().value() == 200009 || lane->id().value() == 200010 ||
 		//	lane->id().value() == 200000 || lane->id().value() == 200025 || lane->id().value() == 200001 || lane->id().value() == 200008 || lane->id().value() == 200028 ||
 		//	lane->id().value() == 200026 || lane->id().value() == 200027){
@@ -294,7 +332,7 @@ void IkaAgent::classifyManeuver(osi3::SensorView& sensorViewData) {
 
 			
 		}
-	}
+	}*/
 	std::cout << "\nMANEUVER (0=straight, 1=left, 2=right): " << _input.vehicle.maneuver << std::endl;
 }
 
@@ -319,6 +357,46 @@ int IkaAgent::applyDriverOutput(double time, osi3::TrafficUpdate &out)
 	return 0;
 }
 
+int IkaAgent::generateHorizon(osi3::SensorView& sensorView, agent_model::Input& input, std::vector<int>& futureLanes) {
+	
+	// first get all relevant points from futureLanes
+
+	osi3::GroundTruth* groundTruth = sensorView.mutable_global_ground_truth();
+	
+
+	for (auto& l:futureLanes) 
+		getXY(findLane(l, groundTruth), pathCenterLine);
+
+	// remove duplicates
+	for (int i = 0; i < pathCenterLine.size()-1; i++) 
+	{
+		double dsNext = (pathCenterLine[i+1].x - pathCenterLine[i].x) * (pathCenterLine[i+1].x - pathCenterLine[i].x)
+					  + (pathCenterLine[i+1].y - pathCenterLine[i].y) * (pathCenterLine[i+1].y - pathCenterLine[i].y);
+
+		if (dsNext < 0.1) {
+			pathCenterLine.erase(pathCenterLine.begin()+i+1);
+			i++;
+		}
+	}
+
+	// calculate s, kappa, and psi
+	xy2curv(pathCenterLine, pathS, pathPsi, pathKappa);
+
+	// debug info
+	std::ofstream test_hor("test_horizon" + std::to_string(hostVehicleId) + ".txt", std::ofstream::out | std::ofstream::app);
+	for(int i = 0; i < pathCenterLine.size(); i++) {
+		test_hor << pathCenterLine[i].x << "," 
+			<< pathCenterLine[i].y << "," 
+			<< pathS[i] << "," 
+			<< pathPsi[i] << "," 
+			<< pathKappa[i] << "\n";
+	}
+
+	test_hor.close();
+
+	return 0;
+}
+
 /**
  * @brief fills the fields of agent_model interface based on data from OSI SensorView
  *
@@ -328,9 +406,7 @@ int IkaAgent::applyDriverOutput(double time, osi3::TrafficUpdate &out)
  */
 int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input& input, std::vector<int>& futureLanes, double time) {
 	if (false)return 0;
-	static int count = 0;
-	count++;
-	//if (count >1)return 0; 
+	
 	osi3::GroundTruth* groundTruth = sensorView.mutable_global_ground_truth();
 	
 	std::ofstream horizon_out("horizon" + std::to_string(hostVehicleId) + ".txt", std::ofstream::out | std::ofstream::app);
@@ -369,7 +445,7 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 	//save ego lane centerline coordinates for later 
 	std::vector<Point2D> elPoints;
 	getXY(egoLanePtr, elPoints);
-
+	//std::cout  << "assigned_lane: " << egoLanePtr->id().value() << "\n";
 
 
 	osi3::BaseMoving base = obj.base();
@@ -397,8 +473,8 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 	//projection of ego coordiantes on centerline
 
 	Point2D egoClPoint;
-	closestCenterlinePoint(lastPosition, elPoints, egoClPoint);
-	input.vehicle.d = sqrt(pow(lastPosition.x - egoClPoint.x, 2) + pow(lastPosition.y - egoClPoint.y, 2));
+	//closestCenterlinePoint(lastPosition, elPoints, egoClPoint);
+	int test_idx = closestCenterlinePoint(lastPosition, pathCenterLine, egoClPoint);
 	
 	// calculate s, psi, k of ego lane
 	std::vector<double> s, psi, k;
@@ -440,6 +516,16 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 		//std::cout << "vehicle psi " << input.vehicle.psi * 180 / 3.14159 << "=" << base.orientation().yaw()*180/3.14159 << "-" << psi.back() * 180 / 3.14159 << std::endl;
 	}
 
+
+	double dirCL = atan2(egoClPoint.y-lastPosition.y, egoClPoint.x-lastPosition.x);
+	//sign?!
+	double orientation = egoPsi-dirCL;
+	if(orientation < -M_PI) orientation = orientation + 2* M_PI;
+	if(orientation > M_PI) orientation = orientation - 2* M_PI;
+	int d_sig = (orientation>0) - (orientation<0);
+	double distCL = sqrt(pow(lastPosition.x - egoClPoint.x, 2) + pow(lastPosition.y - egoClPoint.y, 2));	
+	input.vehicle.d = d_sig*distCL;
+	
 	input.vehicle.pedal = 0;         // TODO
 	input.vehicle.steering = 0;      // TODO  
 
@@ -720,12 +806,52 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 		ds[i] = (i + 1) * (i + 1) * delta * delta;
 	}
 
+	double interpolation = 0;
+	double defaultWidth = 3.5;
+	//		//
+	// NEW	//
+	//		//
+	Point2D dummy;
+	//std::cout << "look here: " << lastPosition.x << ", " << lastPosition.y << " cl lenght: " << pathCenterLine.size() << "\n"; 
+	int hor_idx = closestCenterlinePoint(lastPosition, pathCenterLine, dummy);
+	double sTravel = pathS[hor_idx - 1] + sqrt((lastPosition.x - pathCenterLine[hor_idx - 1].x) * (lastPosition.x - pathCenterLine[hor_idx - 1].x) 
+										 + (lastPosition.y - pathCenterLine[hor_idx - 1].y) * (lastPosition.y - pathCenterLine[hor_idx - 1].y));
+	//std::cout << "sTravel: " << sTravel << " after idx: " << hor_idx << "\n";
+	
+	for (int i = 0; i < agent_model::NOH; i++) {
+		double dsCur = (i + 1) * (i + 1) * delta * delta;
+		int j=-1;
+		for (auto& ss:pathS) {			
+			if (ss > sTravel+dsCur) break;
+			j++;
+		}
+		//std::cout << j << " ";
 
+		//int i_idx = closestCenterlinePoint(lastKnot, pathCenterLine, dummy);
+		
+		interpolation = (sTravel + dsCur - pathS[j]) / (pathS[j+1] - pathS[j]);
+		Point2D hKnot(pathCenterLine[j].x + interpolation * (pathCenterLine[j+1].x - pathCenterLine[j].x),
+					  pathCenterLine[j].y + interpolation * (pathCenterLine[j+1].y - pathCenterLine[j].y));
+		
+		input.horizon.ds[i] = dsCur;
+		input.horizon.x[i] = std::cos(egoPsi) * (hKnot.x - lastPosition.x) + std::sin(egoPsi) * (hKnot.y - lastPosition.y); 
+		input.horizon.y[i] = -1.0 * std::sin(egoPsi) * (hKnot.x - lastPosition.x) + std::cos(egoPsi) * (hKnot.y - lastPosition.y);
+		input.horizon.psi[i] = pathPsi[j] + interpolation * (pathPsi[j+1] - pathPsi[j]) - egoPsi;
+		input.horizon.kappa[i] = pathKappa[j] + interpolation * (pathKappa[j+1] - pathKappa[j]);
+		input.horizon.egoLaneWidth[i] = 3.75;
+		input.horizon.leftLaneWidth[i] = 3.75;
+		input.horizon.rightLaneWidth[i] = 3.75;
+		
+	}
+	std::cout << std::endl;
+
+	//			//
+	// NEW(end)	//
+	//			//
+/*
 	std::vector<Point2D> horizon;
 	std::vector<Point2D> currentCl = elPoints;
 	std::vector<double> kappa = k;
-
-	double interpolation = 0;
 
 	int currentLane = egoLanePtr->id().value();
 
@@ -777,7 +903,7 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 		sStart = s[idx - 1] + sqrt((lastPosition.x - elPoints[idx - 1].x) * (lastPosition.x - elPoints[idx - 1].x) + (lastPosition.y - elPoints[idx - 1].y) * (lastPosition.y - elPoints[idx - 1].y));
 	}
 	
-	double defaultWidth = 3.5;
+	
 
 	[&] {
 		for (int i = 0; i < agent_model::NOH; i++) {
@@ -863,7 +989,7 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 		}
 	}();
 	
-
+*/
 	//set helpers because currentCl is overwritten when lane changes
 	//p1.x = currentCl.back().x; p1.y = currentCl.back().y;
 	//p2.x = currentCl[currentCl.size() - 2].x; p2.y = currentCl[currentCl.size() - 2].y;
@@ -944,7 +1070,7 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 	//	}
 
 	//}();
-	
+/*	
 
 	if (horizon.size() == 0) {
 
@@ -966,7 +1092,7 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 		horizon.push_back(knot);
 		input.horizon.egoLaneWidth[i] = defaultWidth;
 	}
-	
+	*/
 	for (int i = 0; i < agent_model::NOH; i++) {
 		//if (time >= 36 && time <= 37)std::cout << input.horizon.kappa[i] << std::endl;
 			//std::cout << "(" << horizon[i].x << "," << horizon[i].y << ") \n";

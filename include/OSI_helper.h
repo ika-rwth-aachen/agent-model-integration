@@ -9,8 +9,6 @@
 #include <iostream>
 #include <algorithm>
 
-using Point2D = agent_model::Position;
-
 /**
  * @brief computes gradients with finite differences
  *
@@ -105,11 +103,14 @@ int xy2curv(std::vector<Point2D> pos, std::vector<double>& s, std::vector<double
 		}
 
 		double p = atan2(dyds[i], dxds[i]);
-		psi.push_back(p >= 0 ? p : p + 2 * M_PI);
+		//psi.push_back(p >= 0 ? p : p + 2 * M_PI);
+		psi.push_back(p);
 	}
 
 	return 0;
 }
+
+
 
 /**
  * @brief find closest point on centerline of current lane to a point(x,y)
@@ -121,8 +122,9 @@ int xy2curv(std::vector<Point2D> pos, std::vector<double>& s, std::vector<double
  */
 int closestCenterlinePoint(const Point2D point, const std::vector<Point2D>& cl, Point2D& closest) {
 
-	double apprL_min=INFINITY;
+	double min_dist=INFINITY;
 	int min_i=0;
+	Point2D tmp;
 	for (int i = 1; i < cl.size(); i++) {	
 		double x1 = cl[i - 1].x;
 		double x2 = cl[i].x;
@@ -132,23 +134,31 @@ int closestCenterlinePoint(const Point2D point, const std::vector<Point2D>& cl, 
 		//compute orthogonal projection of (x,y) onto the parameterized line connecting (x1,y1) and (x2,y2)
 		double l2 = (x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1);
 		double dot = (point.x - x1) * (x2 - x1) + (point.y - y1) * (y2 - y1);
-		double t = dot / l2;
-		
+		double t = dot / l2;			
 		if (t >= 0 && t <= 1) { //correct points (x1,y1)(x2,y2) were found (projection is in segment)
-			double apprL = (point.x - x1) * (point.x - x1) + (point.y - y1) * (point.y - y1);
-			if(apprL < apprL_min) {
-				apprL_min = apprL;
-				closest.x = x1 + t * (x2 - x1);
-				closest.y = y1 + t * (y2 - y1);
+			tmp.x = x1 + t * (x2 - x1);
+			tmp.y = y1 + t * (y2 - y1);	
+			double dist = pow(tmp.x - point.x ,2) + pow(tmp.y - point.y ,2);
+			if(dist < min_dist) {
+				min_dist = dist;
+				closest = tmp;
+				min_i = i;
+			}
+		} else {
+			double distI = pow(x2 - point.x ,2) + pow(y2 - point.y ,2);
+			if(distI < min_dist) {
+				closest = cl[i];
+				min_dist = distI;
 				min_i = i;
 			}
 		}
 	}
-	if (min_i > 0) return min_i;
+	double distEnd = pow(point.x - cl.back().x, 2) + pow(point.y - cl.back().y, 2);
+	double distStart = pow(point.x - cl.front().x, 2) + pow(point.y - cl.front().y, 2);	
+	if (min_i > 0 && (min_dist < distEnd || min_dist < distStart)) return min_i;
 
 	//x,y beyond scope of cl
-	if ((pow(point.x - cl.back().x, 2) + pow(point.y - cl.back().y, 2))
-		< (pow(point.x - cl.front().x, 2) + pow(point.y - cl.front().y, 2))) {
+	if (distEnd < distStart) {
 
 		if (cl.size() < 2) {
 			closest = cl.back();
@@ -510,9 +520,9 @@ int closestLane(osi3::GroundTruth* groundTruth, const Point2D& point) {
 		getXY(&cur_lane, centerline);
 
 		Point2D closest;
-		closestCenterlinePoint(point, centerline, closest);
+		int idx =closestCenterlinePoint(point, centerline, closest);
 		double d = (closest.x - point.x) * (closest.x - point.x) + (closest.y - point.y) * (closest.y - point.y);
-		
+		//std::cout <<cur_lane.id().value() << ":"<< d << " idx:" << idx<< "\n";
 		if (distance > d) {
 			distance = d;
 			destId = cur_lane.id().value();
@@ -551,9 +561,8 @@ void futureLanes(osi3::GroundTruth* groundTruth, const int& startIdx, const Poin
 		std::sort(adj[i].begin(), adj[i].end());
 		adj[i].erase(unique(adj[i].begin(), adj[i].end()), adj[i].end());
 	}
-
+	
 	int pred[groundTruth->lane_size()];
-
 
 	if (BFS(adj, startIdx, destIdx, groundTruth->lane_size(), pred) == false) {
 		//add starting lane into futureLanes if it is not already contained
