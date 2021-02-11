@@ -146,8 +146,8 @@ int IkaAgent::step(double time, double stepSize, osi3::SensorView &sensorViewDat
 		std::cout << std::endl;
 		generateHorizon(sensorViewData, _input, lanes);
 	}
-	
 
+	//std::cout << "before step...\n" ;
 	//Translate sensorViewData to agent_model::input
 	adapterOsiToInput(sensorViewData, _input, lanes , out.timestamp().seconds()+(out.timestamp().nanos()*0.000000001));
 	this->AgentModel::step(time);
@@ -373,9 +373,9 @@ int IkaAgent::generateHorizon(osi3::SensorView& sensorView, agent_model::Input& 
 		double dsNext = (pathCenterLine[i+1].x - pathCenterLine[i].x) * (pathCenterLine[i+1].x - pathCenterLine[i].x)
 					  + (pathCenterLine[i+1].y - pathCenterLine[i].y) * (pathCenterLine[i+1].y - pathCenterLine[i].y);
 
-		if (dsNext < 0.1) {
-			pathCenterLine.erase(pathCenterLine.begin()+i+1);
-			i++;
+		if (dsNext < 0.01) {
+			pathCenterLine.erase(pathCenterLine.begin()+i);
+			i--;
 		}
 	}
 
@@ -590,7 +590,7 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 
 		sSig += xy2s(egoClPoint, target, elPoints);
 
-		input.signals[signal].id = signal; //could also take sign.id().value() as id here, OSI ids are often larger numbers
+		input.signals[signal].id = signal+1; //could also take sign.id().value() as id here, OSI ids are often larger numbers
 		input.signals[signal].ds = sSig;
 		
 		// calculate type 
@@ -634,7 +634,6 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 	//for (i = 0; i < agent_model::NOS; i++) {
 		//std::cout << "Signal " << input.signals[i].id << " ds=" << input.signals[i].ds << " type: " << input.signals[i].type << " value: " << input.signals[signal].value << std::endl;
 	//}
-
 
 	// --- traffic ---
 	std::unordered_map<int, int> laneMapping;
@@ -820,27 +819,39 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 	
 	for (int i = 0; i < agent_model::NOH; i++) {
 		double dsCur = (i + 1) * (i + 1) * delta * delta;
+		// get correct space for interpolation
 		int j=-1;
 		for (auto& ss:pathS) {			
 			if (ss > sTravel+dsCur) break;
 			j++;
 		}
-		//std::cout << j << " ";
 
-		//int i_idx = closestCenterlinePoint(lastKnot, pathCenterLine, dummy);
-		
-		interpolation = (sTravel + dsCur - pathS[j]) / (pathS[j+1] - pathS[j]);
-		Point2D hKnot(pathCenterLine[j].x + interpolation * (pathCenterLine[j+1].x - pathCenterLine[j].x),
-					  pathCenterLine[j].y + interpolation * (pathCenterLine[j+1].y - pathCenterLine[j].y));
-		
-		input.horizon.ds[i] = dsCur;
+		Point2D hKnot;
+		if(sTravel + dsCur < pathS.back())
+		{
+			interpolation = (sTravel + dsCur - pathS[j]) / (pathS[j+1] - pathS[j]);
+			hKnot.x = pathCenterLine[j].x + interpolation * (pathCenterLine[j+1].x - pathCenterLine[j].x);
+			hKnot.y = pathCenterLine[j].y + interpolation * (pathCenterLine[j+1].y - pathCenterLine[j].y);
+			
+			input.horizon.ds[i] = dsCur;			
+			input.horizon.psi[i] = pathPsi[j] + interpolation * (pathPsi[j+1] - pathPsi[j]) - egoPsi;
+			input.horizon.kappa[i] = pathKappa[j] + interpolation * (pathKappa[j+1] - pathKappa[j]);
+		}
+		else 
+		{
+			hKnot.x = pathCenterLine.back().x;
+			hKnot.y = pathCenterLine.back().y;
+			input.horizon.ds[i] = pathS.back() - sTravel;			
+			input.horizon.psi[i] = 0;
+			input.horizon.kappa[i] = 0;
+		}
+
 		input.horizon.x[i] = std::cos(egoPsi) * (hKnot.x - lastPosition.x) + std::sin(egoPsi) * (hKnot.y - lastPosition.y); 
 		input.horizon.y[i] = -1.0 * std::sin(egoPsi) * (hKnot.x - lastPosition.x) + std::cos(egoPsi) * (hKnot.y - lastPosition.y);
-		input.horizon.psi[i] = pathPsi[j] + interpolation * (pathPsi[j+1] - pathPsi[j]) - egoPsi;
-		input.horizon.kappa[i] = pathKappa[j] + interpolation * (pathKappa[j+1] - pathKappa[j]);
+		// TODO!!
 		input.horizon.egoLaneWidth[i] = 3.75;
-		input.horizon.leftLaneWidth[i] = 3.75;
-		input.horizon.rightLaneWidth[i] = 3.75;
+		input.horizon.leftLaneWidth[i] = 0;
+		input.horizon.rightLaneWidth[i] = 0;
 		
 	}
 	std::cout << std::endl;
