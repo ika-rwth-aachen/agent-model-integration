@@ -67,7 +67,7 @@ private:
     int adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input& input, std::vector<int>& futureLanes, double time);
     int parseTrafficCommand(osi3::SensorView& sensorViewData, osi3::TrafficCommand& commandData);
     void classifyManeuver(osi3::SensorView& sensorViewData);
-    generateHorizon(osi3::SensorView& sensorView, agent_model::Input& input, std::vector<int>& futureLanes);
+    int generateHorizon(osi3::SensorView& sensorView, agent_model::Input& input, std::vector<int>& futureLanes);
 
 	int applyDriverOutput(double time, osi3::TrafficUpdate &out);
 };
