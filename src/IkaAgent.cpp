@@ -656,7 +656,123 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 		}*/
 	}
 	
+	int ti = 0;
+	for(auto& mo : *groundTruth->mutable_moving_object())
+	//for(int k=0; k<groundTruth->moving_object_size();k++)
+	{
+		//auto mo = groundTruth->moving_object(k);
+		if (mo.id().value() == egoId) continue;
 
+		osi3::BaseMoving base = mo.base();
+		input.targets[ti].id = ti+1;
+		input.targets[ti].priority = agent_model::TARGET_PRIORITY_NOT_SET;
+
+		auto it = futureLanes.end(); 
+		bool assigned = false;
+
+		double sTar = 0;
+
+		// determine whether target is assigned to a lane along the host's path (following possible)
+		for (int j = 0; j < mo.assigned_lane_id_size(); j++) {
+
+			it = find(futureLanes.begin(), futureLanes.end(), mo.assigned_lane_id(j).value());
+
+			if (it != futureLanes.end()) {
+				assigned = true;
+				break;
+			}
+		}
+
+		for (int j = 0; j < mo.assigned_lane_id_size(); j++) {
+			if (find(lanesEnteringIntersection.begin(), lanesEnteringIntersection.end(), mo.assigned_lane_id(j).value())
+				!= lanesEnteringIntersection.end()) {
+				//target is on a lane ending in an intersection
+				std::vector<Point2D> cl;
+				getXY(findLane(mo.assigned_lane_id(j).value(), groundTruth), cl);
+				input.targets[ti].dsIntersection = xy2s(Point2D(base.position().x(), base.position().y()), cl.back(), cl);
+				if (find(priorityLanes.begin(), priorityLanes.end(), mo.assigned_lane_id(j).value())
+					!= priorityLanes.end())
+					input.targets[ti].priority = agent_model::TARGET_ON_PRIORITY_LANE;
+				else if (find(yieldingLanes.begin(), yieldingLanes.end(), mo.assigned_lane_id(j).value())
+					!= yieldingLanes.end())
+					input.targets[ti].priority = agent_model::TARGET_ON_GIVE_WAY_LANE;
+
+				break;
+			}
+			else if (findLane(mo.assigned_lane_id(j).value(), groundTruth)->classification().type() == osi3::Lane_Classification_Type_TYPE_INTERSECTION) {
+				input.targets[ti].priority = agent_model::TARGET_ON_INTERSECTION;
+			}
+		}
+
+		// only fill ds, lane and d fields when target is along the host's path
+		if (assigned) {
+			Point2D cPoint;
+			Point2D bPoint(base.position().x(), base.position().y());
+
+			closestCenterlinePoint(bPoint, elPoints, cPoint);
+
+			osi3::Lane* tarLane = findLane(mo.assigned_lane_id(0).value(), groundTruth);
+
+			Point2D current = bPoint;
+
+			if (*it != egoLanePtr->id().value()) {
+				// target is not assigned to the current lane -> add distance along the target's assigned lane
+				// meaning assigned_lane's beginning to bPoint
+				std::vector<Point2D> pos;
+				getXY(findLane(*it, groundTruth), pos);
+				sTar += xy2s(pos.front(), bPoint, pos);
+				pos.clear();
+			}
+			while (it != futureLanes.begin() && *(it - 1) != egoLanePtr->id().value()) {
+				it--;
+				std::vector<Point2D> pos;
+				getXY(findLane(*it, groundTruth), pos);
+				sTar += xy2s(pos.front(), pos.back(), pos);
+				current = pos.front();
+			}
+
+			sTar += xy2s(egoClPoint, current, elPoints);
+
+			input.targets[ti].ds = sTar; //TODO: check what happens when target is behind host vehicle
+			input.targets[ti].d = sqrt(pow(base.position().x() - cPoint.x, 2) + pow(base.position().y() - cPoint.y, 2));
+			input.targets[ti].lane = laneMapping[mo.assigned_lane_id(0).value()];
+		}
+		else {
+			input.targets[ti].ds = INFINITY; 
+			input.targets[ti].d = 0;
+			input.targets[ti].lane = 127;
+		}
+
+		input.targets[ti].xy.x = base.position().x() - lastPosition.x;
+		input.targets[ti].xy.y = base.position().y() - lastPosition.y;
+
+		input.targets[ti].v = sqrt(base.velocity().x() * base.velocity().x() + base.velocity().y() * base.velocity().y());
+		input.targets[ti].a = sqrt(base.acceleration().x() * base.acceleration().x() + base.acceleration().y() * base.acceleration().y());
+		input.targets[ti].psi = base.orientation().yaw() - egoPsi;
+
+		input.targets[ti].size.length = base.dimension().length();
+		input.targets[ti].size.width = base.dimension().width();
+
+		ti++;
+
+	}
+	for(int i = ti; i < agent_model::NOT; i++)
+	{
+		input.targets[i].id = 0;
+		input.targets[i].ds = INFINITY;
+		input.targets[i].xy.x = 0;
+		input.targets[i].xy.y = 0;
+		input.targets[i].v = 0;
+		input.targets[i].a = 0;
+		input.targets[i].d = 0;
+		input.targets[i].psi = 0;
+		input.targets[i].lane = 127;
+		input.targets[i].size.width = 0;
+		input.targets[i].size.length = 0;
+		input.targets[i].dsIntersection = 0;
+		input.targets[i].priority = agent_model::TARGET_PRIORITY_NOT_SET;
+	}
+/*
 	for (int i = 0; i < agent_model::NOT; i++)
 	{
 
@@ -790,7 +906,7 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 			input.targets[i].size.length = 0;
 			input.targets[i].dsIntersection = 0;
 		}
-	}
+	}*/
 
 	// --- horizon ---
 
@@ -1149,7 +1265,7 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 
 	laneCounter++;
 
-	for (int i = 0; i < groundTruth->lane_size() && laneCounter < agent_model::NOL; i++) {
+	for (int i = 0; i < groundTruth->lane_size() && i < agent_model::NOL; i++) {
 		osi3::Lane lane = groundTruth->lane(i);
 		//skip if lane is in futureLanes, that means it was already considered before
 		if (find(futureLanes.begin(), futureLanes.end(), lane.id().value()) != futureLanes.end()) {
