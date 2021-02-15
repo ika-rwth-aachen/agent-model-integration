@@ -20,6 +20,11 @@
 #include <cmath>
 using Point2D = agent_model::Position;
 
+struct junctionPath {
+    std::vector<int> laneIds;
+    std::vector<Point2D> pts;
+    int signalId;
+};
 
 class IkaAgent : public AgentModel {
 public:
@@ -50,6 +55,8 @@ private:
     std::vector<double> pathKappa;
 	std::vector<double> pathS;
 	std::vector<double> pathPsi;
+	std::vector<junctionPath> priorityLanes;
+	std::vector<junctionPath> yieldingLanes;	
 
     // lanes along the path of the agent
     std::vector<int> lanes;
