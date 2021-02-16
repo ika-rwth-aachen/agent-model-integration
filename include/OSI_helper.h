@@ -276,6 +276,52 @@ double calcWidth(const Point2D point, osi3::Lane* lane, osi3::GroundTruth* groun
 	return sqrt(pow(lPoint.x - rPoint.x, 2) + pow(lPoint.y - rPoint.y, 2));
 }
 
+/**
+ * @brief ds along xy starting at (startX,startY) and ending at (endX,endY) with correct sign
+ *
+ * @param start point
+ * @param end point
+ * @param cl centerline
+ * @return resulting distance
+ */
+double xy2s_sgn(const Point2D start, const Point2D end, const std::vector<Point2D>& cl) {
+	double s = 0;
+	Point2D startCl, endCl;
+	int startIdx = closestCenterlinePoint(start, cl, startCl);
+	int endIdx = closestCenterlinePoint(end, cl, endCl);
+
+	if(startIdx < endIdx)
+	{
+		for (int i = startIdx + 1; i < endIdx; i++)
+		{
+			double dx = cl[i].x - cl[i - 1].x;
+			double dy = cl[i].y - cl[i - 1].y;
+
+			s += sqrt(dx * dx + dy * dy);
+		}
+		s += sqrt( pow(start.x-cl[startIdx].x, 2) + pow(start.y-cl[startIdx].y, 2) );
+		s += sqrt( pow(end.x-cl[endIdx-1].x, 2) + pow(end.y-cl[endIdx-1].y, 2) );
+		return s;
+	}
+	else if(startIdx == endIdx)
+	{
+		// unsure about sign...
+		return sqrt( pow(start.x-end.x, 2) + pow(start.y-end.y, 2) );
+	}
+	else
+	{
+		for (int i = startIdx + 1; i < endIdx; i++)
+		{
+			double dx = cl[i].x - cl[i - 1].x;
+			double dy = cl[i].y - cl[i - 1].y;
+
+			s -= sqrt(dx * dx + dy * dy);
+		}
+		s -= sqrt( pow(start.x-cl[startIdx].x, 2) + pow(start.y-cl[startIdx].y, 2) );
+		s -= sqrt( pow(end.x-cl[endIdx-1].x, 2) + pow(end.y-cl[endIdx-1].y, 2) );
+		return s;
+	}
+}
 
 /**
  * @brief ds along centerline starting at (startX,startY) and ending at (endX,endY)

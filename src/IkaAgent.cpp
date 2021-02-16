@@ -38,6 +38,7 @@ void IkaAgent::init()
 	drParam->stop.T = 2.0;
 	drParam->stop.TMax = 7.0;
 	drParam->stop.tSign = 0.5;
+	drParam->stop.vStopped = 0.2;
 	drParam->stop.pedalDuringStanding = -0.3;
 
 	// following
@@ -618,8 +619,6 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 		auto it = futureLanes.end();
 		// check that the sign is assigned to a lane along the route. 
 		bool assigned = false;
-		// sSig will hold s value along centerlines to reach the signal
-		double sSig = 0;
 		for (int j = 0; j < clas.assigned_lane_id_size(); j++) {
 			if(find(knownAsLane.begin(), knownAsLane.end(), clas.assigned_lane_id(j).value()) != knownAsLane.end())
 				continue;
@@ -635,17 +634,17 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 		}
 
 		if (!assigned) continue;
-
-		
-
+		// sSig will hold s value along centerlines to reach the signal
 		//projection of signal position on centerline: cPoint
 		Point2D cPoint;
 		Point2D sPoint(sign.main_sign().base().position().x(), sign.main_sign().base().position().y());
 		//closestCenterlinePoint(sPoint, elPoints, cPoint);
 		Point2D target = sPoint;
+		closestCenterlinePoint(sPoint, pathCenterLine, cPoint);
+		double sSig = xy2s_sgn(egoClPoint, cPoint, pathCenterLine);
 		//std::cout << "Spoint: (" << sPoint.x << "," << sPoint.y << ")" << std::endl;
 		//signal on future lane
-		if (*it != egoLanePtr->id().value()) {
+		/*if (*it != egoLanePtr->id().value()) {
 			// signal is not assigned to the current lane -> add distance along the signal's assigned lane
 			// meaning assigned_lane beginning to sPoint
 			std::vector<Point2D> pos;
@@ -664,7 +663,7 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 
 		//std::cout << "\nhost : (" << lastPosition.x << "," << lastPosition.y << ")\nsignal: (" << sPoint.x << "," << sPoint.y << ") " << "\ntarget (" << target.x << "," << target.y << ") " << std::endl;
 
-		sSig += xy2s(egoClPoint, target, elPoints);
+		sSig += xy2s(egoClPoint, target, elPoints);*/
 
 		input.signals[signal].id = signal+1; //could also take sign.id().value() as id here, OSI ids are often larger numbers
 		input.signals[signal].ds = sSig;
