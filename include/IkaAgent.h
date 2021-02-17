@@ -37,7 +37,7 @@ public:
    
 
 private:
-    void init();
+    void init(osi3::BaseMoving& host);
     bool initialized = false;
 
     // Ids identifying the last processed TrafficCommands
@@ -48,8 +48,6 @@ private:
 
     double lastS;
     double horizonTHW;
-    double psi;
-    double v;
     agent_model::Position lastPosition;
     std::vector<Point2D> pathCenterLine;
     std::vector<double> pathKappa;

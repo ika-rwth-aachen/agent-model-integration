@@ -17,12 +17,12 @@ constexpr double EPSILON = 0.000000000000001;
 //using Point2D = agent_model::Position;
 
 
-void IkaAgent::init()
+void IkaAgent::init(osi3::BaseMoving& host)
 {
 	lastS = 0;
 	horizonTHW = 15;
 	double l = 3.22; // wheel base
-
+	
 	drParam = getParameters();
 	drState = getState();
 
@@ -74,8 +74,8 @@ void IkaAgent::init()
     vehParam->rollCoefficient[0] = 4.0 * 9.91e-3;
     vehParam->rollCoefficient[1] = 4.0 * 1.95e-5;
     vehParam->rollCoefficient[2] = 4.0 * 1.76e-9;
-    vehParam->size.x = 5.0;
-    vehParam->size.y = 2.0;
+    vehParam->size.x = host.dimension().length();
+    vehParam->size.y = host.dimension().width();
 	vehParam->driverPosition.x = 0.0;// 0.50;
     vehParam->driverPosition.y = 0.0;//0.5;
 	
@@ -89,10 +89,12 @@ void IkaAgent::init()
 
     // set states
     _vehicle.reset();
-	vehState->position.x =  lastPosition.x;
-    vehState->position.y = lastPosition.y;
-	vehState->v =  v;//tbd
-	vehState->psi = psi; //tbd
+	vehState->position.x = host.position().x();
+    vehState->position.y = host.position().y();
+	//vehState->v = sqrt(host.velocity().x() * host.velocity().x() 
+	//			+ host.velocity().y() * host.velocity().y());//tbd
+	vehState->v = 10;
+	vehState->psi = host.orientation().yaw(); //tbd
 	
     // set variables
     pedalContr.setVariables(&vehState->a, &drState->subconscious.a, &vehInput->pedal, &drState->subconscious.pedal);
@@ -109,31 +111,31 @@ void IkaAgent::init()
 	std::ofstream hor("horizon" + std::to_string(hostVehicleId) + ".txt", std::ofstream::out | std::ofstream::trunc);
 	hor.close();
 	std::ofstream hor_test("test_horizon" + std::to_string(hostVehicleId) + ".txt", std::ofstream::out | std::ofstream::trunc);
-	hor.close();
+	hor_test.close();
 }
 
 
 int IkaAgent::step(double time, double stepSize, osi3::SensorView &sensorViewData, osi3::TrafficCommand &commandData, osi3::TrafficUpdate &out, setlevel4to5::DynamicsRequest & dynOut)
 {
-	if (false) return 0;
-	//----------------
-	
+
 	//Initialize agent in first step
 	if (!initialized) {
+		osi3::BaseMoving hostData = sensorViewData.host_vehicle_data().location();
 		hostVehicleId = sensorViewData.host_vehicle_id().value();
 		//set initial Position
-		for (int i = 0; i < sensorViewData.global_ground_truth().moving_object_size(); i++) {
-			if (sensorViewData.global_ground_truth().moving_object(i).id().value() == sensorViewData.host_vehicle_id().value()) {
-				osi3::BaseMoving base = sensorViewData.global_ground_truth().moving_object(i).base();
-				lastPosition.x = base.position().x();
+		/*for (int i = 0; i < sensorViewData.global_ground_truth().moving_object_size(); i++) {
+			if (sensorViewData.global_ground_truth().moving_object(i).id().value() == hostVehicleId) {
+				//osi3::BaseMoving base = sensorViewData.global_ground_truth().moving_object(i).base();
+				osi3::HostVehicleData host = sensorViewData.host_vehicle_data();
+				lastPosition.x = host.position().x();
 				lastPosition.y = base.position().y();
 				psi = base.orientation().yaw();
 				v = 7;// sqrt(base.velocity().x() * base.velocity().x() + base.velocity().y() * base.velocity().y());
 				break;
 			}
-		}
+		}*/
 
-		IkaAgent::init();
+		IkaAgent::init(hostData);
 		initialized = true;
 	}	
 	std::ofstream output("debug" + std::to_string(hostVehicleId) + ".txt", std::ofstream::out | std::ofstream::app);
