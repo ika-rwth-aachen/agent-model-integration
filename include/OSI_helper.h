@@ -292,7 +292,7 @@ double xy2s_sgn(const Point2D start, const Point2D end, const std::vector<Point2
 
 	if(startIdx < endIdx)
 	{
-		for (int i = startIdx + 1; i < endIdx; i++)
+		for (int i = startIdx + 1; i <= endIdx; i++)
 		{
 			double dx = cl[i].x - cl[i - 1].x;
 			double dy = cl[i].y - cl[i - 1].y;
@@ -300,7 +300,7 @@ double xy2s_sgn(const Point2D start, const Point2D end, const std::vector<Point2
 			s += sqrt(dx * dx + dy * dy);
 		}
 		s += sqrt( pow(start.x-cl[startIdx].x, 2) + pow(start.y-cl[startIdx].y, 2) );
-		s += sqrt( pow(end.x-cl[endIdx-1].x, 2) + pow(end.y-cl[endIdx-1].y, 2) );
+		s -= sqrt( pow(end.x-cl[endIdx].x, 2) + pow(end.y-cl[endIdx].y, 2) );
 		return s;
 	}
 	else if(startIdx == endIdx)
@@ -310,15 +310,15 @@ double xy2s_sgn(const Point2D start, const Point2D end, const std::vector<Point2
 	}
 	else
 	{
-		for (int i = startIdx + 1; i < endIdx; i++)
+		for (int i = endIdx + 1; i <= startIdx; i++)
 		{
 			double dx = cl[i].x - cl[i - 1].x;
 			double dy = cl[i].y - cl[i - 1].y;
 
 			s -= sqrt(dx * dx + dy * dy);
 		}
-		s -= sqrt( pow(start.x-cl[startIdx].x, 2) + pow(start.y-cl[startIdx].y, 2) );
-		s -= sqrt( pow(end.x-cl[endIdx-1].x, 2) + pow(end.y-cl[endIdx-1].y, 2) );
+		s += sqrt( pow(start.x-cl[startIdx].x, 2) + pow(start.y-cl[startIdx].y, 2) );
+		s -= sqrt( pow(end.x-cl[endIdx].x, 2) + pow(end.y-cl[endIdx].y, 2) );
 		return s;
 	}
 }

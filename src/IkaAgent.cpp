@@ -769,7 +769,9 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 			osi3::Lane* tarLane = findLane(mo.assigned_lane_id(0).value(), groundTruth);
 			Point2D current = bPoint;
 
-			double sTar = 0;
+			
+			double sTar = xy2s_sgn(egoClPoint, bPoint, pathCenterLine);
+			/*double sTar = 0;
 			if (*it != egoLanePtr->id().value()) {
 				// target is not assigned to the current lane -> add distance along the target's assigned lane
 				// meaning assigned_lane's beginning to bPoint
@@ -785,10 +787,15 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input
 				sTar += xy2s(pos.front(), pos.back(), pos);
 				current = pos.front();
 			}
+			sTar += xy2s(egoClPoint, current, elPoints);*/
 
-			sTar += xy2s(egoClPoint, current, elPoints);
+			double sTarNet;
+			if(sTar>0)
+				sTarNet = sTar - 0.5 * base.dimension().length() - 0.5 * obj.base().dimension().length();
+			else
+				sTarNet = sTar + 0.5 * base.dimension().length() + 0.5 * obj.base().dimension().length();
 
-			input.targets[ti].ds = sTar-2; //TODO: check what happens when target is behind host vehicle
+			input.targets[ti].ds = sTarNet; //TODO: check what happens when target is behind host vehicle
 			input.targets[ti].d = sqrt(pow(base.position().x() - cPoint.x, 2) + pow(base.position().y() - cPoint.y, 2));
 			input.targets[ti].lane = laneMapping[mo.assigned_lane_id(0).value()];
 		}
