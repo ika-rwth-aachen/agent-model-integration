@@ -93,7 +93,7 @@ void IkaAgent::init(osi3::BaseMoving& host)
     vehState->position.y = host.position().y();
 	vehState->v = sqrt(host.velocity().x() * host.velocity().x() 
 				+ host.velocity().y() * host.velocity().y());//tbd
-	//vehState->v = 10;
+	vehState->v = 10;
 	drParam->velocity.vComfort = vehState->v;
 	vehState->psi = host.orientation().yaw(); //tbd
 	
@@ -258,32 +258,36 @@ void IkaAgent::classifyManeuver(osi3::SensorView& sensorViewData) {
 	/*std::cout << "curve: ";
 	for (auto& p:pos) std::cout << p.x << "," << p.y << " ";
 	std::cout << "\n";*/
-	for (int i = 0; i < pos.size()-1; i++) 
-	{
-		double dsNext = (pos[i+1].x - pos[i].x) * (pos[i+1].x - pos[i].x)
-					  + (pos[i+1].y - pos[i].y) * (pos[i+1].y - pos[i].y);
-
-		if (dsNext < 0.1) {
-			pos.erase(pos.begin()+i+1);
-			i++;
-		}
-	}
-	if (pos.size() <= 2) 
+	if(pos.empty())
 		_input.vehicle.maneuver = agent_model::Maneuver::STRAIGHT;
 	else
 	{
-		xy2curv(pos, s, p, k);
-		double avg = std::accumulate(k.cbegin(), k.cend(), 0.0) / k.size();
-		std::cout << "avg: " << avg << "\n";
-		double eps = 0.0000001;
-		if (avg > eps)
-			_input.vehicle.maneuver = agent_model::Maneuver::TURN_LEFT;
-		else if(avg < (-1*eps))
-			_input.vehicle.maneuver = agent_model::Maneuver::TURN_RIGHT;
-		else
-			_input.vehicle.maneuver = agent_model::Maneuver::STRAIGHT;
-	}
+		for (int i = 0; i < pos.size()-1; i++) 
+		{
+			double dsNext = (pos[i+1].x - pos[i].x) * (pos[i+1].x - pos[i].x)
+						+ (pos[i+1].y - pos[i].y) * (pos[i+1].y - pos[i].y);
 
+			if (dsNext < 0.1) {
+				pos.erase(pos.begin()+i);
+				i--;
+			}
+		}
+		if (pos.size() <= 2) 
+			_input.vehicle.maneuver = agent_model::Maneuver::STRAIGHT;
+		else
+		{
+			xy2curv(pos, s, p, k);
+			double avg = std::accumulate(k.cbegin(), k.cend(), 0.0) / k.size();
+			std::cout << "avg: " << avg << "\n";
+			double eps = 0.0000001;
+			if (avg > eps)
+				_input.vehicle.maneuver = agent_model::Maneuver::TURN_LEFT;
+			else if(avg < (-1*eps))
+				_input.vehicle.maneuver = agent_model::Maneuver::TURN_RIGHT;
+			else
+				_input.vehicle.maneuver = agent_model::Maneuver::STRAIGHT;
+		}
+	}
 	std::cout << "\nMANEUVER (0=straight, 1=left, 2=right): " << _input.vehicle.maneuver << std::endl;
 }
 
