@@ -6,7 +6,7 @@
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- */ 
+ */
 #pragma once
 #include "osi_trafficcommand.pb.h"
 #include "osi_trafficupdate.pb.h"
@@ -20,24 +20,24 @@
 #include <cmath>
 using Point2D = agent_model::Position;
 
-struct junctionPath {
+struct junctionPath
+{
     std::vector<int> laneIds;
     std::vector<Point2D> pts;
     int signalId;
 };
 
-class IkaAgent : public AgentModel {
+class IkaAgent : public AgentModel
+{
 public:
-    explicit IkaAgent() {};
-    ~IkaAgent() {};// = default;
+    explicit IkaAgent(){};
+    ~IkaAgent(){}; // = default;
 
-    
-    int step(double time, double stepSize, osi3::SensorView &sensorViewData, osi3::TrafficCommand &commandData, osi3::TrafficUpdate &out, setlevel4to5::DynamicsRequest & dynOut);
+    int step(double time, double stepSize, osi3::SensorView &sensorViewData, osi3::TrafficCommand &commandData, osi3::TrafficUpdate &out, setlevel4to5::DynamicsRequest &dynOut);
     int terminate();
-   
 
 private:
-    void init(osi3::BaseMoving& host);
+    void init(osi3::BaseMoving &host);
     bool initialized = false;
 
     // Ids identifying the last processed TrafficCommands
@@ -51,28 +51,27 @@ private:
     agent_model::Position lastPosition;
     std::vector<Point2D> pathCenterLine;
     std::vector<double> pathKappa;
-	std::vector<double> pathS;
-	std::vector<double> pathPsi;
-	std::vector<junctionPath> priorityLanes;
-	std::vector<junctionPath> yieldingLanes;	
+    std::vector<double> pathS;
+    std::vector<double> pathPsi;
+    std::vector<junctionPath> priorityLanes;
+    std::vector<junctionPath> yieldingLanes;
 
     // lanes along the path of the agent
     std::vector<int> lanes;
-    
 
-    agent_model::Parameters* drParam;
-    agent_model::State* drState;
+    agent_model::Parameters *drParam;
+    agent_model::State *drState;
     VehicleModel _vehicle;
     PrimaryController steeringContr;
     PrimaryController pedalContr;
-    VehicleModel::Input      *vehInput;
-    VehicleModel::State      *vehState;
+    VehicleModel::Input *vehInput;
+    VehicleModel::State *vehState;
     VehicleModel::Parameters *vehParam;
 
-    int adapterOsiToInput(osi3::SensorView& sensorView, agent_model::Input& input, std::vector<int>& futureLanes, double time);
-    int parseTrafficCommand(osi3::SensorView& sensorViewData, osi3::TrafficCommand& commandData);
-    void classifyManeuver(osi3::SensorView& sensorViewData);
-    int generateHorizon(osi3::SensorView& sensorView, std::vector<int>& futureLanes);
+    int adapterOsiToInput(osi3::SensorView &sensorView, agent_model::Input &input, std::vector<int> &futureLanes, double time);
+    int parseTrafficCommand(osi3::SensorView &sensorViewData, osi3::TrafficCommand &commandData);
+    void classifyManeuver(osi3::SensorView &sensorViewData);
+    int generateHorizon(osi3::SensorView &sensorView, std::vector<int> &futureLanes);
 
-	int applyDriverOutput(double time, osi3::TrafficUpdate &out);
+    int applyDriverOutput(double time, osi3::TrafficUpdate &out);
 };
