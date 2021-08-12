@@ -27,6 +27,7 @@
 #define VEHICLE_MODEL_INTERFACE_H
 
 
+#include <iostream>
 
 /**
  * @brief A vehicle model interface.
@@ -93,7 +94,7 @@ public:
 
 
     /** Default destructor */
-    virtual ~VehicleModel() = default;
+    ~VehicleModel() = default;
 
 
     /** This method resets the vehicle memory */

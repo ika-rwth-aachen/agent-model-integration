@@ -285,43 +285,59 @@ double calcWidth(const Point2D point, osi3::Lane* lane, osi3::GroundTruth* groun
  * @param cl centerline
  * @return resulting distance
  */
-double xy2s_sgn(const Point2D start, const Point2D end, const std::vector<Point2D>& cl) {
+double xy2s_sgn(const Point2D start, const Point2D end, const std::vector<Point2D>& cl, double startPsi) {
 	double s = 0;
 	Point2D startCl, endCl;
 	int startIdx = closestCenterlinePoint(start, cl, startCl);
 	int endIdx = closestCenterlinePoint(end, cl, endCl);
-
-	if(startIdx < endIdx)
+	if (cl.size() == 2) 
 	{
-		for (int i = startIdx + 1; i <= endIdx; i++)
-		{
-			double dx = cl[i].x - cl[i - 1].x;
-			double dy = cl[i].y - cl[i - 1].y;
-
-			s += sqrt(dx * dx + dy * dy);
-		}
-		s += sqrt( pow(start.x-cl[startIdx].x, 2) + pow(start.y-cl[startIdx].y, 2) );
-		s -= sqrt( pow(end.x-cl[endIdx].x, 2) + pow(end.y-cl[endIdx].y, 2) );
-		return s;
-	}
-	else if(startIdx == endIdx)
-	{
-		// unsure about sign...
-		return sqrt( pow(start.x-end.x, 2) + pow(start.y-end.y, 2) );
+		double startEndPsi = atan2(end.y-start.y, end.x-start.x);
+		//std::cout << "target dir: " << startEndPsi-startPsi << "\n";
+		double dist =  sqrt( pow(end.x-start.x, 2) + pow(end.y-start.y, 2) );
+		if (abs(startEndPsi-startPsi) > 1.5)
+			return -dist;
+		else
+			return dist;
 	}
 	else
 	{
-		for (int i = endIdx + 1; i <= startIdx; i++)
-		{
-			double dx = cl[i].x - cl[i - 1].x;
-			double dy = cl[i].y - cl[i - 1].y;
+		int startIdx = closestCenterlinePoint(start, cl, startCl);
+		int endIdx = closestCenterlinePoint(end, cl, endCl);
 
-			s -= sqrt(dx * dx + dy * dy);
+		if(startIdx < endIdx)
+		{
+			for (int i = startIdx + 1; i <= endIdx; i++)
+			{
+				double dx = cl[i].x - cl[i - 1].x;
+				double dy = cl[i].y - cl[i - 1].y;
+
+				s += sqrt(dx * dx + dy * dy);
+			}
+			s += sqrt( pow(start.x-cl[startIdx].x, 2) + pow(start.y-cl[startIdx].y, 2) );
+			s -= sqrt( pow(end.x-cl[endIdx].x, 2) + pow(end.y-cl[endIdx].y, 2) );
+			return s;
 		}
-		s += sqrt( pow(start.x-cl[startIdx].x, 2) + pow(start.y-cl[startIdx].y, 2) );
-		s -= sqrt( pow(end.x-cl[endIdx].x, 2) + pow(end.y-cl[endIdx].y, 2) );
-		return s;
+		else if(startIdx == endIdx)
+		{
+			// unsure about sign...
+			return sqrt( pow(start.x-end.x, 2) + pow(start.y-end.y, 2) );
+		}
+		else
+		{
+			for (int i = endIdx + 1; i <= startIdx; i++)
+			{
+				double dx = cl[i].x - cl[i - 1].x;
+				double dy = cl[i].y - cl[i - 1].y;
+
+				s -= sqrt(dx * dx + dy * dy);
+			}
+			s += sqrt( pow(start.x-cl[startIdx].x, 2) + pow(start.y-cl[startIdx].y, 2) );
+			s -= sqrt( pow(end.x-cl[endIdx].x, 2) + pow(end.y-cl[endIdx].y, 2) );
+			return s;
+		}
 	}
+	
 }
 
 /**

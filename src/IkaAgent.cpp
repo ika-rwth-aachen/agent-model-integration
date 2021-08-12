@@ -12,8 +12,6 @@
 #include <iostream>
 #include "OSI_helper.h"
 
-constexpr double EPSILON = 0.000000000000001;
-
 //using Point2D = agent_model::Position;
 
 void IkaAgent::init(osi3::BaseMoving &host)
@@ -30,7 +28,7 @@ void IkaAgent::init(osi3::BaseMoving &host)
 	drParam->velocity.thwMax = 10.0;
 	drParam->velocity.delta = 4.0;
 	drParam->velocity.deltaPred = 3.0;
-	drParam->velocity.vComfort = 0; //50.0 / 3.6; //s.u.
+	drParam->velocity.vComfort = 50.0 / 3.6; //s.u.
 	drParam->velocity.ayMax = 1.5;
 
 	// stop control
@@ -90,8 +88,8 @@ void IkaAgent::init(osi3::BaseMoving &host)
 	vehState->position.x = host.position().x();
 	vehState->position.y = host.position().y();
 	vehState->v = sqrt(host.velocity().x() * host.velocity().x() + host.velocity().y() * host.velocity().y()); //tbd
-	//vehState->v = 10;
-	drParam->velocity.vComfort = 12;
+	vehState->v = 40.0 / 3.6;
+	//drParam->velocity.vComfort = 12;
 	vehState->psi = host.orientation().yaw(); //tbd
 
 	// set variables
@@ -568,7 +566,7 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView &sensorView, agent_model::Input
 		//closestCenterlinePoint(sPoint, elPoints, cPoint);
 		Point2D target = sPoint;
 		closestCenterlinePoint(sPoint, pathCenterLine, cPoint);
-		double sSig = xy2s_sgn(egoClPoint, cPoint, pathCenterLine);
+		double sSig = xy2s_sgn(egoClPoint, cPoint, pathCenterLine, egoPsi);
 		//std::cout << "Spoint: (" << sPoint.x << "," << sPoint.y << ")" << std::endl;
 		//signal on future lane
 		/*if (*it != egoLanePtr->id().value()) {
@@ -681,6 +679,7 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView &sensorView, agent_model::Input
 		// determine whether target is assigned to a lane along the host's path (following possible)
 		bool onPath = false;
 		auto it = futureLanes.end();
+		int commonLaneIdx = 0;
 		for (int j = 0; j < mo.assigned_lane_id_size(); j++)
 		{
 
@@ -690,6 +689,7 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView &sensorView, agent_model::Input
 			it = find(futureLanes.begin(), futureLanes.end(), mo.assigned_lane_id(j).value());
 			if (it != futureLanes.end())
 			{
+				commonLaneIdx = j;
 				onPath = true;
 				break;
 			}
@@ -702,10 +702,10 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView &sensorView, agent_model::Input
 			Point2D bPoint(moBase.position().x(), moBase.position().y());
 
 			closestCenterlinePoint(bPoint, pathCenterLine, cPoint);
-			osi3::Lane *tarLane = findLane(mo.assigned_lane_id(0).value(), groundTruth);
-			Point2D current = bPoint;
+			//osi3::Lane *tarLane = findLane(mo.assigned_lane_id(commonLane).value(), groundTruth);
+			//Point2D current = bPoint;
 
-			double sTar = xy2s_sgn(egoClPoint, bPoint, pathCenterLine);
+			double sTar = xy2s_sgn(egoClPoint, bPoint, pathCenterLine, egoPsi);
 			/*double sTar = 0;
 			if (*it != egoLanePtr->id().value()) {
 				// target is not assigned to the current lane -> add distance along the target's assigned lane
@@ -732,7 +732,7 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView &sensorView, agent_model::Input
 
 			input.targets[ti].ds = sTarNet; //TODO: check what happens when target is behind host vehicle
 			input.targets[ti].d = sqrt(pow(moBase.position().x() - cPoint.x, 2) + pow(moBase.position().y() - cPoint.y, 2));
-			input.targets[ti].lane = laneMapping[mo.assigned_lane_id(0).value()];
+			input.targets[ti].lane = laneMapping[mo.assigned_lane_id(commonLaneIdx).value()];
 		}
 		else
 		{
