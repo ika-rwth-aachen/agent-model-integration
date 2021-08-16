@@ -309,7 +309,7 @@ fmi2Status COSMPTrafficAgent::doCalc(fmi2Real currentCommunicationPoint, fmi2Rea
                 normal_log("OSI","MovingObject with ID %llu is EgoVehicle: %d",obj.id().value(), obj.id().value() == ego_id.value());
                 if (obj.id().value() == ego_id.value()) {
                     normal_log("OSI","Found EgoVehicle with ID: %llu",obj.id().value());
-                    currentOut.mutable_update()->CopyFrom(obj);
+                    currentOut.mutable_update(0)->CopyFrom(obj);
                 }
             });
 

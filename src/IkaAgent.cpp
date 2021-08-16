@@ -207,14 +207,14 @@ int IkaAgent::parseTrafficCommand(osi3::SensorView &sensorViewData, osi3::Traffi
 	{
 		if (commandData.action(i).has_acquire_global_position_action())
 		{
-			osi3::AcquireGlobalPositionAction globPos = commandData.action(i).acquire_global_position_action();
+			osi3::TrafficAction_AcquireGlobalPositionAction globPos = commandData.action(i).acquire_global_position_action();
 			destPoint = Point2D(globPos.position().x(), globPos.position().y());
 			lanes.clear();
 			futureLanes(groundTruth, startingLaneIdx, destPoint, lanes);
 		}
 		if (commandData.action(i).has_follow_trajectory_action() && (commandData.action(i).follow_trajectory_action().action_header().action_id().value() != trajActionId))
 		{
-			osi3::FollowTrajectoryAction traj = commandData.action(i).follow_trajectory_action();
+			osi3::TrafficAction_FollowTrajectoryAction traj = commandData.action(i).follow_trajectory_action();
 			trajActionId = traj.action_header().action_id().value();
 			destPoint = Point2D(traj.trajectory_point(traj.trajectory_point_size() - 1).position().x(), traj.trajectory_point(traj.trajectory_point_size() - 1).position().y());
 			lanes.clear();
@@ -222,7 +222,7 @@ int IkaAgent::parseTrafficCommand(osi3::SensorView &sensorViewData, osi3::Traffi
 		}
 		if (commandData.action(i).has_follow_path_action() && (commandData.action(i).follow_path_action().action_header().action_id().value() != pathActionId))
 		{
-			osi3::FollowPathAction path = commandData.action(i).follow_path_action();
+			osi3::TrafficAction_FollowPathAction path = commandData.action(i).follow_path_action();
 			pathActionId = path.action_header().action_id().value();
 			destPoint = Point2D(path.path_point(path.path_point_size() - 1).position().x(), path.path_point(path.path_point_size() - 1).position().y());
 			lanes.clear();
@@ -230,7 +230,7 @@ int IkaAgent::parseTrafficCommand(osi3::SensorView &sensorViewData, osi3::Traffi
 		}
 		if (commandData.action(i).has_speed_action() && (commandData.action(i).speed_action().action_header().action_id().value() != speedActionId))
 		{
-			osi3::SpeedAction speed = commandData.action(i).speed_action();
+			osi3::TrafficAction_SpeedAction speed = commandData.action(i).speed_action();
 			speedActionId = speed.action_header().action_id().value();
 			drParam->velocity.vComfort = speed.absolute_target_speed();
 		}
@@ -302,7 +302,7 @@ int IkaAgent::terminate()
 
 int IkaAgent::applyDriverOutput(double time, osi3::TrafficUpdate &out)
 {
-	osi3::MovingObject *update = out.mutable_update();
+	osi3::MovingObject *update = out.mutable_update(0);
 
 	update->mutable_base()->mutable_position()->set_x(vehState->position.x);
 	update->mutable_base()->mutable_position()->set_y(vehState->position.y);
