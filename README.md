@@ -4,29 +4,51 @@
 > * [**Latest FMU** (Ubuntu 20.04 LTS)](https://gitlab.sl4to5.de/deliverables/model/traffic-agents/ika-driver/-/jobs/artifacts/master/raw/lib/ikaDriverAgent.fmu?job=buildFMU2004) 
 
 ## Build
-Brief build instructions for compilation with `MinGW` (64Bit V8.1.0) on Windows.  
+Brief build instructions for compilation with `MSYS2 MinGW 64-bit` on Windows.  
 ### Protobuf dependency
-Download a protobuf source (tested with 3.8.0) and follow the cmake build instructions (create `build` folder in `cmake` subdirectory). In addition, do the following:
-* Use the `MinGW` compiler (i.e. `cmake -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release ..`)
-* Set `CMAKE_INSTALL_PREFIX` to a desired directory 
-* After building protobuf, make sure that directory is the first directory where a protobuf installation may be found in your `PATH` variable.
+Due to the usage of the CMake feature 'ExternalProject_Add()', there is no need to download and build protobuf from source source anymore. 
   
-### Build FMU
-First create a `build` directory and enter it. Then execute:
-```
-cmake -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release ..
-```  
+### Windows Build FMU
+1. Start `MSYS2 MinGW 64-bit` shell
+1. Create a `build` directory and enter it:
+    ```
+    mkdir build && cd build
+    ```  
 
-After building, the `FMU` will be in the subfolder `lib/`. If a specific `FMU` output dir shall be used:
-```
-cmake -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DFMU_OUTDIR=<dir> ..
-```  
+2. Execute CMake:
+    ```
+    cmake -G "MSYS Makefiles" -DCMAKE_BUILD_TYPE=Release ..
+    ```  
 
-Compile the library with:
-```
-mingw32-make.exe
-```
-Optional: `mingw32-make.exe -j4` for building on multiple cores (replace `4` with an arbitrary number).
+    Please note: The default build directory for the `FMU` is the subfolder `lib/`. If a specific `FMU` output dir shall be used, set the variable `FMU_OUTDIR`, e.g.
+    ```
+    cmake -G "MSYS Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_BUILD_TYPE=Release -DFMU_OUTDIR=<dir> ..
+    ```  
 
-### Remarks
-**The described build instructions should be very similar when using other compilers!**  
+3. Compile the library:
+    ```
+    make.exe
+    ```
+    Optional: `make.exe -j4` for building on multiple cores (replace `4` with an arbitrary number).
+
+### Linux Build FMU
+1. Create a `build` directory and enter it:
+    ```
+    mkdir build && cd build
+    ```  
+
+2. Execute CMake:
+    ```
+    cmake -DCMAKE_BUILD_TYPE=Release ..
+    ```  
+
+    Please note: The default build directory for the `FMU` is the subfolder `lib/`. If a specific `FMU` output dir shall be used, set the variable `FMU_OUTDIR`, e.g.
+    ```
+    cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_BUILD_TYPE=Release -DFMU_OUTDIR=<dir> ..
+    ```  
+
+3. Compile the library:
+    ```
+    make
+    ```
+    Optional: `make -j4` for building on multiple cores (replace `4` with an arbitrary number).
