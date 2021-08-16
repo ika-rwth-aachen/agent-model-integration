@@ -1,19 +1,22 @@
 cmake_minimum_required(VERSION 3.5)
 project(ikaDriverAgent)
+
+include(ExternalProject)
+
 # Set a default build type if none was specified
 set(default_build_type "Release")
 if(EXISTS "${CMAKE_SOURCE_DIR}/../.git")
   set(default_build_type "Debug")
 endif()
 
+# FMU output directory
 set(FMU_OUTDIR "${CMAKE_SOURCE_DIR}/lib" CACHE STRING "Fmu output directory")
-
-add_subdirectory(lib/open-simulation-interface)
-add_subdirectory(lib/SimDriver)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(LINK_WITH_SHARED_OSI ON CACHE BOOL "Link FMU with shared OSI library instead of statically linking")
+
+# Logging
 set(PUBLIC_LOGGING OFF CACHE BOOL "Enable logging via FMI logger")
 set(PRIVATE_LOGGING OFF CACHE BOOL "Enable private logging to file")
 if(WIN32)
@@ -28,54 +31,120 @@ string(TIMESTAMP FMUTIMESTAMP UTC)
 string(MD5 FMUGUID modelDescription.in.xml)
 configure_file(modelDescription.xml modelDescription.xml @ONLY)
 
-find_package(Protobuf REQUIRED)
+if(WIN32)
+	set(PROTOBUF_CMAKE_GENERATOR "MSYS Makefiles")
+	set(PROTOC_EXE "protoc.exe")
+	set(OSI_CMAKE_GENERATOR "MSYS Makefiles")
+elseif(UNIX)
+	set(PROTOBUF_CMAKE_GENERATOR "Unix Makefiles")
+	set(PROTOC_EXE "protoc")
+	set(OSI_CMAKE_GENERATOR "Unix Makefiles")
+endif()
+
+# Download protobuf and install with position independent code 
+# (pic) so that other Osi and ikaDriver can link against
+ExternalProject_Add (protobuf_download
+	PREFIX            	protobuf_download
+	GIT_REPOSITORY    	https://github.com/protocolbuffers/protobuf.git
+	GIT_TAG           	v3.11.4
+	UPDATE_COMMAND    	""
+	INSTALL_COMMAND   	make install
+	BUILD_COMMAND     	make -j3
+	BUILD_ALWAYS      	OFF
+	INSTALL_DIR       	${CMAKE_CURRENT_BINARY_DIR}/ext/protobuf_download
+	SOURCE_SUBDIR	  	cmake
+	CONFIGURE_COMMAND 	${CMAKE_COMMAND} -G ${PROTOBUF_CMAKE_GENERATOR}
+							-DCMAKE_BUILD_TYPE=Release 
+							-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR> 
+							-DCMAKE_CXX_FLAGS="-fPIC" 
+							-Dprotobuf_MSVC_STATIC_RUNTIME=OFF 
+							-Dprotobuf_BUILD_TESTS=OFF 
+							../protobuf_download/cmake)
+
+# Download Osi and compile such that it links against the pic-build protobuf
+ExternalProject_Add (osi_submodule
+	DEPENDS             protobuf_download
+	#PREFIX             osi_download
+	#GIT_REPOSITORY     https://gitlab.setlevel.de/deliverables/architecture/open-simulation-interface.git
+	#GIT_TAG            sl45/v3.2.2
+	SOURCE_DIR 			${CMAKE_SOURCE_DIR}/lib/open-simulation-interface
+	UPDATE_COMMAND      ""
+	INSTALL_COMMAND     make install
+	BUILD_COMMAND      	make -j3
+	BUILD_ALWAYS        OFF
+	INSTALL_DIR         ${CMAKE_CURRENT_BINARY_DIR}/ext/osi_submodule
+	SOURCE_SUBDIR       cmake
+	CONFIGURE_COMMAND 	${CMAKE_COMMAND} -G ${OSI_CMAKE_GENERATOR}
+							-DCMAKE_BUILD_TYPE=Release 
+							-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR> 
+							-DPROTOBUF_INCLUDE_DIR=${CMAKE_CURRENT_BINARY_DIR}/ext/protobuf_download/include 
+							-DPROTOBUF_PROTOC_EXECUTABLE=${CMAKE_CURRENT_BINARY_DIR}/ext/protobuf_download/bin/${PROTOC_EXE} 
+							-DPROTOBUF_LIBRARY=${CMAKE_CURRENT_BINARY_DIR}/ext/protobuf_download/lib/libprotobuf.a
+							${CMAKE_SOURCE_DIR}/lib/open-simulation-interface)
+
+# Get Osi installation directory
+ExternalProject_Get_Property(osi_submodule INSTALL_DIR)
+set(OSI ${INSTALL_DIR})
+message("Osi installation directory :" ${OSI})
+
+# Get Protobuf installation directory
+ExternalProject_Get_Property(protobuf_download INSTALL_DIR)
+set(PROTOBUF ${INSTALL_DIR})
+message("Protobuf installation directory " ${PROTOBUF})
+
+# Add submodule SimDriver
+add_subdirectory(lib/SimDriver)
+
+# Includes
 set(SIMDRIVER_SRC lib/SimDriver/src)
 set(INJECTION_DIR lib/SimDriver/lib/Injection)
-#message("osi dir " ${CMAKE_CURRENT_BINARY_DIR}/lib/open-simulation-interface)
-set(SIMDRIVER_LIB ${CMAKE_CURRENT_BINARY_DIR}/lib/SimDriver/src)
-include_directories(
-	include
-	include/FMI 
-	#${THIRDPARTY_INCLUDES} 
-	#${THIRDPARTY_INCLUDES}/osi3 
-	${SIMDRIVER_SRC} 
-	${Protobuf_INCLUDE_DIRS}
-	#${INJECTION_INC}/include/injection
-)
-#link_directories(${THIRDPARTY_LIBRARIES} ${Protobuf_LIBRARIES} ${SIMDRIVER_LIB} ${CMAKE_CURRENT_BINARY_DIR}/lib/open-simulation-interface)
-#link_directories(${THIRDPARTY_LIBRARIES})
-#link_directories(${Protobuf_LIBRARIES})
-add_library(${PROJECT_NAME} SHARED 
-			src/OSMPTrafficAgent.cpp 
-			src/IkaAgent.cpp 
-			src/VehicleModel.cpp
-			src/PrimaryController.cpp
-			#${SIMDRIVER_SRC}/AgentModel.cpp
-			#${SIMDRIVER_SRC}/model_collection.cpp
-			#${SIMDRIVER_SRC}/AgentModelInjection.cpp
-			)
-set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")
+SET(OSI_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/ext/protobuf_download/include)
+SET(PROTOBUF_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/ext/osi_submodule/include/osi3)
 
+include_directories(
+	${SIMDRIVER_SRC} 
+	include
+	include/FMI
+	${OSI_INCLUDE_DIR}
+	${PROTOBUF_INCLUDE_DIR})
+
+# Define target library ikaDriver
+add_library(${PROJECT_NAME} SHARED 
+	src/OSMPTrafficAgent.cpp 
+	src/IkaAgent.cpp 
+	src/VehicleModel.cpp
+	src/PrimaryController.cpp)
+
+# Build ikaDriver after protobuf and osi has been downloaded and installed
+add_dependencies(${PROJECT_NAME} protobuf_download osi_submodule)
+
+# Compile defitions
+set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")
 target_compile_definitions(${PROJECT_NAME} PRIVATE "FMU_SHARED_OBJECT")
 target_compile_definitions(${PROJECT_NAME} PRIVATE "FMU_GUID=\"${FMUGUID}\"")
-if(WIN32)
-    target_link_libraries(${PROJECT_NAME}
-                  PUBLIC open_simulation_interface_static
-                  #PUBLIC protobuf
-                  PUBLIC agent_model)
-else()
-  target_link_libraries(${PROJECT_NAME}
-                  PUBLIC open_simulation_interface
-		  #PUBLIC protobuf
-		  PUBLIC agent_model)
-endif()
+
+# Define libraries which ikaDriver can link against
+add_library(static_protobuf_lib STATIC IMPORTED)
+add_dependencies(static_protobuf_lib protobuf_download)
+set_target_properties(static_protobuf_lib PROPERTIES 
+    IMPORTED_LOCATION "${PROTOBUF}/lib/libprotobuf.a")
+
+add_library(static_osi_lib STATIC IMPORTED)
+add_dependencies(static_osi_lib osi_submodule)
+set_target_properties(static_osi_lib PROPERTIES 
+	IMPORTED_LOCATION "${OSI}/lib/osi3/libopen_simulation_interface_pic.a")
+
+target_link_libraries(${PROJECT_NAME}
+	PUBLIC static_osi_lib
+	PUBLIC static_protobuf_lib
+	PUBLIC agent_model)
+
 #if(LINK_WITH_SHARED_OSI)
 	#target_link_libraries(${PROJECT_NAME} open_simulation_interface -lprotobuf agent_model)
-	
-
 #else()
 	#target_link_libraries(${PROJECT_NAME} open_simulation_interface_pic agent_model injection)
 #endif()
+
 if(PRIVATE_LOGGING)
 	file(TO_NATIVE_PATH ${PRIVATE_LOG_PATH} PRIVATE_LOG_PATH_NATIVE)
 	string(REPLACE "\\" "\\\\" PRIVATE_LOG_PATH_ESCAPED ${PRIVATE_LOG_PATH_NATIVE})
@@ -110,33 +179,21 @@ endif()
 get_filename_component(Protobuf_REAL_LIBRARY_FILENAME "${Protobuf_LIBRARY}" REALPATH)
 
 add_custom_command(OUTPUT ${FMU_OUTDIR}/${PROJECT_NAME}.fmu
-                   DEPENDS ${PROJECT_NAME}
-                           modelDescription.xml
-                   COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_CURRENT_BINARY_DIR}/buildfmu"
-                   COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/sources"
-                   COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/binaries/${FMI_BINARIES_PLATFORM}"
-                   COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/modelDescription.xml" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu"
-                   COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${PROJECT_NAME}> "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/binaries/${FMI_BINARIES_PLATFORM}"
-                   #COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:open_simulation_interface> "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/binaries/${FMI_BINARIES_PLATFORM}"
-                   #COMMAND ${CMAKE_COMMAND} -E copy "${Protobuf_REAL_LIBRARY_FILENAME}" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/binaries/${FMI_BINARIES_PLATFORM}"
-				   #COMMAND ${CMAKE_COMMAND} -E chdir "${CMAKE_CURRENT_BINARY_DIR}/buildfmu" ${CMAKE_COMMAND} -E tar "cfv" "${CMAKE_CURRENT_SOURCE_DIR}/lib/${PROJECT_NAME}.fmu" --format=zip "modelDescription.xml" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/binaries/${FMI_BINARIES_PLATFORM}")
-				   COMMAND ${CMAKE_COMMAND} -E chdir "${CMAKE_CURRENT_BINARY_DIR}/buildfmu" ${CMAKE_COMMAND} -E tar "cfv" "${FMU_OUTDIR}/${PROJECT_NAME}.fmu" --format=zip "modelDescription.xml" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/binaries/${FMI_BINARIES_PLATFORM}")
+	DEPENDS ${PROJECT_NAME}
+			modelDescription.xml
+	COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_CURRENT_BINARY_DIR}/buildfmu"
+	#COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/sources"
+	COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/binaries/${FMI_BINARIES_PLATFORM}"
+	COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/modelDescription.xml" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu"
+	COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${PROJECT_NAME}> "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/binaries/${FMI_BINARIES_PLATFORM}"
+	#COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:open_simulation_interface> "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/binaries/${FMI_BINARIES_PLATFORM}"
+	#COMMAND ${CMAKE_COMMAND} -E copy "${Protobuf_REAL_LIBRARY_FILENAME}" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/binaries/${FMI_BINARIES_PLATFORM}"
+	#COMMAND ${CMAKE_COMMAND} -E chdir "${CMAKE_CURRENT_BINARY_DIR}/buildfmu" ${CMAKE_COMMAND} -E tar "cfv" "${CMAKE_CURRENT_SOURCE_DIR}/lib/${PROJECT_NAME}.fmu" --format=zip "modelDescription.xml" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/binaries/${FMI_BINARIES_PLATFORM}")
+	COMMAND ${CMAKE_COMMAND} -E chdir "${CMAKE_CURRENT_BINARY_DIR}/buildfmu" ${CMAKE_COMMAND} 
+							 -E tar "cfv" "${FMU_OUTDIR}/${PROJECT_NAME}.fmu" 
+							 --format=zip "modelDescription.xml" 
+						 	 "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/binaries/${FMI_BINARIES_PLATFORM}")
 
 add_custom_target(${PROJECT_NAME}_fmu
-                  ALL
-				  DEPENDS ${FMU_OUTDIR}/${PROJECT_NAME}.fmu)
-				  
-
-#add_custom_command(TARGET ${PROJECT_NAME}
-	#POST_BUILD
-	#COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_CURRENT_BINARY_DIR}/buildfmu"
-	#COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/sources"
-	#COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/binaries/${FMI_BINARIES_PLATFORM}"
-	#COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_BINARY_DIR}/modelDescription.xml" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu"
-	#COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/src/IkaAgent.cpp" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/sources/"
-	##COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/../SimDriver/src/AgentModel.cpp" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/sources/"
-	#COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/include/IkaAgent.h" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/sources/"
-	#COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/src/${PROJECT_NAME}.cpp" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/sources/"
-	#COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}.h" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/sources/"
-	#COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${PROJECT_NAME}> $<$<PLATFORM_ID:Windows>:$<$<CONFIG:Debug>:$<TARGET_PDB_FILE:${PROJECT_NAME}>>> "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/binaries/${FMI_BINARIES_PLATFORM}"
-	#COMMAND ${CMAKE_COMMAND} -E chdir "${CMAKE_CURRENT_BINARY_DIR}/buildfmu" ${CMAKE_COMMAND} -E tar "cfv" "../${PROJECT_NAME}.fmu" --format=zip "modelDescription.xml" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/sources" "${CMAKE_CURRENT_BINARY_DIR}/buildfmu/binaries/${FMI_BINARIES_PLATFORM}")
+	ALL
+	DEPENDS ${FMU_OUTDIR}/${PROJECT_NAME}.fmu)

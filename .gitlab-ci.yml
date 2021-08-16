@@ -2,8 +2,8 @@ variables:
   GIT_SUBMODULE_STRATEGY: recursive
 before_script:
   - apt update
-  - DEBIAN_FRONTEND="noninteractive" apt install -y cmake build-essential #git
-  - apt install -y libprotobuf-dev protobuf-compiler
+  - DEBIAN_FRONTEND="noninteractive" apt install -y cmake build-essential git
+  #- apt install -y libprotobuf-dev protobuf-compiler
   #- git submodule sync --recursive
   #- git submodule update --init --recursive
 
