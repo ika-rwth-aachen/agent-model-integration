@@ -1,0 +1,8 @@
+
+build/
+
+.vs/
+
+lib/*.fmu
+
+.vscode/
