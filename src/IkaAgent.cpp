@@ -102,12 +102,15 @@ void IkaAgent::init(osi3::BaseMoving &host)
 	_input.vehicle.maneuver = agent_model::Maneuver::STRAIGHT;
 
 	// clean output file
-	std::ofstream output("debug" + std::to_string(hostVehicleId) + ".txt", std::ofstream::out | std::ofstream::trunc);
-	output.close();
-	std::ofstream hor("horizon" + std::to_string(hostVehicleId) + ".txt", std::ofstream::out | std::ofstream::trunc);
-	hor.close();
-	std::ofstream hor_test("test_horizon" + std::to_string(hostVehicleId) + ".txt", std::ofstream::out | std::ofstream::trunc);
-	hor_test.close();
+	if(debug_files)
+	{
+		std::ofstream output("debug" + std::to_string(hostVehicleId) + ".txt", std::ofstream::out | std::ofstream::trunc);
+		output.close();
+		std::ofstream hor("horizon" + std::to_string(hostVehicleId) + ".txt", std::ofstream::out | std::ofstream::trunc);
+		hor.close();
+		std::ofstream hor_test("test_horizon" + std::to_string(hostVehicleId) + ".txt", std::ofstream::out | std::ofstream::trunc);
+		hor_test.close();
+	}
 }
 
 void IkaAgent::setVehicleSpeed(double v0)
@@ -153,7 +156,7 @@ int IkaAgent::step(double time, double stepSize, osi3::SensorView &sensorViewDat
 	// Perform Vehicle Model step
 	vehInput->slope = 0.0;	 //TODO
 	_vehicle.step(stepSize); // STEP SIZE not TIME!
-	if (true) // replace with debug flag or similar
+	if (debug_files) // replace with debug flag or similar
 	{
 		std::ofstream output("debug" + std::to_string(hostVehicleId) + ".txt", std::ofstream::out | std::ofstream::app);
 		output << out.timestamp().seconds() + (out.timestamp().nanos() * 0.000000001) << ","
@@ -376,7 +379,7 @@ int IkaAgent::generateHorizon(osi3::SensorView &sensorView, std::vector<int> &fu
 	// calculate s, kappa, and psi
 	xy2curv(pathCenterLine, pathS, pathPsi, pathKappa);
 
-	if (true) // replace with debug flag or similar
+	if (debug_files) // replace with debug flag or similar
 	{
 		std::ofstream test_hor("test_horizon" + std::to_string(hostVehicleId) + ".txt", std::ofstream::out | std::ofstream::app);
 		for (int i = 0; i < pathCenterLine.size(); i++)
