@@ -43,6 +43,7 @@ public:
 private:
     void init(osi3::BaseMoving &host);
     bool initialized = false;
+    bool debug_files = false;
 
     // Ids identifying the last processed TrafficCommands
     int trajActionId = -1;
