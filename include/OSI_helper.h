@@ -195,6 +195,79 @@ int closestCenterlinePoint(const Point2D point, const std::vector<Point2D>& cl, 
 }
 
 /**
+ * @brief Calculate approximate centerline connection for intersection area
+ * 
+ * This function creates centerline points between two road ends. To do so,
+ * two points at each road end are required. With that information, the 
+ * parameterized cubic polynomials x(t) and y(t) can be solved unique.
+ * The ODE system for x(t) is set up as follows: 
+ * x(0) = x1, x(\delta x) = x2 with \delta x = abs(x2-x1)
+ * x'(0) = cos(ang1), x(\delta x) = cos(ang2) where ang1 and ang2 are the angles
+ * at the end of each road. With those four equations, the ODE A*c=b can be 
+ * solved for c
+ * 
+ * @param p1p2 a vector of four points that describe both road ends
+ * @param pos the centerline with a gap that should be filled by this function
+ * @param idx index within pos where the gap is located
+ * 
+*/
+
+int calcXYgap(std::vector<Point2D> p1p2, std::vector<Point2D>& pos, int idx)
+{
+	// gap start/end plus second last point, respectively
+	double x1 = p1p2[1].x;
+	double y1 = p1p2[1].y;
+	double x1_h = p1p2[0].x;
+	double y1_h = p1p2[0].y;
+	double x2 = p1p2[2].x;
+	double y2 = p1p2[2].y;
+	double x2_h = p1p2[3].x;
+	double y2_h = p1p2[3].y;
+	
+	// help/intermediate variables
+	double dx = abs(x2-x1);
+	double dy = abs(y2-y1);
+	double ang1 = atan2(y1 - y1_h, x1 - x1_h);
+	double ang2 = atan2(y2_h - y2, x2_h - x2);
+
+	// manual coefficient calculation after paper+pen
+	// x(0) = x1, x(dx) = x2, x'(0) = cos(ang1), x'(dx) = cos(ang2)
+	// y similar but with sin()
+	// Remark: Those calculation are the solution to an ODE of the form A \ b = c
+	double ca_x = (-2/pow(dx,3))*(dx-dx*cos(ang1)) + (1/pow(dx,2))*(cos(ang2)-cos(ang1));
+	double cb_x = (3/pow(dx,2))*(dx-dx*cos(ang1)) + (-1/dx)*(cos(ang2)-cos(ang1));
+	double cc_x = cos(ang1);
+	double cd_x = x1;
+	double ca_y = (-2/pow(dy,3))*(dy-dy*sin(ang1)) + (1/pow(dy,2))*(sin(ang2)-sin(ang1));
+	double cb_y = (3/pow(dy,2))*(dy-dy*sin(ang1)) + (-1/dy)*(sin(ang2)-sin(ang1));
+	double cc_y = sin(ang1);
+	double cd_y = y1;
+
+	std::vector<Point2D> gapXY;
+	int N = 30; //number of interpolated points
+	double ddx = dx/(N-1);
+	double ddy = dy/(N-1);
+	double tx = 0;
+	double ty = 0;
+	for (int i=0; i<N; i++)
+	{
+		Point2D tmp;
+		// calculate parameter polynomial function 
+		tmp.x = ca_x*pow(tx, 3) + cb_x*pow(tx, 2) + cc_x*tx + cd_x;
+		tmp.y = ca_y*pow(ty, 3) + cb_y*pow(ty, 2) + cc_y*ty + cd_y;
+
+		tx += ddx;
+		ty += ddy;
+		// add point
+		gapXY.push_back(tmp);
+	}
+
+	pos.insert(pos.begin() + idx, gapXY.begin(), gapXY.end());
+
+	return 0;
+}
+
+/**
  * @brief get vector of x y  centerline-coordinates of a lane
  *
  * @param lane pointer
@@ -219,7 +292,6 @@ int getXY(osi3::Lane* l, std::vector<Point2D>& pos)
 		}
 		return 0;
 	}
-
 }
 
 /**

@@ -33,8 +33,12 @@ public:
     explicit IkaAgent(){};
     ~IkaAgent(){}; // = default;
 
-    int step(double time, double stepSize, osi3::SensorView &sensorViewData, osi3::TrafficCommand &commandData, osi3::TrafficUpdate &out, setlevel4to5::DynamicsRequest &dynOut);
+    int step(double time, double stepSize, osi3::SensorView &sensorViewData, 
+            osi3::TrafficCommand &commandData, osi3::TrafficUpdate &out, 
+            setlevel4to5::DynamicsRequest &dynOut);
+    void setVehicleSpeed(double v0);
     int terminate();
+    bool isInitialized() {return initialized;}
 
 private:
     void init(osi3::BaseMoving &host);
@@ -68,7 +72,8 @@ private:
     VehicleModel::State *vehState;
     VehicleModel::Parameters *vehParam;
 
-    int adapterOsiToInput(osi3::SensorView &sensorView, agent_model::Input &input, std::vector<int> &futureLanes, double time);
+    int adapterOsiToInput(osi3::SensorView &sensorView, agent_model::Input &input, 
+                          std::vector<int> &futureLanes, double time);
     int parseTrafficCommand(osi3::SensorView &sensorViewData, osi3::TrafficCommand &commandData);
     void classifyManeuver(osi3::SensorView &sensorViewData);
     int generateHorizon(osi3::SensorView &sensorView, std::vector<int> &futureLanes);

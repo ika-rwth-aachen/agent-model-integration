@@ -66,13 +66,16 @@ using namespace std;
 #define FMI_INTEGER_SENSORVIEW_CONFIG_BASELO_IDX 15
 #define FMI_INTEGER_SENSORVIEW_CONFIG_BASEHI_IDX 16
 #define FMI_INTEGER_SENSORVIEW_CONFIG_SIZE_IDX 17
-#define FMI_INTEGER_COUNT_IDX 18
+#define FMI_INTEGER_COUNT_IDX 17
 #define FMI_INTEGER_LAST_IDX FMI_INTEGER_COUNT_IDX
-#define FMI_INTEGER_VARS (FMI_INTEGER_LAST_IDX+1)
+#define FMI_INTEGER_VARS FMI_INTEGER_LAST_IDX+1
 
 /* Real Variables */
-#define FMI_REAL_LAST_IDX 0
-#define FMI_REAL_VARS (FMI_REAL_LAST_IDX+1)
+#define FMI_REAL_VELOCITY_V_COMFORT 0
+#define FMI_REAL_VELOCITY_V_INIT 1
+#define FMI_REAL_COUNT_IDX 1
+#define FMI_REAL_LAST_IDX FMI_REAL_COUNT_IDX
+#define FMI_REAL_VARS FMI_REAL_LAST_IDX+1
 
 /* String Variables */
 #define FMI_STRING_LAST_IDX 0
@@ -94,6 +97,15 @@ using namespace std;
 
 /* FMU Class */
 class COSMPTrafficAgent {
+public:
+    /// Enum to reflect FMI variable types
+    enum class VariableType {
+        Real,
+        Integer,
+        Boolean,
+        String
+    };
+
 public:
     /* FMI2 Interface mapped to C++ */
     COSMPTrafficAgent(fmi2String theinstanceName, fmi2Type thefmuType, fmi2String thefmuGUID, fmi2String thefmuResourceLocation, const fmi2CallbackFunctions* thefunctions, fmi2Boolean thevisible, fmi2Boolean theloggingOn);
@@ -125,6 +137,26 @@ protected:
     fmi2Status doCalc(fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPointfmi2Component);
     fmi2Status doTerm();
     void doFree();
+
+private:
+
+    /**
+     * @brief Update the traffic agent's model parameter with the given value reference
+     * @tparam T Type of the parameter that should be updated.
+     * @param vr Value reference of the parameter that should be updated.
+     */
+    template<typename T>
+    void updateAgentParameter(size_t vr);
+
+    /**
+     * @brief Set the traffic agent's model parameter with the given value reference
+     * @tparam T Type of the parameter that should be set.
+     * @param vr    Value reference of the parameter that should be set.
+     * @param param Value to which the parameter should be set.
+     */
+    template<typename T>
+    void setAgentParameter(size_t vr, T param);
+
 
 protected:
     /* Private File-based Logging just for Debugging */
@@ -219,6 +251,7 @@ protected:
     string lastDynamicsRequestBuffer;
 
     IkaAgent agentModel;
+    std::set<std::pair<size_t, VariableType>> mVariableChangedSet;
 
     /* Simple Accessors */
     fmi2Boolean fmi_valid() { return boolean_vars[FMI_BOOLEAN_VALID_IDX]; }

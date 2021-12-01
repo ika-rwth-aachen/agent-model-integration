@@ -17,31 +17,31 @@
 void IkaAgent::init(osi3::BaseMoving &host)
 {
 	lastS = 0;
-	horizonTHW = 15;
-	double l = 3.22; // wheel base
+	horizonTHW = 15; // parameter candidate
+	double l = 3.22; // wheel base // parameter candidate
 
 	drParam = getParameters();
 	drState = getState();
 
-	drParam->velocity.a = 2.0;
-	drParam->velocity.b = -2.0;
-	drParam->velocity.thwMax = 10.0;
+	drParam->velocity.a = 2.0; // parameter candidate
+	drParam->velocity.b = -2.0; // parameter candidate
+	drParam->velocity.thwMax = 10.0; // parameter candidate
 	drParam->velocity.delta = 4.0;
 	drParam->velocity.deltaPred = 3.0;
-	drParam->velocity.vComfort = 50.0 / 3.6; //s.u.
-	drParam->velocity.ayMax = 1.5;
+	//drParam->velocity.vComfort = 50.0 / 3.6; //s.u. // parameter candidate
+	drParam->velocity.ayMax = 1.5; // parameter candidate
 
 	// stop control
 	drParam->stop.T = 2.0;
 	drParam->stop.TMax = 7.0;
-	drParam->stop.tSign = 0.5;
+	drParam->stop.tSign = 0.5; 
 	drParam->stop.vStopped = 0.2;
 	drParam->stop.pedalDuringStanding = -0.3;
 
 	// following
 	drParam->follow.dsStopped = 2.0;
 	drParam->follow.thwMax = 10.0;
-	drParam->follow.timeHeadway = 1.8;
+	drParam->follow.timeHeadway = 1.8; // parameter candidate
 
 	// steering
 	drParam->steering.thw[0] = 1.0;
@@ -83,12 +83,12 @@ void IkaAgent::init(osi3::BaseMoving &host)
 	pedalContr.setParameters(1.75, .5, 0.01, 1.0);
 	pedalContr.setRange(-1.0, 1.0, INFINITY);
 
-	// set states
+	// set initial states
 	_vehicle.reset();
 	vehState->position.x = host.position().x();
 	vehState->position.y = host.position().y();
-	vehState->v = sqrt(host.velocity().x() * host.velocity().x() + host.velocity().y() * host.velocity().y()); //tbd
-	vehState->v = 40.0 / 3.6;
+	//vehState->v = sqrt(host.velocity().x() * host.velocity().x() + host.velocity().y() * host.velocity().y()); //tbd
+	//vehState->v = 40.0 / 3.6; // parameter candidate
 	//drParam->velocity.vComfort = 12;
 	vehState->psi = host.orientation().yaw(); //tbd
 
@@ -110,6 +110,11 @@ void IkaAgent::init(osi3::BaseMoving &host)
 	hor_test.close();
 }
 
+void IkaAgent::setVehicleSpeed(double v0)
+{
+	_vehicle.getState()->v = v0;
+}
+
 int IkaAgent::step(double time, double stepSize, osi3::SensorView &sensorViewData, osi3::TrafficCommand &commandData, osi3::TrafficUpdate &out, setlevel4to5::DynamicsRequest &dynOut)
 {
 	//Initialize agent in first step
@@ -128,7 +133,7 @@ int IkaAgent::step(double time, double stepSize, osi3::SensorView &sensorViewDat
 		parseTrafficCommand(sensorViewData, commandData);
 		//determine type of maneuver (if crossing intersection)
 		classifyManeuver(sensorViewData);
-		std::cout << "lane to pass: ";
+		std::cout << "lanes to pass: ";
 		for (auto &lane : lanes)
 			std::cout << lane << " ";
 		std::cout << std::endl;
@@ -148,7 +153,6 @@ int IkaAgent::step(double time, double stepSize, osi3::SensorView &sensorViewDat
 	// Perform Vehicle Model step
 	vehInput->slope = 0.0;	 //TODO
 	_vehicle.step(stepSize); // STEP SIZE not TIME!
-
 	if (true) // replace with debug flag or similar
 	{
 		std::ofstream output("debug" + std::to_string(hostVehicleId) + ".txt", std::ofstream::out | std::ofstream::app);
@@ -253,12 +257,23 @@ void IkaAgent::classifyManeuver(osi3::SensorView &sensorViewData)
 	// Assuming there is only one intersection along the path, considering the first encountered
 	std::vector<Point2D> pos;
 	std::vector<double> s, k, p;
+	bool isOsiStandard = false;
+
 	for (auto it : lanes)
 	{
 		osi3::Lane *lane = findLane(it, groundTruth);
 		if (lane->classification().type() == osi3::Lane_Classification_Type_TYPE_INTERSECTION)
-			getXY(lane, pos);
+			if (lane->classification().free_lane_boundary_id_size() > 0)
+			{
+				isOsiStandard = true;
+				std::cout << "intersection is modeled as free lane boundary (as stated in the standard).";
+			}
+			else
+				getXY(lane, pos);
 	}
+
+	// TODO: calculate maneuver when intersection is an area
+
 	/*std::cout << "curve: ";
 	for (auto& p:pos) std::cout << p.x << "," << p.y << " ";
 	std::cout << "\n";*/
@@ -325,12 +340,26 @@ int IkaAgent::applyDriverOutput(double time, osi3::TrafficUpdate &out)
  */
 int IkaAgent::generateHorizon(osi3::SensorView &sensorView, std::vector<int> &futureLanes)
 {
-
 	// first get all relevant points from futureLanes
 	osi3::GroundTruth *groundTruth = sensorView.mutable_global_ground_truth();
 
+	int gapIdx=0;
 	for (auto &l : futureLanes)
-		getXY(findLane(l, groundTruth), pathCenterLine);
+	{
+		if (findLane(l, groundTruth)->classification().free_lane_boundary_id_size() > 0 
+		 && findLane(l, groundTruth)->classification().type() == osi3::Lane_Classification_Type_TYPE_INTERSECTION)
+		{ // mark gap and compute points later, when gap end is known as well
+			gapIdx = pathCenterLine.size()-1;
+		} 
+		else
+			getXY(findLane(l, groundTruth), pathCenterLine);
+	}
+
+	if (gapIdx > 0)
+	{
+		std::vector<Point2D> gapPts(&pathCenterLine[gapIdx-1], &pathCenterLine[gapIdx+3]);
+		calcXYgap(gapPts, pathCenterLine, gapIdx);
+	}
 
 	// remove duplicates
 	for (int i = 0; i < pathCenterLine.size() - 1; i++)
@@ -1371,3 +1400,4 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView &sensorView, agent_model::Input
 
 	return 0;
 }
+
