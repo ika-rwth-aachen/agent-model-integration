@@ -19,11 +19,13 @@ Fig. 1: OSMP wrapping of the driver model
 
 #### Information Flow
 
-![osmp](doc/04_architecture-en.svg)  
+![architecutre](doc/04_architecture-en.svg)  
+Fig. 2: Behavior model architecture [2]  
 
 #### Basic Maneuvers
 
-![osmp](doc/states-original.svg)  
+![states](doc/states-original.svg)  
+Fig. 2: Behavior model basic maneuvers [2]  
 
 ## Licensing
 **Distributed under the [MIT License](LICENSE).**
