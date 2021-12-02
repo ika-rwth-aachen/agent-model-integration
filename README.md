@@ -1,56 +1,18 @@
-**README will be updated according to open source template**
+# Driver Model with OSI 
+This driver model is a closed loop agent model that reacts on other traffic participants and is able to perform basic maneuvers. 
+The model is based on the work done by [1] and got extended with an OSI adapter. The model described in [1] is available on [GitHub](https://github.com/ika-rwth-aachen/SimDriver).
+The driver model was developed by the institute for automotive engineering, RWTH Aachen University within the scope of the SET Level project.
 
-# Driver model for SET Level 4to5
-> CI pipeline results:  
-> * [**Latest FMU** (Ubuntu 18.04 LTS)](https://gitlab.sl4to5.de/deliverables/model/traffic-agents/ika-driver/-/jobs/artifacts/master/raw/lib/ikaDriverAgent.fmu?job=buildFMU1804) 
-> * [**Latest FMU** (Ubuntu 20.04 LTS)](https://gitlab.sl4to5.de/deliverables/model/traffic-agents/ika-driver/-/jobs/artifacts/master/raw/lib/ikaDriverAgent.fmu?job=buildFMU2004) 
+# Modeling Approach
+In the following, the basic maneuvers and the implementation concept are outlined.
 
-## Build
-Brief build instructions for compilation with `MSYS2 MinGW 64-bit` on Windows.  
-### Protobuf dependency
-Due to the usage of the CMake feature 'ExternalProject_Add()', there is no need to download and build protobuf from source source anymore. 
-  
-### Windows Build FMU
-1. Start `MSYS2 MinGW 64-bit` shell
-1. Create a `build` directory and enter it:
-    ```
-    mkdir build && cd build
-    ```  
+## Framework
+Before describing the model itself, its framework is briefly described. 
+The implementation uses the [OSI Sensor Model Packaging (OSMP)](https://github.com/OpenSimulationInterface/osi-sensor-model-packaging) framework to pack the library as a standardized [FMU](https://fmi-standard.org/). This way, the model may be integrated in any simulation platform that supports the [Open Simulation Interface (OSI)](https://github.com/OpenSimulationInterface/open-simulation-interface) and FMI.
+Fig. 1 illustrates the wrapping around the actual behavior model to end up with an encapsulated FMU.  
 
-2. Execute CMake:
-    ```
-    cmake -G "MSYS Makefiles" -DCMAKE_BUILD_TYPE=Release ..
-    ```  
+![osmp](doc/drivermodel_osmp.png)  
+Fig. 1: OSMP wrapping of the driver model  
 
-    Please note: The default build directory for the `FMU` is the subfolder `lib/`. If a specific `FMU` output dir shall be used, set the variable `FMU_OUTDIR`, e.g.
-    ```
-    cmake -G "MSYS Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_BUILD_TYPE=Release -DFMU_OUTDIR=<dir> ..
-    ```  
-
-3. Compile the library:
-    ```
-    make.exe
-    ```
-    Optional: `make.exe -j4` for building on multiple cores (replace `4` with an arbitrary number).
-
-### Linux Build FMU
-1. Create a `build` directory and enter it:
-    ```
-    mkdir build && cd build
-    ```  
-
-2. Execute CMake:
-    ```
-    cmake -DCMAKE_BUILD_TYPE=Release ..
-    ```  
-
-    Please note: The default build directory for the `FMU` is the subfolder `lib/`. If a specific `FMU` output dir shall be used, set the variable `FMU_OUTDIR`, e.g.
-    ```
-    cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_BUILD_TYPE=Release -DFMU_OUTDIR=<dir> ..
-    ```  
-
-3. Compile the library:
-    ```
-    make
-    ```
-    Optional: `make -j4` for building on multiple cores (replace `4` with an arbitrary number).
+# References
+[1] *System Design of an Agent Model for the Closed-Loop Simulation of Relevant Scenarios in the Development of ADS*, 29th Aachen Colloquium 2020, 07.10.2020, Aachen. Jens Klimke, E.Go Moove GmbH; Daniel Becker, Institut für Kraftfahrzeuge (ika); Univ.-Prof. Dr.-Ing. Lutz Eckstein, Insitut für Kraftfahrzeuge (ika)
