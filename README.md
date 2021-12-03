@@ -16,16 +16,21 @@ Inside the FMU, internal interfaces are used to feed the ika behavior model and 
 Fig. 1: OSMP wrapping of the driver model  
 
 ### Behavior Model
-
+The model core is hosted on [GitHub](https://github.com/ika-rwth-aachen/SimDriver) and its basic structure and features are described in this section.
 #### Information Flow
+An extensive discussion of Fig. 2 can be found in [1]. However, the basic concept of the driver model shall be outlined. 
+On the left side of Fig. 2 the input interface is shown. It consists of information on the environment (static + dynamic), the route and the ego vehicle. Inside the model these signals are processed the *Perception* layer. This is currently just a "pass-through" layer, but it would be possible to model the driver's perception ability by disturbing the signals.  
+The *Processing* layer takes the environment and traffic data and enriches them, e.g., with TTC or THW measures. Then, the most suitable maneuver is selected and modeled by conscious guiding variables (e.g. a time headway to a leading vehicle that should be maintained). Conscious variables are controlled by the sub-conscious variables acceleration and curvature (*Note:* `Z-micro` corresponds to the `sl4to5::DynamicsRequest` message here).  
+The *Action* column is actually located outside the "ika Agent Model" block from Fig. 1, but modeled in the most right block of Fig. 1.
 
 ![architecutre](doc/04_architecture-en.svg)  
-Fig. 2: Behavior model architecture [2]  
+Fig. 2: Behavior model architecture (taken from [2])  
 
 #### Basic Maneuvers
+This section should help enlighten some blocks within the *Processing* column of Fig. 2. The driver model is implemented such that basic driving maneuvers are modeled which enables the model to perform most driving tasks that are required in urban scenarios (cf. [1]).
 
 ![states](doc/states-original.svg)  
-Fig. 2: Behavior model basic maneuvers [2]  
+Fig. 3: Behavior model basic maneuvers (taken from [2])  
 
 ## Licensing
 **Distributed under the [MIT License](LICENSE).**
@@ -34,8 +39,8 @@ Fig. 2: Behavior model basic maneuvers [2]
 This work received funding from the research project
 "[SET Level](https://setlevel.de/)" of the [PEGASUS ](https://pegasus-family.de) project family, promoted by the German Federal
 Ministry for Economic Affairs and Energy based on a decision of the German Bundestag.
-| SET Level                                                                                                | PEGASUS Family                                                                                                       | BMWi                                                                                                                                                                                 |
-|----------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| SET Level | PEGASUS Family | BMWi |
+|-----------|----------------|------|
 | <a href="https://setlevel.de"><img src="https://setlevel.de/assets/logo-setlevel.svg" width="100" /></a> | <a href="https://pegasus-family.de"><img src="https://setlevel.de/assets/logo-pegasus-family.svg" width="100" /></a> | <a href="https://www.bmwi.de/Redaktion/DE/Textsammlungen/Technologie/fahrzeug-und-systemtechnologien.html"><img src="https://setlevel.de/assets/logo-bmwi-en.svg" width="100" /></a> |
 
 
