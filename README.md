@@ -27,10 +27,35 @@ The *Action* column is actually located outside the "ika Agent Model" block from
 Fig. 2: Behavior model architecture (taken from [2])  
 
 #### Basic Maneuvers
-This section should help enlighten some blocks within the *Processing* column of Fig. 2. The driver model is implemented such that basic driving maneuvers are modeled which enables the model to perform most driving tasks that are required in urban scenarios (cf. [1]).
+This section should help enlighten some blocks within the *Processing* column of Fig. 2. The driver model is implemented such that basic driving maneuvers are modeled which enables the model to perform most driving tasks that are required in urban scenarios (cf. [1]). Those capabilities or basic maneuvers are illustrated as a state diagram in Fig. 3.
 
 ![states](doc/states-original.svg)  
 Fig. 3: Behavior model basic maneuvers (taken from [2])  
+
+**TODO: brief description of state diagram**
+
+## Parametrization
+Currently, the model can only be parameterized directly in the source code. A solution for a FMU based approach will be done by the end of SET Level.  
+
+In the source file [IkaAgent.cpp](src/IkaAgent.cpp) within the `init` function all parameters can be adjusted. Possible parameters of interest might be:
+```C++
+drParam->velocity.vComfort // The default velocity the driver reaches on a straight road ( in *m/s*)
+drParam->velocity.thwMax // The maximum time headway the driver starts to react (in *s*)
+drParam->follow.timeHeadway  // The time headway the driver tries to reach during following (in *s*)
+```
+
+## Interface
+The simulation environment should fill the `osi3::GroundTruth` almost completely. A detailed list will follow.
+
+## Building Instructions
+The model can be build on Linux with `cmake` quite straight forward 
+```
+mkdir build 
+cd build
+cmake .. 
+cmake --build
+```
+If desired, the `cmake` parameter `FMU_OUTDIR` which specifies the location of the resulting FMU can be set. If not, the FMU is placed in `/lib`.
 
 ## Licensing
 **Distributed under the [MIT License](LICENSE).**
@@ -43,9 +68,7 @@ Ministry for Economic Affairs and Energy based on a decision of the German Bunde
 |-----------|----------------|------|
 | <a href="https://setlevel.de"><img src="https://setlevel.de/assets/logo-setlevel.svg" width="100" /></a> | <a href="https://pegasus-family.de"><img src="https://setlevel.de/assets/logo-pegasus-family.svg" width="100" /></a> | <a href="https://www.bmwi.de/Redaktion/DE/Textsammlungen/Technologie/fahrzeug-und-systemtechnologien.html"><img src="https://setlevel.de/assets/logo-bmwi-en.svg" width="100" /></a> |
 
-
 ## References
 [1] *System Design of an Agent Model for the Closed-Loop Simulation of Relevant Scenarios in the Development of ADS*, 29th Aachen Colloquium 2020, 07.10.2020, Aachen. Jens Klimke, E.Go Moove GmbH; Daniel Becker, Institut für Kraftfahrzeuge (ika); Univ.-Prof. Dr.-Ing. Lutz Eckstein, Insitut für Kraftfahrzeuge (ika)
 
 [2] *Agentenmodell für die Closed-Loop-Simulation von Verkehrszenarien*, ATZelektronik 05 Mai 2021, 16. Jahrgang, S.42-46. Daniel Becker, Jens Klimke, Lutz Eckstein. Link: https://www.springerprofessional.de/agentenmodell-fuer-die-closed-loop-simulation-von-verkehrsszenar/19141908
-
