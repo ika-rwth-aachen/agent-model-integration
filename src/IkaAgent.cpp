@@ -88,7 +88,6 @@ void IkaAgent::init(osi3::BaseMoving &host)
 	vehState->position.x = host.position().x();
 	vehState->position.y = host.position().y();
 	vehState->v = sqrt(host.velocity().x() * host.velocity().x() + host.velocity().y() * host.velocity().y()); //tbd
-	vehState->v = 40.0 / 3.6;
 	//drParam->velocity.vComfort = 12;
 	vehState->psi = host.orientation().yaw(); //tbd
 
