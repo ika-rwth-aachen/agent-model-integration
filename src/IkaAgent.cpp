@@ -28,7 +28,7 @@ void IkaAgent::init(osi3::BaseMoving &host)
 	drParam->velocity.thwMax = 10.0; // parameter candidate
 	drParam->velocity.delta = 4.0;
 	drParam->velocity.deltaPred = 3.0;
-	//drParam->velocity.vComfort = 50.0 / 3.6; //s.u. // parameter candidate
+	drParam->velocity.vComfort = 50.0 / 3.6; //s.u. // parameter candidate
 	drParam->velocity.ayMax = 1.5; // parameter candidate
 
 	// stop control
@@ -87,7 +87,7 @@ void IkaAgent::init(osi3::BaseMoving &host)
 	_vehicle.reset();
 	vehState->position.x = host.position().x();
 	vehState->position.y = host.position().y();
-	//vehState->v = sqrt(host.velocity().x() * host.velocity().x() + host.velocity().y() * host.velocity().y()); //tbd
+	vehState->v = sqrt(host.velocity().x() * host.velocity().x() + host.velocity().y() * host.velocity().y()); //tbd
 	//vehState->v = 40.0 / 3.6; // parameter candidate
 	//drParam->velocity.vComfort = 12;
 	vehState->psi = host.orientation().yaw(); //tbd

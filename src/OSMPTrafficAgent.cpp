@@ -205,6 +205,42 @@ void COSMPTrafficAgent::refresh_fmi_sensor_view_config_request()
     }
 }
 
+template<>
+void
+COSMPTrafficAgent::setAgentParameter(size_t vr, fmi2Real param)
+{
+    // get the parameter struct from the interface
+    agent_model::Parameters *drParam;
+    drParam = agentModel.getParameters();
+    
+    switch(vr) {
+        case FMI_REAL_VELOCITY_V_COMFORT:
+            drParam->velocity.vComfort = param;
+            return;
+        case FMI_REAL_VELOCITY_V_INIT:
+            agentModel.setVehicleSpeed(param);
+            return;
+        default:
+            assert(false);
+            break;
+    }
+}
+
+template<>
+void
+COSMPTrafficAgent::updateAgentParameter<fmi2Real>(size_t vr)
+{
+    auto varTypePair = std::make_pair(vr, VariableType::Real);
+    /// Only perform an update if the parameter changed
+    //if(!mVariableChangedSet.count(varTypePair))
+    //    return;
+    assert(vr <= FMI_REAL_LAST_IDX);
+    fmi2Real param = real_vars[vr];
+    setAgentParameter(vr, param);
+    mVariableChangedSet.erase(varTypePair);
+
+}
+
 /*
  * Actual Core Content
  */
@@ -313,8 +349,14 @@ fmi2Status COSMPTrafficAgent::doCalc(fmi2Real currentCommunicationPoint, fmi2Rea
                 }
             });
 
-    
-    /* Update Trajectory */
+    /* initial speed */
+    if (time == 0)
+    {
+        updateAgentParameter<fmi2Real>(FMI_REAL_VELOCITY_V_INIT);
+        updateAgentParameter<fmi2Real>(FMI_REAL_VELOCITY_V_COMFORT);
+    }
+
+    /* Update state point */
     agentModel.step(time, communicationStepSize, currentViewIn, currentCommandIn, currentOut, currentDynReq);
 
     /* Serialize */
@@ -348,6 +390,7 @@ COSMPTrafficAgent::COSMPTrafficAgent(fmi2String theinstanceName, fmi2Type thefmu
     fmuResourceLocation(thefmuResourceLocation),
     functions(*thefunctions),
     visible(!!thevisible),
+    mVariableChangedSet(),
     loggingOn(!!theloggingOn),
     simulation_started(false)
 {
@@ -519,7 +562,10 @@ fmi2Status COSMPTrafficAgent::SetReal(const fmi2ValueReference vr[], size_t nvr,
     fmi_verbose_log("fmi2SetReal(...)");
     for (size_t i = 0; i<nvr; i++) {
         if (vr[i]<FMI_REAL_VARS)
+        {
             real_vars[vr[i]] = value[i];
+            mVariableChangedSet.emplace(std::make_pair(vr[i], VariableType::Real));
+        }
         else
             return fmi2Error;
     }
