@@ -139,6 +139,16 @@ target_link_libraries(${PROJECT_NAME}
 	PUBLIC static_protobuf_lib
 	PUBLIC agent_model)
 
+add_executable(${PROJECT_NAME}_ositrace
+	src/IkaAgent.cpp
+	src/VehicleModel.cpp
+	src/PrimaryController.cpp
+	test/osiTraceTest.cpp)
+target_link_libraries(${PROJECT_NAME}_ositrace
+	PUBLIC static_osi_lib
+	PUBLIC static_protobuf_lib
+	PUBLIC agent_model)
+
 #if(LINK_WITH_SHARED_OSI)
 	#target_link_libraries(${PROJECT_NAME} open_simulation_interface -lprotobuf agent_model)
 #else()

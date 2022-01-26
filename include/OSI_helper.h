@@ -568,12 +568,15 @@ void createGraph(osi3::GroundTruth* groundTruth, std::vector<int> adj[]) {
 
 		for (int j = 0; j < groundTruth->lane(i).classification().lane_pairing_size(); j++) {
 			if (groundTruth->lane(i).classification().centerline_is_driving_direction()) {
-
+				//if (groundTruth->lane(i).classification().lane_pairing(j).successor_lane_id().value() == groundTruth->lane(i).id().value())
+				//	adj[i].push_back(findLaneId(groundTruth, groundTruth->lane(i).classification().lane_pairing(j).antecessor_lane_id().value()));
 				if (groundTruth->lane(i).classification().lane_pairing(j).antecessor_lane_id().value() == groundTruth->lane(i).id().value())
 					adj[i].push_back(findLaneId(groundTruth, groundTruth->lane(i).classification().lane_pairing(j).successor_lane_id().value()));
 
 			}
 			else {
+				//if (groundTruth->lane(i).classification().lane_pairing(j).antecessor_lane_id().value() == groundTruth->lane(i).id().value())
+				//	adj[i].push_back(findLaneId(groundTruth, groundTruth->lane(i).classification().lane_pairing(j).successor_lane_id().value()));
 				if (groundTruth->lane(i).classification().lane_pairing(j).successor_lane_id().value() == groundTruth->lane(i).id().value())
 					adj[i].push_back(findLaneId(groundTruth, groundTruth->lane(i).classification().lane_pairing(j).antecessor_lane_id().value()));
 
