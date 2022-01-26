@@ -1485,7 +1485,7 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView &sensorView, agent_model::Input
 	}
 	*/
 
-	if (true) // replace with debug flag or similar
+	if (debug_files) // replace with debug flag or similar
 	{
 		std::ofstream horizon_out("horizon" + std::to_string(hostVehicleId) + ".txt", std::ofstream::out | std::ofstream::app);
 		for (int i = 0; i < agent_model::NOH; i++)
