@@ -17,31 +17,31 @@
 void IkaAgent::init(osi3::BaseMoving &host)
 {
 	lastS = 0;
-	horizonTHW = 15; // parameter candidate
-	double l = 3.22; // wheel base // parameter candidate
+	horizonTHW = 15;
+	double l = 3.22; // wheel base
 
 	drParam = getParameters();
 	drState = getState();
 
-	drParam->velocity.a = 2.0; // parameter candidate
-	drParam->velocity.b = -2.0; // parameter candidate
-	drParam->velocity.thwMax = 10.0; // parameter candidate
+	drParam->velocity.a = 2.0;
+	drParam->velocity.b = -2.0;
+	drParam->velocity.thwMax = 10.0;
 	drParam->velocity.delta = 4.0;
 	drParam->velocity.deltaPred = 3.0;
-	drParam->velocity.vComfort = 50.0 / 3.6; //s.u. // parameter candidate
-	drParam->velocity.ayMax = 1.5; // parameter candidate
+	drParam->velocity.vComfort = 50.0 / 3.6; //s.u.
+	drParam->velocity.ayMax = 1.5;
 
 	// stop control
 	drParam->stop.T = 2.0;
 	drParam->stop.TMax = 7.0;
-	drParam->stop.tSign = 0.5; 
+	drParam->stop.tSign = 0.5;
 	drParam->stop.vStopped = 0.2;
 	drParam->stop.pedalDuringStanding = -0.3;
 
 	// following
 	drParam->follow.dsStopped = 2.0;
 	drParam->follow.thwMax = 10.0;
-	drParam->follow.timeHeadway = 1.8; // parameter candidate
+	drParam->follow.timeHeadway = 1.8;
 
 	// steering
 	drParam->steering.thw[0] = 1.0;
@@ -83,12 +83,12 @@ void IkaAgent::init(osi3::BaseMoving &host)
 	pedalContr.setParameters(1.75, .5, 0.01, 1.0);
 	pedalContr.setRange(-1.0, 1.0, INFINITY);
 
-	// set initial states
+	// set states
 	_vehicle.reset();
 	vehState->position.x = host.position().x();
 	vehState->position.y = host.position().y();
 	vehState->v = sqrt(host.velocity().x() * host.velocity().x() + host.velocity().y() * host.velocity().y()); //tbd
-	//vehState->v = 40.0 / 3.6; // parameter candidate
+	//vehState->v = 40.0 / 3.6;
 	//drParam->velocity.vComfort = 12;
 	vehState->psi = host.orientation().yaw(); //tbd
 
@@ -117,7 +117,6 @@ void IkaAgent::setVehicleSpeed(double v0)
 {
 	_vehicle.getState()->v = v0;
 }
-
 int IkaAgent::step(double time, double stepSize, osi3::SensorView &sensorViewData, osi3::TrafficCommand &commandData, osi3::TrafficUpdate &out, setlevel4to5::DynamicsRequest &dynOut)
 {
 	//Initialize agent in first step
@@ -393,11 +392,14 @@ int IkaAgent::generateHorizon(osi3::SensorView &sensorView, std::vector<int> &fu
 		test_hor.close();
 	}
 
+	
+
 	// generate junction paths for traffic rules
 	std::vector<int> knownStartingLid;
 	for (auto &sig : *groundTruth->mutable_traffic_sign())
 	{
-		if (sig.main_sign().classification().type() == osi3::TrafficSign_MainSign_Classification_Type_TYPE_RIGHT_OF_WAY_BEGIN || sig.main_sign().classification().type() == osi3::TrafficSign_MainSign_Classification_Type_TYPE_GIVE_WAY)
+		if (sig.main_sign().classification().type() == osi3::TrafficSign_MainSign_Classification_Type_TYPE_RIGHT_OF_WAY_BEGIN 
+		|| sig.main_sign().classification().type() == osi3::TrafficSign_MainSign_Classification_Type_TYPE_GIVE_WAY)
 		{
 			// create path from assigned lane of sign backwards
 			for (auto &asLane : sig.main_sign().classification().assigned_lane_id())
@@ -444,6 +446,7 @@ int IkaAgent::generateHorizon(osi3::SensorView &sensorView, std::vector<int> &fu
 						}
 					}
 				}
+				//why not both conditions?
 				if (sig.main_sign().classification().type() == osi3::TrafficSign_MainSign_Classification_Type_TYPE_GIVE_WAY)
 					yieldingLanes.push_back(tmp);
 				else
@@ -479,6 +482,7 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView &sensorView, agent_model::Input
 {
 	osi3::GroundTruth *groundTruth = sensorView.mutable_global_ground_truth();
 
+	
 	// --- ego ---
 	// save properties needed often
 	int egoId = sensorView.host_vehicle_id().value();
@@ -562,6 +566,125 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView &sensorView, agent_model::Input
 	// --- signals ---
 	int signal = 0;
 	std::vector<int> knownAsLane;
+
+	std::vector<Point2D> knownSigPosition; 			//save all known/processed signal positions in this vector
+	std::vector<int> allTLS_IDs;					//save all IDs of TrafficLight signals
+	//::vector<osi3::Identifier> allTLS_IDs;
+
+	auto it_knownSigPosition = knownSigPosition.begin();
+	//auto it_allTLS_IDs = allTLS_IDs.begin();
+
+	//std::vector<Point2D>::iterator it_knownSigPosition = knownSigPosition.begin();
+	//std::vector<osi3::Identifier>::iterator it_allTLS_IDs = allTLS_IDs.begin();
+	
+
+	int DEBUG_TLS_Size = groundTruth->traffic_light_size();
+	int DEBUG_SIGN_Size = groundTruth->traffic_sign_size();
+	int DEBUG_ID_Value;
+
+	for(int i = 0; i < groundTruth->traffic_light_size(); i++)
+	{
+		if (signal>= agent_model::NOTL)
+			break;
+		//if (signal>= agent_model::NOS + agent_model::NOTL)
+		//	break;
+
+		osi3::TrafficLight light = groundTruth->traffic_light(i);
+		osi3::TrafficLight_Classification clas = light.classification();
+
+		auto it = futureLanes.end();
+		// check: sign is assigned to lane along the route?
+		bool assigned = false;
+		for (int k = 0; k < clas.assigned_lane_id_size(); k++)
+		{
+			if(find(knownAsLane.begin(),knownAsLane.end(),clas.assigned_lane_id(k).value()) !=knownAsLane.end())
+				continue;
+			else
+				knownAsLane.push_back(clas.assigned_lane_id(k).value());
+
+			it = find(futureLanes.begin(), futureLanes.end(),clas.assigned_lane_id(k).value());
+			if(it != futureLanes.end())
+				{assigned = true; 	break;}
+
+		}
+
+		if (!assigned)
+			continue;
+		//projection of trafficlight_signal position on centerline: cPoint
+		Point2D cPoint;
+		Point2D sPoint(light.base().position().x(), light.base().position().y());
+		Point2D target = sPoint;
+
+		closestCenterlinePoint(sPoint, pathCenterLine, cPoint);
+
+		// sLight holds s value along centerlines to reach the signal
+		double sLight = xy2s_sgn(egoClPoint, cPoint, pathCenterLine, egoPsi);
+		//std::cout << "Spoint: (" << sPoint.x << "," << sPoint.y << ")" << std::endl;
+
+		//signal on future lane / deleted comments
+
+		input.signals[signal].id = signal + 1; //could also take light.id().value() as id here, OSI ids are often larger numbers
+		input.signals[signal].ds = sLight;
+
+
+		//save postition to check later on: signal is standalone signal or sign combined with TLS?
+		knownSigPosition.push_back(sPoint);
+		///xxx
+		
+		//int k = light.id().value();
+		//save all TLS IDs to assign IDs of combined signs later on
+		allTLS_IDs.push_back(light.id().value());
+
+		DEBUG_ID_Value = light.id().value();
+		
+
+
+		//TODO: Write function to set Icons
+		// Calculate Color and Type/Icon
+		if (clas.color() == osi3::TrafficLight_Classification_Color_COLOR_RED)
+		{
+			//if(clas.is_out_of_service() == osi3::TrafficLight_Classification::is_out_of_service)
+			//osi3::TrafficLight_Classification::is_out_of_service;
+
+			input.signals[signal].color = agent_model::COLOR_RED;
+
+			if(clas.icon() == osi3::TrafficLight_Classification_Icon_ICON_NONE)
+				input.signals[signal].icon =  agent_model::ICON_NONE;
+			else if(clas.icon() == osi3::TrafficLight_Classification_Icon_ICON_ARROW_LEFT)
+				input.signals[signal].icon = agent_model::ICON_ARROW_LEFT;
+			else if(clas.icon() == osi3::TrafficLight_Classification_Icon_ICON_ARROW_RIGHT)
+				input.signals[signal].icon = agent_model::ICON_ARROW_RIGHT;	
+		}
+		else if (clas.color() == osi3::TrafficLight_Classification_Color_COLOR_YELLOW)
+		{
+			input.signals[signal].color = agent_model::COLOR_YELLOW;
+
+			if(clas.icon() == osi3::TrafficLight_Classification_Icon_ICON_NONE)
+				input.signals[signal].icon = agent_model::ICON_NONE;
+			else if(clas.icon() == osi3::TrafficLight_Classification_Icon_ICON_ARROW_LEFT)
+				input.signals[signal].icon = agent_model::ICON_ARROW_LEFT;
+			else if(clas.icon() == osi3::TrafficLight_Classification_Icon_ICON_ARROW_RIGHT)
+				input.signals[signal].icon = agent_model::ICON_ARROW_RIGHT;	
+		}
+		else if (clas.color() == osi3::TrafficLight_Classification_Color_COLOR_GREEN)
+		{
+			input.signals[signal].color = agent_model::COLOR_GREEN;
+			
+			if(clas.icon() == osi3::TrafficLight_Classification_Icon_ICON_NONE)
+				input.signals[signal].icon = agent_model::ICON_NONE;
+			else if(clas.icon() == osi3::TrafficLight_Classification_Icon_ICON_ARROW_LEFT)
+				input.signals[signal].icon = agent_model::ICON_ARROW_LEFT;
+			else if(clas.icon() == osi3::TrafficLight_Classification_Icon_ICON_ARROW_RIGHT)
+				input.signals[signal].icon = agent_model::ICON_ARROW_RIGHT;	
+		}
+
+	signal++;
+	}
+
+	int amountLights = signal;
+
+	auto it_allTLS_IDs = allTLS_IDs.begin();
+   
 	for (int i = 0; i < groundTruth->traffic_sign_size(); i++)
 	{
 		if (signal >= agent_model::NOS)
@@ -591,11 +714,14 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView &sensorView, agent_model::Input
 
 		if (!assigned)
 			continue;
+
 		// sSig will hold s value along centerlines to reach the signal
 		//projection of signal position on centerline: cPoint
 		Point2D cPoint;
 		Point2D sPoint(sign.main_sign().base().position().x(), sign.main_sign().base().position().y());
 		//closestCenterlinePoint(sPoint, elPoints, cPoint);
+		//knownSigPosition.push_back(sPoint);
+
 		Point2D target = sPoint;
 		closestCenterlinePoint(sPoint, pathCenterLine, cPoint);
 		double sSig = xy2s_sgn(egoClPoint, cPoint, pathCenterLine, egoPsi);
@@ -624,6 +750,57 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView &sensorView, agent_model::Input
 
 		input.signals[signal].id = signal + 1; //could also take sign.id().value() as id here, OSI ids are often larger numbers
 		input.signals[signal].ds = sSig;
+		
+	
+		//check if signal position is already known (due to prior signs)
+		it_knownSigPosition = find(knownSigPosition.begin(),knownSigPosition.end(),sPoint);
+
+		if (it_knownSigPosition != knownSigPosition.end())
+		{
+			input.signals[signal].subsignal=true;
+		}
+
+		int itDistance[3];
+		int k = 0;
+
+		while((it_knownSigPosition != knownSigPosition.end()))
+		{
+			itDistance[k] = it_knownSigPosition - knownSigPosition.begin();
+			it_knownSigPosition = find(it_knownSigPosition,knownSigPosition.end(),sPoint);	
+
+			k++;
+			if(k>=3)
+				break;
+		}
+
+		if (!allTLS_IDs.empty()/*||amountLights != 0*/)
+		{
+			for (int k = 0; k < 3; k++)
+			{
+				//it_allTLS_IDs is at same index as it_knownSigPosition was
+				std::advance(it_allTLS_IDs, itDistance[k]);
+				//it_allTLS_IDs + itDistance[k];
+				input.signals[signal].pairedSignalID[k] = *it_allTLS_IDs;
+			}
+
+			//check if whole Trafficlight is out of service -> Sign must be in use
+			if (groundTruth->mutable_traffic_light()->Get(input.signals[signal].pairedSignalID[0]).classification().is_out_of_service() 
+			 && groundTruth->mutable_traffic_light()->Get(input.signals[signal].pairedSignalID[1]).classification().is_out_of_service() 
+			 && groundTruth->mutable_traffic_light()->Get(input.signals[signal].pairedSignalID[2]).classification().is_out_of_service())
+				input.signals[signal].sign_is_in_use = true;
+			else
+				input.signals[signal].sign_is_in_use = false;
+		}
+		else
+		{
+			input.signals[signal].subsignal = false;
+			input.signals[signal].sign_is_in_use = true;
+		}
+
+		//if (find(knownSigPosition.begin(),knownSigPosition.end(),sPoint) != knownSigPosition.end())
+		//	input.signals[signal].subsignal=true;
+
+
 
 		// calculate type
 		if (clas.type() == osi3::TrafficSign_MainSign_Classification_Type_TYPE_STOP)
@@ -660,6 +837,8 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView &sensorView, agent_model::Input
 
 		signal++;
 	}
+
+
 	//fill remaining signals with default values
 	for (int i = signal; i < agent_model::NOS; i++)
 	{
@@ -1403,4 +1582,3 @@ int IkaAgent::adapterOsiToInput(osi3::SensorView &sensorView, agent_model::Input
 
 	return 0;
 }
-
