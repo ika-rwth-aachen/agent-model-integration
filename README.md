@@ -5,6 +5,12 @@
 
 ## Build
 Brief build instructions for compilation with `MSYS2 MinGW 64-bit` on Windows.  
+### Initialize Repository
+Befor starting the build process, the repositorie's submodules need to be downloaded
+```
+git submodule update --init --recursive
+```
+
 ### Protobuf dependency
 Due to the usage of the CMake feature 'ExternalProject_Add()', there is no need to download and build protobuf from source source anymore. 
   
