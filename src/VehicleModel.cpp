@@ -56,7 +56,6 @@ void VehicleModel::reset() {
     input.slope = 0.0;
     input.pedal = 0.0;
     input.steer = 0.0;
-
 }
 
 
@@ -107,15 +106,15 @@ bool VehicleModel::step(double timeStepSize) {
     double _x = st->v * 0.1;        // / 10 m/s (low speed boundary)
 
     // calculate drive force
-    st->force = _x < 1.0
-            ? (F0 + _x * _x * (4.0 * F1 -  3.0 * F0) + _x * _x * _x * (2.0 * F0 - 3.0 * F1))    // low speed
-            : p->powerMax / st->v;                                                              // high speed
+    if (_x < 1.0)
+        st->force = (F0 + pow(_x, 2) * (4.0*F1 - 3.0*F0) + pow(_x, 3) * (2.0 * F0 - 3.0 * F1));                         // low speed
+    else 
+        st->force = p->powerMax / st->v;         // high speed
 
     // calculate acceleration
     st->a  = -aRoll - aAir - aSlope + aBrake + throttle * st->force / p->mass;
     st->ay = st->kappa * st->v * st->v;
-    //std::cout << "aRoll=" << aRoll << "\taAir=" << aAir << "\taSlope=" << aSlope << "\taBrake=" << aBrake << "\tforce=" << st->force << "\tmass=" << p->mass << std::endl;
-    //std::cout << "gas=" << throttle * st->force / p->mass << std::endl;
+
     // unset acceleration, when standing
     if(st->v == 0.0 && st->a < 0.0)
         st->a = 0.0;

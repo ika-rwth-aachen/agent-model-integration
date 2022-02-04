@@ -14,7 +14,7 @@
  *
  * @param x
  * @param y
- * @param order of differetiation
+ * @param order of differentiation
  * @return gradient at every point
  */
 std::vector<double> gradient(std::vector<double> x, std::vector<double> y, int order)
@@ -50,8 +50,6 @@ std::vector<double> gradient(std::vector<double> x, std::vector<double> y, int o
 		res[0] = (2.0 / (h1 + h2)) * ((y[2] - y[1]) / h2 - (y[1] - y[0]) / h1);
 		h1 = (x[n - 1] - x[n - 2]), h2 = (x[n - 2] - x[n - 3]);
 		res[n - 1] = (2.0 / (h1 + h2)) * ((y[n - 1] - y[n - 2]) / h1 - (y[n - 2] - y[n - 3]) / h2);
-		//res[n - 1] = (y[n - 1] - 2 * y[n - 2] + y[n - 3]) / pow(x[n - 1] - x[n - 2], 2);
-
 	}
 
 	return res;
@@ -73,6 +71,7 @@ int xy2curv(std::vector<Point2D> pos, std::vector<double>& s, std::vector<double
 	// calculate s from xy coordinates
 	s.push_back(0);
 	std::vector<double> x(1, pos[0].x), y(1, pos[0].y);
+
 	for (int i = 1; i < pos.size(); i++)
 	{
 		double dx = pos[i].x - pos[i - 1].x;
@@ -104,8 +103,6 @@ int xy2curv(std::vector<Point2D> pos, std::vector<double>& s, std::vector<double
 		else {
 			k.push_back(0.0);
 		}
-
-		
 	}
 
 	return 0;
@@ -126,13 +123,14 @@ int closestCenterlinePoint(const Point2D point, const std::vector<Point2D>& cl, 
 	double min_dist=INFINITY;
 	int min_i=0;
 	Point2D tmp;
+
 	for (int i = 1; i < cl.size(); i++) {	
 		double x1 = cl[i - 1].x;
 		double x2 = cl[i].x;
 		double y1 = cl[i - 1].y;
 		double y2 = cl[i].y;
 
-		//compute orthogonal projection of (x,y) onto the parameterized line connecting (x1,y1) and (x2,y2)
+		// compute orthogonal projection of (x,y) onto the parameterized line connecting (x1,y1) and (x2,y2)
 		double l2 = (x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1);
 		double dot = (point.x - x1) * (x2 - x1) + (point.y - y1) * (y2 - y1);
 		double t = dot / l2;			
@@ -158,7 +156,7 @@ int closestCenterlinePoint(const Point2D point, const std::vector<Point2D>& cl, 
 	double distStart = pow(point.x - cl.front().x, 2) + pow(point.y - cl.front().y, 2);	
 	if (min_i > 0 && (min_dist < distEnd || min_dist < distStart)) return min_i;
 
-	//x,y beyond scope of cl
+	// x,y beyond scope of cl
 	if (distEnd < distStart) {
 
 		if (cl.size() < 2) {
@@ -173,7 +171,6 @@ int closestCenterlinePoint(const Point2D point, const std::vector<Point2D>& cl, 
 			closest.y = cl.back().y + t * (cl.back().y - cl[cl.size() - 2].y);
 			return cl.size();
 		}
-
 	}
 	else {
 		if (cl.size() < 2) {
@@ -188,7 +185,6 @@ int closestCenterlinePoint(const Point2D point, const std::vector<Point2D>& cl, 
 			closest.y = cl[0].y + t * (cl[0].y - cl[1].y);
 			return 0;
 		}
-
 	}
 
 	return 0;

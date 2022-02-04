@@ -32,13 +32,13 @@ class PrimaryController {
 
 protected:
 
-    double *_value  = nullptr; // the actual value
-    double *_target = nullptr; // the target value
-    double *_offset = nullptr; // an offset to be controlled directly
-    double *_y      = nullptr; // the output value
+    double *_value  = nullptr;  // the actual value
+    double *_target = nullptr;  // the target value
+    double *_offset = nullptr;  // an offset to be controlled directly
+    double *_y      = nullptr;  // the output value
 
-    double in = 0.0; // the integral error
-    double u  = 0.0; // the error
+    double in = 0.0;            // the integral error
+    double u  = 0.0;            // the error
 
     double k_P = 0.0;
     double k_I = 0.0;
