@@ -870,3 +870,14 @@ void spline1(Point2D start, Point2D end, std::vector<Point2D>& cl) {
 
 }
 
+
+/**
+ * @brief get norm of osi3::Vector3d
+ * 
+ * @param v vector
+ * @return euclidean norm
+ */
+double getNorm(osi3::Vector3d v)
+{
+	return sqrt(pow(v.x(),2) + pow(v.y(),2) + pow(v.z(),2));
+}
