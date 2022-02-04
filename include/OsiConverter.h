@@ -35,12 +35,8 @@ public:
 
     void convert(osi3::SensorView &sensor_view, 
                 osi3::TrafficCommand &traffic_command,
-                agent_model::Input &input,
-                double time);
+                agent_model::Input &input);
     
-    void convert2(osi3::SensorView &sensor_view,
-                agent_model::Input &input, double time);//CGE
-
 private:
     bool debug = false; //CGE sould be defined with compile flags
 
@@ -55,6 +51,14 @@ private:
     agent_model::Position lastPosition;
     double lastS = 0;
 
+    // current ego values
+    int ego_id;
+    osi3::BaseMoving egoBase;
+    double egoPsi;
+	Point2D egoClPoint;    
+	osi3::Lane *egoLanePtr;
+	std::unordered_map<int, int> laneMapping;
+    
     // path vectors
     std::vector<Point2D> pathCenterLine;
     std::vector<double> pathKappa;
@@ -73,5 +77,17 @@ private:
     void classifyManeuver(osi3::SensorView &sensor_view,
                           agent_model::Input &input);
     void generatePath(osi3::SensorView &sensor_view,
+                        agent_model::Input &input);
+
+    // filling functions
+    void fillVehicle(osi3::SensorView &sensor_view,
+                        agent_model::Input &input);
+    void fillSignals(osi3::SensorView &sensor_view,
+                        agent_model::Input &input);
+    void fillTargets(osi3::SensorView &sensor_view,
+                        agent_model::Input &input);
+    void fillHorizon(osi3::SensorView &sensor_view,
+                        agent_model::Input &input);
+    void fillLanes(osi3::SensorView &sensor_view,
                         agent_model::Input &input);
 };
