@@ -209,16 +209,13 @@ template<>
 void
 COSMPTrafficAgent::setAgentParameter(size_t vr, fmi2Real param)
 {
-    // get the parameter struct from the interface
-    agent_model::Parameters *drParam;
-    drParam = agentModel.getParameters();
-    
+    // CGE: do we really need this as initialization?
     switch(vr) {
         case FMI_REAL_VELOCITY_V_COMFORT:
-            drParam->velocity.vComfort = param;
+            agentModel.getParameters()->velocity.vComfort = param;
             return;
         case FMI_REAL_VELOCITY_V_INIT:
-            agentModel.setVehicleSpeed(param);
+            agentModel.vehicle.getState()->v = param;
             return;
         default:
             assert(false);
