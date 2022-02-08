@@ -131,7 +131,6 @@ int IkaAgent::step(double time,
 	steeringContr.step(step_size);
 
 	// vehicle model step
-	vehicle.getInput()->slope = 0.0; // CGE do we need this?
 	vehicle.step(step_size);
 
 	// update DynamicsRequest TrafficUpdate
