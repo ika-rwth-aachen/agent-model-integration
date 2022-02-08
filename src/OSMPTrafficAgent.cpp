@@ -235,7 +235,6 @@ COSMPTrafficAgent::updateAgentParameter<fmi2Real>(size_t vr)
     fmi2Real param = real_vars[vr];
     setAgentParameter(vr, param);
     mVariableChangedSet.erase(varTypePair);
-
 }
 
 /*

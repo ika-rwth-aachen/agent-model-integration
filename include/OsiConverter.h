@@ -38,6 +38,7 @@ public:
                 agent_model::Input &input);
     
 private:
+
     bool debug = false; //CGE sould be defined with compile flags
 
     AgentModel::Parameters *driver_param;

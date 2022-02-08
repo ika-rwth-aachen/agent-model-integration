@@ -870,7 +870,6 @@ void spline1(Point2D start, Point2D end, std::vector<Point2D>& cl) {
 
 }
 
-
 /**
  * @brief get norm of osi3::Vector3d
  * 

@@ -71,10 +71,10 @@ void IkaAgent::init(osi3::BaseMoving &host)
 	vehicle_param->rollCoefficient[0] = 4.0 * 9.91e-3;
 	vehicle_param->rollCoefficient[1] = 4.0 * 1.95e-5;
 	vehicle_param->rollCoefficient[2] = 4.0 * 1.76e-9;
-	vehicle_param->size.x = host.dimension().length();
-	vehicle_param->size.y = host.dimension().width();
 	vehicle_param->driverPosition.x = 0.0;
 	vehicle_param->driverPosition.y = 0.0;
+	vehicle_param->size.x = host.dimension().length();
+	vehicle_param->size.y = host.dimension().width();
 
 	// set initial vehicle state
 	vehicle.reset();
@@ -115,8 +115,10 @@ int IkaAgent::step(double time,
 	if (!initialized)
 	{	
 		osi3::BaseMoving host = sensor_view.host_vehicle_data().location();
+
 		IkaAgent::init(host);
 		converter.init(this->getParameters());
+
 		initialized = true;
 	}
 
@@ -133,7 +135,7 @@ int IkaAgent::step(double time,
 	// vehicle model step
 	vehicle.step(step_size);
 
-	// update DynamicsRequest TrafficUpdate
+	// update DynamicsRequest and TrafficUpdate
 	dynamic_request.set_longitudinal_acceleration_target(driver_state->subconscious.a);
 	dynamic_request.set_curvature_target(driver_state->subconscious.kappa);
 	this->buildTrafficUpdate(traffic_update);
