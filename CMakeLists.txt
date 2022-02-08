@@ -10,7 +10,7 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/../.git")
 endif()
 
 # FMU output directory
-set(FMU_OUTDIR "${CMAKE_SOURCE_DIR}/lib" CACHE STRING "Fmu output directory")
+set(FMU_OUTDIR "${CMAKE_SOURCE_DIR}/../openPASS/configs" CACHE STRING "Fmu output directory")
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
