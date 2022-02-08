@@ -327,6 +327,9 @@ void OsiConverter::fillVehicle(osi3::SensorView &sensor_view,
 		}
 	}
 
+	// fill egoLaneMapping	
+	mapLanes(groundTruth, egoLaneMapping, egoLanePtr, lanes);
+
 	// fill vehicle properties
 	egoBase = egoObj.base();
 	input.vehicle.v = sqrt(egoBase.velocity().x() * egoBase.velocity().x() + egoBase.velocity().y() * egoBase.velocity().y());
@@ -654,8 +657,6 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
 {
 	osi3::GroundTruth *groundTruth = sensor_view.mutable_global_ground_truth();
 
-	mapLanes(groundTruth, laneMapping, egoLanePtr, lanes);
-
 	std::vector<int> intersectionLanes;
 
 	for (int i = 0; i < groundTruth->lane_size(); i++)
@@ -733,7 +734,7 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
 
 			input.targets[ti].ds = sTarNet; //TODO: check what happens when target is behind host vehicle
 			input.targets[ti].d = sqrt(pow(moBase.position().x() - cPoint.x, 2) + pow(moBase.position().y() - cPoint.y, 2));
-			input.targets[ti].lane = laneMapping[mo.assigned_lane_id(commonLaneIdx).value()];
+			input.targets[ti].lane = egoLaneMapping[mo.assigned_lane_id(commonLaneIdx).value()];
 		}
 		else
 		{
@@ -942,7 +943,7 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
 			input.targets[i].size.width = base.dimension().width();
 
 
-			input.targets[i].lane = laneMapping[egoObj.assigned_lane_id(0).value()];
+			input.targets[i].lane = egoLaneMapping[egoObj.assigned_lane_id(0).value()];
 
 		}
 		else
@@ -1289,7 +1290,7 @@ void OsiConverter::fillLanes(osi3::SensorView &sensor_view,
 	// lanes along the host's path constitute one lane
 
 	osi3::Lane lane = *egoLanePtr;
-	input.lanes[laneCounter].id = laneMapping[lanes[laneCounter]];
+	input.lanes[laneCounter].id = egoLaneMapping[lanes[laneCounter]];
 
 	input.lanes[laneCounter].access = agent_model::Accessibility::ACC_ACCESSIBLE; //lanes along route are accessible by definition
 	input.lanes[laneCounter].width = input.horizon.egoLaneWidth[0];
@@ -1326,7 +1327,7 @@ void OsiConverter::fillLanes(osi3::SensorView &sensor_view,
 			continue;
 		}
 
-		input.lanes[i].id = laneMapping[lane.id().value()];
+		input.lanes[i].id = egoLaneMapping[lane.id().value()];
 
 		// calculate type
 		if (lane.classification().type() == osi3::Lane_Classification_Type_TYPE_DRIVING)

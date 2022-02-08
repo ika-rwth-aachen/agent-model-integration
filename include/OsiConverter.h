@@ -41,14 +41,25 @@ private:
 
     bool debug = false; //CGE sould be defined with compile flags
 
-    AgentModel::Parameters *driver_param;
+    AgentModel::Parameters *driver_param; // CGE used only for setting the vComfort -> maybe move this paramater to the input struct (not a parameter, more a variable)
+
+    // global path vectors
+    std::vector<Point2D> pathCenterLine;
+    std::vector<double> pathKappa;
+    std::vector<double> pathS;
+    std::vector<double> pathPsi;
+
+    // global lanes
+    std::vector<int> lanes;
+    std::vector<junctionPath> priorityLanes;
+    std::vector<junctionPath> yieldingLanes;
 
     // last action id's
     int trajActionId = -1;
     int pathActionId = -1;
     int speedActionId = -1;
 
-    // last values
+    // last position values
     agent_model::Position lastPosition;
     double lastS = 0;
 
@@ -58,20 +69,10 @@ private:
     double egoPsi;
 	Point2D egoClPoint;    
 	osi3::Lane *egoLanePtr;
-	std::unordered_map<int, int> laneMapping;
+	std::unordered_map<int, int> egoLaneMapping;
     
-    // path vectors
-    std::vector<Point2D> pathCenterLine;
-    std::vector<double> pathKappa;
-    std::vector<double> pathS;
-    std::vector<double> pathPsi;
 
-    // lanes
-    std::vector<int> lanes;
-    std::vector<junctionPath> priorityLanes;
-    std::vector<junctionPath> yieldingLanes;
-
-
+    // helper functions
     void processTrafficCommand(osi3::SensorView &sensor_view,  
                                osi3::TrafficCommand &traffic_command,
                                agent_model::Input &input);
