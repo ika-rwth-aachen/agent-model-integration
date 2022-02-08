@@ -31,23 +31,23 @@
 class PrimaryController {
 
  protected:
-  double *_value = nullptr;   // the actual value
-  double *_target = nullptr;  // the target value
-  double *_offset = nullptr;  // an offset to be controlled directly
-  double *_y = nullptr;       // the output value
+  double *value_ = nullptr;   // the actual value
+  double *target_ = nullptr;  // the target value
+  double *offset_ = nullptr;  // an offset to be controlled directly
+  double *y_ = nullptr;       // the output value
 
-  double in = 0.0;  // the integral error
-  double u = 0.0;   // the error
+  double in_ = 0.0;  // the integral error
+  double u_ = 0.0;   // the error
 
-  double k_P = 0.0;
-  double k_I = 0.0;
-  double k_D = 0.0;
-  double o_P = 1.0;
+  double k_P_ = 0.0;
+  double k_I_ = 0.0;
+  double k_D_ = 0.0;
+  double o_P_ = 1.0;
 
-  double _range[2] = {-1.0, 1.0};
-  double _maxChange = 1.0;
+  double range_[2] = {-1.0, 1.0};
+  double max_change_ = 1.0;
 
-  bool _reset = false;
+  bool reset_ = false;
 
  public:
   /**
@@ -57,9 +57,9 @@ class PrimaryController {
 
   /**
    * Perform a controller step with the given time step size
-   * @param timeStepSize Time step size
+   * @param time_step_size Time step size
    */
-  bool step(double timeStepSize);
+  bool step(double time_step_size);
 
   /**
    * Set the controller variables
@@ -84,9 +84,9 @@ class PrimaryController {
    * Sets the range of the output value
    * @param lower Lower limit
    * @param upper Upper limit
-   * @param macChange The maximum change of the output value
+   * @param max_change The maximum change of the output value
    */
-  void setRange(double lower, double upper, double maxChange);
+  void setRange(double lower, double upper, double max_change);
 };
 
 #endif  // SIMDRIVER_VM_PRIMARY_CONTROLLER_H

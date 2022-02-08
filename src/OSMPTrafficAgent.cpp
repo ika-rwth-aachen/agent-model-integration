@@ -244,7 +244,7 @@ void COSMPTrafficAgent::setAgentParameter(size_t vr, fmi2Real param) {
       agentModel.getParameters()->velocity.vComfort = param;
       return;
     case FMI_REAL_VELOCITY_V_INIT:
-      agentModel.vehicle.getState()->v = param;
+      agentModel.vehicle_.getState()->v = param;
       return;
     default:
       assert(false);

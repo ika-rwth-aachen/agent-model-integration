@@ -20,10 +20,10 @@
 
 using Point2D = agent_model::Position;
 
-struct junctionPath {
-  std::vector<int> laneIds;
+struct JunctionPath {
+  std::vector<int> lane_ids;
   std::vector<Point2D> pts;
-  int signalId;
+  int signal_id;
 };
 
 class OsiConverter {
@@ -38,40 +38,40 @@ class OsiConverter {
                agent_model::Input &input);
 
  private:
-  bool debug = false;  // CGE sould be defined with compile flags
+  bool debug_ = false;  // CGE sould be defined with compile flags
 
-  AgentModel::Parameters *driver_param;
+  AgentModel::Parameters *driver_param_;
   // CGE used only for setting the vComfort -> maybe move this
   // paramater to the input struct (not a parameter, more a
   // variable)
 
   // global path vectors
-  std::vector<Point2D> pathCenterLine;
-  std::vector<double> pathKappa;
-  std::vector<double> pathS;
-  std::vector<double> pathPsi;
+  std::vector<Point2D> path_centerline_;
+  std::vector<double> path_kappa_;
+  std::vector<double> path_s_;
+  std::vector<double> path_psi_;
 
   // global lanes
-  std::vector<int> lanes;
-  std::vector<junctionPath> priorityLanes;
-  std::vector<junctionPath> yieldingLanes;
+  std::vector<int> lanes_;
+  std::vector<JunctionPath> priority_lanes_;
+  std::vector<JunctionPath> yielding_lanes_;
 
   // last action id's
-  int trajActionId = -1;
-  int pathActionId = -1;
-  int speedActionId = -1;
+  int traj_action_id_ = -1;
+  int path_action_id_ = -1;
+  int speed_action_id_ = -1;
 
   // last position values
-  agent_model::Position lastPosition;
-  double lastS = 0;
+  agent_model::Position last_position_;
+  double last_s_ = 0;
 
   // current ego values
-  int ego_id;
-  osi3::BaseMoving egoBase;
-  double egoPsi;
-  Point2D egoClPoint;
-  osi3::Lane *egoLanePtr;
-  std::unordered_map<int, int> egoLaneMapping;
+  int ego_id_;
+  osi3::BaseMoving ego_base_;
+  double ego_psi_;
+  Point2D ego_centerline_point_;
+  osi3::Lane *ego_lane_ptr_;
+  std::unordered_map<int, int> ego_lane_mapping_;
 
   // helper functions
   void processTrafficCommand(osi3::SensorView &sensor_view,

@@ -27,77 +27,73 @@
 #include <cmath>
 #include <stdexcept>
 
-bool PrimaryController::step(double timeStepSize) {
+bool PrimaryController::step(double time_step_size) {
 
-  auto &dt = timeStepSize;
+  auto &dt = time_step_size;
 
   // check if value is set
-  if (_target == nullptr) return false;
+  if (target_ == nullptr) return false;
 
   // calculate error (P)
-  auto _u = *_target - *_value;
+  auto u = *target_ - *value_;
 
-  if (std::isinf(_u)) throw std::runtime_error("Input value is not finite.");
+  if (std::isinf(u)) throw std::runtime_error("Input value is not finite.");
 
   // calculate integral (I)
-  in += (u + _u) * dt;
+  in_ += (u_ + u) * dt;
 
   // calculate derivative (D)
-  auto der = _reset ? 0.0 : (_u - u) / dt;
-  u = _u;
+  auto der = reset_ ? 0.0 : (u - u_) / dt;
+  u_ = u;
 
   // unset reset flag
-  _reset = false;
+  reset_ = false;
 
   // calculate controller change
-  auto dy = k_P * u + k_I * in + k_D * der;
+  auto dy = k_P_ * u_ + k_I_ * in_ + k_D_ * der;
 
   // apply desired controller state
-  if (_offset != nullptr && !std::isinf(*_offset)) {
+  if (offset_ != nullptr && !std::isinf(*offset_)) {
 
     // change controller value
-    dy = (*_offset - *_y) * o_P;
+    dy = (*offset_ - *y_) * o_P_;
 
     // reset controller
     reset();
   }
 
   // limit change of controller
-  dy = std::min(_maxChange, std::max(-_maxChange, dy));
+  dy = std::min(max_change_, std::max(-max_change_, dy));
 
   // integrate
-  *_y = std::max(_range[0], std::min(_range[1], *_y + dy * dt));
+  *y_ = std::max(range_[0], std::min(range_[1], *y_ + dy * dt));
 
   return true;
 }
 
 void PrimaryController::reset() {
-
-  in = 0.0;
-  _reset = true;
+  in_ = 0.0;
+  reset_ = true;
 }
 
 void PrimaryController::setVariables(double *value, double *target,
                                      double *output, double *offset) {
-
-  this->_value = value;
-  this->_target = target;
-  this->_offset = offset;
-  _y = output;
+  this->value_ = value;
+  this->target_ = target;
+  this->offset_ = offset;
+  this->y_ = output;
 }
 
 void PrimaryController::setParameters(double k_p, double k_i, double k_d,
                                       double o_p) {
-
-  k_P = k_p;
-  k_I = k_i;
-  k_D = k_d;
-  o_P = o_p;
+  this->k_P_ = k_p;
+  this->k_I_ = k_i;
+  this->k_D_ = k_d;
+  this->o_P_ = o_p;
 }
 
 void PrimaryController::setRange(double lower, double upper, double maxChange) {
-
-  this->_range[0] = lower;
-  this->_range[1] = upper;
-  this->_maxChange = maxChange;
+  this->range_[0] = lower;
+  this->range_[1] = upper;
+  this->max_change_ = maxChange;
 }

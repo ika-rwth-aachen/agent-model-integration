@@ -14,8 +14,8 @@
 
 void IkaAgent::init(osi3::BaseMoving &host) {
   // get global pointers
-  driver_state = this->getState();
-  vehicle_state = vehicle.getState();
+  driver_state_ = this->getState();
+  vehicle_state_ = vehicle_.getState();
 
   // set driver parameters
   agent_model::Parameters *driver_param = this->getParameters();
@@ -56,51 +56,51 @@ void IkaAgent::init(osi3::BaseMoving &host) {
   AgentModel::init();
 
   // set vehicle parameters
-  VehicleModel::Parameters *vehicle_param = vehicle.getParameters();
-  VehicleModel::Input *vehicle_input = vehicle.getInput();
+  VehicleModel::Parameters *vehicle_param = vehicle_.getParameters();
+  VehicleModel::Input *vehicle_input = vehicle_.getInput();
 
-  vehicle_param->steerTransmission = 0.474;
-  vehicle_param->steerTransmission = 0.5;
-  vehicle_param->wheelBase = wheel_base;
+  vehicle_param->steer_transmission = 0.474;
+  vehicle_param->steer_transmission = 0.5;
+  vehicle_param->wheel_base = wheel_base;
   vehicle_param->mass = 1.5e3;
-  vehicle_param->powerMax = 1.0e4;
-  vehicle_param->forceMax = 6.0e3;
+  vehicle_param->power_max = 1.0e4;
+  vehicle_param->force_max = 6.0e3;
   vehicle_param->idle = 0.05;
-  vehicle_param->rollCoefficient[0] = 4.0 * 9.91e-3;
-  vehicle_param->rollCoefficient[1] = 4.0 * 1.95e-5;
-  vehicle_param->rollCoefficient[2] = 4.0 * 1.76e-9;
-  vehicle_param->driverPosition.x = 0.0;
-  vehicle_param->driverPosition.y = 0.0;
+  vehicle_param->roll_coefficient[0] = 4.0 * 9.91e-3;
+  vehicle_param->roll_coefficient[1] = 4.0 * 1.95e-5;
+  vehicle_param->roll_coefficient[2] = 4.0 * 1.76e-9;
+  vehicle_param->driver_position.x = 0.0;
+  vehicle_param->driver_position.y = 0.0;
   vehicle_param->size.x = host.dimension().length();
   vehicle_param->size.y = host.dimension().width();
 
   // set initial vehicle state
-  vehicle.reset();
-  vehicle_state->position.x = host.position().x();
-  vehicle_state->position.y = host.position().y();
+  vehicle_.reset();
+  vehicle_state_->position.x = host.position().x();
+  vehicle_state_->position.y = host.position().y();
   osi3::Vector3d v = host.velocity();
-  vehicle_state->v = sqrt(pow(v.x(), 2) + pow(v.y(), 2) + pow(v.z(), 2));
-  vehicle_state->psi = host.orientation().yaw();
+  vehicle_state_->v = sqrt(pow(v.x(), 2) + pow(v.y(), 2) + pow(v.z(), 2));
+  vehicle_state_->psi = host.orientation().yaw();
 
 
   // set controller parameters (lateral motion control)
-  steeringContr.setParameters(10.0 * wheel_base, 0.1 * wheel_base, 0.0, 1.0);
-  steeringContr.setRange(-1.0, 1.0, INFINITY);
+  steering_controller_.setParameters(10.0 * wheel_base, 0.1 * wheel_base, 0.0, 1.0);
+  steering_controller_.setRange(-1.0, 1.0, INFINITY);
 
   // set controller parameters (longitudinal motion control)
-  pedalContr.setParameters(1.75, .5, 0.01, 1.0);
-  pedalContr.setRange(-1.0, 1.0, INFINITY);
+  pedal_controller_.setParameters(1.75, .5, 0.01, 1.0);
+  pedal_controller_.setRange(-1.0, 1.0, INFINITY);
 
   // set variables
-  pedalContr.setVariables(&vehicle_state->a, &driver_state->subconscious.a,
+  pedal_controller_.setVariables(&vehicle_state_->a, &driver_state_->subconscious.a,
                           &vehicle_input->pedal,
-                          &driver_state->subconscious.pedal);
-  steeringContr.setVariables(&vehicle_state->kappa,
-                             &driver_state->subconscious.kappa,
+                          &driver_state_->subconscious.pedal);
+  steering_controller_.setVariables(&vehicle_state_->kappa,
+                             &driver_state_->subconscious.kappa,
                              &vehicle_input->steer);
 
-  pedalContr.reset();
-  steeringContr.reset();
+  pedal_controller_.reset();
+  steering_controller_.reset();
 }
 
 int IkaAgent::step(double time, double step_size, osi3::SensorView &sensor_view,
@@ -110,32 +110,32 @@ int IkaAgent::step(double time, double step_size, osi3::SensorView &sensor_view,
   std::cout << "----------- time: " << time << " --------------" << std::endl;
 
   // initialize agent
-  if (!initialized) {
+  if (!initialized_) {
     osi3::BaseMoving host = sensor_view.host_vehicle_data().location();
 
     IkaAgent::init(host);
-    converter.init(this->getParameters());
+    converter_.init(this->getParameters());
 
-    initialized = true;
+    initialized_ = true;
   }
 
   // converter converts from osi to agent_model::input
-  converter.convert(sensor_view, traffic_command, _input);
+  converter_.convert(sensor_view, traffic_command, _input);
 
   // ika agent model step
   this->AgentModel::step(time);
 
   // controller translates acc. and curv. to pedal and steering
-  pedalContr.step(step_size);
-  steeringContr.step(step_size);
+  pedal_controller_.step(step_size);
+  steering_controller_.step(step_size);
 
   // vehicle model step
-  vehicle.step(step_size);
+  vehicle_.step(step_size);
 
   // update DynamicsRequest and TrafficUpdate
   dynamic_request.set_longitudinal_acceleration_target(
-    driver_state->subconscious.a);
-  dynamic_request.set_curvature_target(driver_state->subconscious.kappa);
+    driver_state_->subconscious.a);
+  dynamic_request.set_curvature_target(driver_state_->subconscious.kappa);
   this->buildTrafficUpdate(traffic_update);
 
   return 0;
@@ -144,15 +144,15 @@ int IkaAgent::step(double time, double step_size, osi3::SensorView &sensor_view,
 int IkaAgent::buildTrafficUpdate(osi3::TrafficUpdate &traffic_update) {
   osi3::MovingObject *object = traffic_update.mutable_update(0);
 
-  object->mutable_base()->mutable_position()->set_x(vehicle_state->position.x);
-  object->mutable_base()->mutable_position()->set_y(vehicle_state->position.y);
-  object->mutable_base()->mutable_velocity()->set_x(vehicle_state->v);
+  object->mutable_base()->mutable_position()->set_x(vehicle_state_->position.x);
+  object->mutable_base()->mutable_position()->set_y(vehicle_state_->position.y);
+  object->mutable_base()->mutable_velocity()->set_x(vehicle_state_->v);
   object->mutable_base()->mutable_velocity()->set_y(0);
-  object->mutable_base()->mutable_acceleration()->set_x(vehicle_state->a);
+  object->mutable_base()->mutable_acceleration()->set_x(vehicle_state_->a);
   object->mutable_base()->mutable_acceleration()->set_y(0);
-  object->mutable_base()->mutable_orientation()->set_yaw(vehicle_state->psi);
+  object->mutable_base()->mutable_orientation()->set_yaw(vehicle_state_->psi);
   object->mutable_base()->mutable_orientation_rate()->set_yaw(
-    vehicle_state->dPsi);
+    vehicle_state_->d_psi);
 
   return 0;
 }

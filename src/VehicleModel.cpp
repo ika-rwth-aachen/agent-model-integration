@@ -38,36 +38,36 @@
 void VehicleModel::reset() {
 
   // set initial states
-  state.s = 0.0;
-  state.v = 0.0;
-  state.psi = 0.0;
-  state.position = {0.0, 0.0};
+  state_.s = 0.0;
+  state_.v = 0.0;
+  state_.psi = 0.0;
+  state_.position = {0.0, 0.0};
 
   // set calculated states
-  state.ds = 0.0;
-  state.a = 0.0;
-  state.dPsi = 0.0;
-  state.delta = 0.0;
-  state.kappa = 0.0;
-  state.ay = 0.0;
-  state.force = 0.0;
+  state_.ds = 0.0;
+  state_.a = 0.0;
+  state_.d_psi = 0.0;
+  state_.delta = 0.0;
+  state_.kappa = 0.0;
+  state_.ay = 0.0;
+  state_.force = 0.0;
 
   // set inputs
-  input.slope = 0.0;
-  input.pedal = 0.0;
-  input.steer = 0.0;
+  input_.slope = 0.0;
+  input_.pedal = 0.0;
+  input_.steer = 0.0;
 }
 
-bool VehicleModel::step(double timeStepSize) {
+bool VehicleModel::step(double time_step_size) {
 
   // short cuts
-  auto &dt = timeStepSize;
-  auto p = &parameters;
-  auto st = &state;
+  auto &dt = time_step_size;
+  auto p = &parameters_;
+  auto st = &state_;
 
   // calculate wheel steer angle and curvature
-  st->delta = p->steerTransmission * input.steer;
-  st->kappa = st->delta / p->wheelBase;
+  st->delta = p->steer_transmission * input_.steer;
+  st->kappa = st->delta / p->wheel_base;
 
   // calculate distance and velocity
   st->ds = std::max(0.0, st->v * dt + 0.5 * st->a * dt * dt);
@@ -79,41 +79,41 @@ bool VehicleModel::step(double timeStepSize) {
   st->position.y += sin(st->psi) * st->ds;
 
   // calculate yaw rate and yaw angle
-  st->dPsi = st->v * st->kappa;
-  st->psi += st->dPsi * dt;
+  st->d_psi = st->v * st->kappa;
+  st->psi += st->d_psi * dt;
 
   // squared velocity
   auto v2 = st->v * st->v;
 
   // coefficients
-  auto airCoeff = 0.5 * RHO_AIR * p->cwA;
-  auto rollCoeff = p->rollCoefficient[0] + p->rollCoefficient[1] * st->v +
-                   p->rollCoefficient[2] * v2;
+  auto air_coeff = 0.5 * RHO_AIR * p->cwA;
+  auto roll_coeff = p->roll_coefficient[0] + p->roll_coefficient[1] * st->v +
+                   p->roll_coefficient[2] * v2;
 
   // limit power and gas pedal
-  auto throttle = std::max(input.pedal, 0.0) * (1.0 - p->idle) + p->idle;
+  auto throttle = std::max(input_.pedal, 0.0) * (1.0 - p->idle) + p->idle;
 
   // calculate accelerations
-  auto aGround = cos(input.slope) * G_ACC;
-  auto aAir = airCoeff * v2 / p->mass;
-  auto aRoll = rollCoeff * aGround;
-  auto aSlope = sin(input.slope) * G_ACC;
-  auto aBrake = aGround * std::min(input.pedal, 0.0);
+  auto a_ground = cos(input_.slope) * G_ACC;
+  auto a_air = air_coeff * v2 / p->mass;
+  auto a_roll = roll_coeff * a_ground;
+  auto a_slope = sin(input_.slope) * G_ACC;
+  auto a_brake = a_ground * std::min(input_.pedal, 0.0);
 
   // calculate smooth force curve
-  double F0 = p->forceMax;
-  double F1 = p->powerMax * 0.1;  // / 10 m/s (low speed boundary)
-  double _x = st->v * 0.1;        // / 10 m/s (low speed boundary)
+  double f0 = p->force_max;
+  double f1 = p->power_max * 0.1;  // / 10 m/s (low speed boundary)
+  double x = st->v * 0.1;        // / 10 m/s (low speed boundary)
 
   // calculate drive force
-  if (_x < 1.0)
-    st->force = (F0 + pow(_x, 2) * (4.0 * F1 - 3.0 * F0) +
-                 pow(_x, 3) * (2.0 * F0 - 3.0 * F1));  // low speed
+  if (x < 1.0)
+    st->force = (f0 + pow(x, 2) * (4.0 * f1 - 3.0 * f0) +
+                 pow(x, 3) * (2.0 * f0 - 3.0 * f1));  // low speed
   else
-    st->force = p->powerMax / st->v;  // high speed
+    st->force = p->power_max / st->v;  // high speed
 
   // calculate acceleration
-  st->a = -aRoll - aAir - aSlope + aBrake + throttle * st->force / p->mass;
+  st->a = -a_roll - a_air - a_slope + a_brake + throttle * st->force / p->mass;
   st->ay = st->kappa * st->v * st->v;
 
   // unset acceleration, when standing
@@ -124,30 +124,30 @@ bool VehicleModel::step(double timeStepSize) {
 
 VehicleModel::Input *VehicleModel::getInput() {
 
-  return &this->input;
+  return &this->input_;
 }
 
 VehicleModel::State *VehicleModel::getState() {
 
-  return &this->state;
+  return &this->state_;
 }
 
 VehicleModel::Parameters *VehicleModel::getParameters() {
 
-  return &this->parameters;
+  return &this->parameters_;
 }
 
 const VehicleModel::Input *VehicleModel::getInput() const {
 
-  return &this->input;
+  return &this->input_;
 }
 
 const VehicleModel::State *VehicleModel::getState() const {
 
-  return &this->state;
+  return &this->state_;
 }
 
 const VehicleModel::Parameters *VehicleModel::getParameters() const {
 
-  return &this->parameters;
+  return &this->parameters_;
 }

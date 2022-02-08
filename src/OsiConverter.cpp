@@ -15,7 +15,7 @@
 #include "OSI_helper.h"
 
 void OsiConverter::init(AgentModel::Parameters *_driver_param) {
-  driver_param = _driver_param;
+  driver_param_ = _driver_param;
 }
 
 void OsiConverter::convert(osi3::SensorView &sensor_view,
@@ -63,49 +63,49 @@ void OsiConverter::processTrafficCommand(osi3::SensorView &sensor_view,
       osi3::TrafficAction_AcquireGlobalPositionAction globPos =
         traffic_command.action(i).acquire_global_position_action();
       destPoint = Point2D(globPos.position().x(), globPos.position().y());
-      lanes.clear();
-      futureLanes(groundTruth, startingLaneIdx, destPoint, lanes);
+      lanes_.clear();
+      futureLanes(groundTruth, startingLaneIdx, destPoint, lanes_);
     }
     if (traffic_command.action(i).has_follow_trajectory_action() &&
         (traffic_command.action(i)
            .follow_trajectory_action()
            .action_header()
            .action_id()
-           .value() != trajActionId)) {
+           .value() != traj_action_id_)) {
       osi3::TrafficAction_FollowTrajectoryAction traj =
         traffic_command.action(i).follow_trajectory_action();
-      trajActionId = traj.action_header().action_id().value();
+      traj_action_id_ = traj.action_header().action_id().value();
       destPoint = Point2D(
         traj.trajectory_point(traj.trajectory_point_size() - 1).position().x(),
         traj.trajectory_point(traj.trajectory_point_size() - 1).position().y());
-      lanes.clear();
-      futureLanes(groundTruth, startingLaneIdx, destPoint, lanes);
+      lanes_.clear();
+      futureLanes(groundTruth, startingLaneIdx, destPoint, lanes_);
     }
     if (traffic_command.action(i).has_follow_path_action() &&
         (traffic_command.action(i)
            .follow_path_action()
            .action_header()
            .action_id()
-           .value() != pathActionId)) {
+           .value() != path_action_id_)) {
       osi3::TrafficAction_FollowPathAction path =
         traffic_command.action(i).follow_path_action();
-      pathActionId = path.action_header().action_id().value();
+      path_action_id_ = path.action_header().action_id().value();
       destPoint =
         Point2D(path.path_point(path.path_point_size() - 1).position().x(),
                 path.path_point(path.path_point_size() - 1).position().y());
-      lanes.clear();
-      futureLanes(groundTruth, startingLaneIdx, destPoint, lanes);
+      lanes_.clear();
+      futureLanes(groundTruth, startingLaneIdx, destPoint, lanes_);
     }
     if (traffic_command.action(i).has_speed_action() &&
         (traffic_command.action(i)
            .speed_action()
            .action_header()
            .action_id()
-           .value() != speedActionId)) {
+           .value() != speed_action_id_)) {
       osi3::TrafficAction_SpeedAction speed =
         traffic_command.action(i).speed_action();
-      speedActionId = speed.action_header().action_id().value();
-      driver_param->velocity.vComfort = speed.absolute_target_speed();
+      speed_action_id_ = speed.action_header().action_id().value();
+      driver_param_->velocity.vComfort = speed.absolute_target_speed();
     }
   }
 
@@ -115,9 +115,9 @@ void OsiConverter::processTrafficCommand(osi3::SensorView &sensor_view,
   // generate horizon
   generatePath(sensor_view, input);
 
-  // print lanes
-  std::cout << "lanes to pass: ";
-  for (auto &lane : lanes) std::cout << lane << " ";
+  // print lanes_
+  std::cout << "lanes_ to pass: ";
+  for (auto &lane : lanes_) std::cout << lane << " ";
   std::cout << std::endl;
 }
 
@@ -140,7 +140,7 @@ void OsiConverter::classifyManeuver(osi3::SensorView &sensor_view,
   std::vector<double> s, k, p;
   bool isOsiStandard = false;
 
-  for (auto it : lanes) {
+  for (auto it : lanes_) {
     osi3::Lane *lane = findLane(it, groundTruth);
     if (lane->classification().type() ==
         osi3::Lane_Classification_Type_TYPE_INTERSECTION)
@@ -169,7 +169,7 @@ void OsiConverter::classifyManeuver(osi3::SensorView &sensor_view,
     if (pos.size() <= 2)
       input.vehicle.maneuver = agent_model::Maneuver::STRAIGHT;
     else {
-      xy2curv(pos, s, p, k);
+      xy2Curv(pos, s, p, k);
       double avg = std::accumulate(k.cbegin(), k.cend(), 0.0) / k.size();
       std::cout << "avg: " << avg << "\n";
       double eps = 0.0000001;
@@ -190,15 +190,15 @@ void OsiConverter::classifyManeuver(osi3::SensorView &sensor_view,
  *
  *
  * @param sensor_view osi sensor view from first time step
- * @param lanes the lanes the driver will pass on its path
+ * @param lanes_ the lanes_ the driver will pass on its path
  */
 void OsiConverter::generatePath(osi3::SensorView &sensor_view,
                                 agent_model::Input &input) {
-  // first get all relevant points from lanes
+  // first get all relevant points from lanes_
   osi3::GroundTruth *groundTruth = sensor_view.mutable_global_ground_truth();
 
   int gapIdx = 0;
-  for (auto &l : lanes) {
+  for (auto &l : lanes_) {
     if (findLane(l, groundTruth)
             ->classification()
             .free_lane_boundary_id_size() > 0 &&
@@ -208,32 +208,32 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view,
                                                                // later, when
                                                                // gap end is
                                                                // known as well
-      gapIdx = pathCenterLine.size() - 1;
+      gapIdx = path_centerline_.size() - 1;
     } else
-      getXY(findLane(l, groundTruth), pathCenterLine);
+      getXY(findLane(l, groundTruth), path_centerline_);
   }
 
   if (gapIdx > 0) {
-    std::vector<Point2D> gapPts(&pathCenterLine[gapIdx - 1],
-                                &pathCenterLine[gapIdx + 3]);
-    calcXYgap(gapPts, pathCenterLine, gapIdx);
+    std::vector<Point2D> gapPts(&path_centerline_[gapIdx - 1],
+                                &path_centerline_[gapIdx + 3]);
+    calcXYGap(gapPts, path_centerline_, gapIdx);
   }
 
   // remove duplicates
-  for (int i = 0; i < pathCenterLine.size() - 1; i++) {
-    double dsNext = (pathCenterLine[i + 1].x - pathCenterLine[i].x) *
-                      (pathCenterLine[i + 1].x - pathCenterLine[i].x) +
-                    (pathCenterLine[i + 1].y - pathCenterLine[i].y) *
-                      (pathCenterLine[i + 1].y - pathCenterLine[i].y);
+  for (int i = 0; i < path_centerline_.size() - 1; i++) {
+    double dsNext = (path_centerline_[i + 1].x - path_centerline_[i].x) *
+                      (path_centerline_[i + 1].x - path_centerline_[i].x) +
+                    (path_centerline_[i + 1].y - path_centerline_[i].y) *
+                      (path_centerline_[i + 1].y - path_centerline_[i].y);
 
     if (dsNext < 0.01) {
-      pathCenterLine.erase(pathCenterLine.begin() + i);
+      path_centerline_.erase(path_centerline_.begin() + i);
       i--;
     }
   }
 
   // calculate s, kappa, and psi
-  xy2curv(pathCenterLine, pathS, pathPsi, pathKappa);
+  xy2Curv(path_centerline_, path_s_, path_psi_, path_kappa_);
 
   // generate junction paths for traffic rules
   std::vector<int> knownStartingLid;
@@ -245,9 +245,9 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view,
           osi3::TrafficSign_MainSign_Classification_Type_TYPE_GIVE_WAY) {
       // create path from assigned lane of sign backwards
       for (auto &asLane : sig.main_sign().classification().assigned_lane_id()) {
-        junctionPath tmp;
+        JunctionPath tmp;
         osi3::Lane *sigLane = findLane(asLane.value(), groundTruth);
-        tmp.signalId = sig.id().value();
+        tmp.signal_id = sig.id().value();
 
         int lid = asLane.value();
 
@@ -257,7 +257,7 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view,
         else
           knownStartingLid.push_back(lid);
         bool found_next_lane = true;
-        tmp.laneIds.push_back(lid);
+        tmp.lane_ids.push_back(lid);
         while (found_next_lane) {
           auto *lane = findLane(lid, groundTruth);
           for (auto &lpairs : lane->classification().lane_pairing()) {
@@ -267,14 +267,14 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view,
             if (lane->classification().centerline_is_driving_direction()) {
               if (lidSuc == lid) {
                 found_next_lane = true;
-                tmp.laneIds.push_back(lidAnt);
+                tmp.lane_ids.push_back(lidAnt);
                 lid = lidAnt;
                 break;
               }
             } else {
               if (lidAnt == lid) {
                 found_next_lane = true;
-                tmp.laneIds.push_back(lidSuc);
+                tmp.lane_ids.push_back(lidSuc);
                 lid = lidSuc;
                 break;
               }
@@ -284,98 +284,98 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view,
         // why not both conditions?
         if (sig.main_sign().classification().type() ==
             osi3::TrafficSign_MainSign_Classification_Type_TYPE_GIVE_WAY)
-          yieldingLanes.push_back(tmp);
+          yielding_lanes_.push_back(tmp);
         else
-          priorityLanes.push_back(tmp);
+          priority_lanes_.push_back(tmp);
       }
     }
   }
 
-  for (auto &yl : yieldingLanes) {
-    std::reverse(yl.laneIds.begin(), yl.laneIds.end());
-    for (auto &l : yl.laneIds) getXY(findLane(l, groundTruth), yl.pts);
+  for (auto &yl : yielding_lanes_) {
+    std::reverse(yl.lane_ids.begin(), yl.lane_ids.end());
+    for (auto &l : yl.lane_ids) getXY(findLane(l, groundTruth), yl.pts);
   }
-  for (auto &pl : priorityLanes) {
-    std::reverse(pl.laneIds.begin(), pl.laneIds.end());
-    for (auto &l : pl.laneIds) getXY(findLane(l, groundTruth), pl.pts);
+  for (auto &pl : priority_lanes_) {
+    std::reverse(pl.lane_ids.begin(), pl.lane_ids.end());
+    for (auto &l : pl.lane_ids) getXY(findLane(l, groundTruth), pl.pts);
   }
 }
 
 void OsiConverter::fillVehicle(osi3::SensorView &sensor_view,
                                agent_model::Input &input) {
   osi3::GroundTruth *groundTruth = sensor_view.mutable_global_ground_truth();
-  ego_id = sensor_view.host_vehicle_id().value();
+  ego_id_ = sensor_view.host_vehicle_id().value();
 
   // find ego object
   osi3::MovingObject egoObj;
   for (int i = 0; i < groundTruth->moving_object_size(); i++) {
-    if (groundTruth->moving_object(i).id().value() == ego_id) {
+    if (groundTruth->moving_object(i).id().value() == ego_id_) {
       egoObj = groundTruth->moving_object(i);
       break;
     }
   }
 
   // find ego lane
-  egoLanePtr = nullptr;
+  ego_lane_ptr_ = nullptr;
   if (egoObj.assigned_lane_id_size() < 2)
-    egoLanePtr = findLane(egoObj.assigned_lane_id(0).value(), groundTruth);
+    ego_lane_ptr_ = findLane(egoObj.assigned_lane_id(0).value(), groundTruth);
   else {
     // multiple assigned_lanes (intersection):
-    // iterate over lanes in reverse --> first assigned lane is correct
-    for (int j = lanes.size() - 1; j >= 0; j--) {
+    // iterate over lanes_ in reverse --> first assigned lane is correct
+    for (int j = lanes_.size() - 1; j >= 0; j--) {
       for (int i = 0; i < egoObj.assigned_lane_id_size(); i++)
-        if (find(lanes.begin(), lanes.end(),
-                 egoObj.assigned_lane_id(i).value()) != lanes.end())
-          egoLanePtr =
+        if (find(lanes_.begin(), lanes_.end(),
+                 egoObj.assigned_lane_id(i).value()) != lanes_.end())
+          ego_lane_ptr_ =
             findLane(egoObj.assigned_lane_id(i).value(), groundTruth);
     }
   }
 
-  // fill egoLaneMapping
-  mapLanes(groundTruth, egoLaneMapping, egoLanePtr, lanes);
+  // fill ego_lane_mapping_
+  mapLanes(groundTruth, ego_lane_mapping_, ego_lane_ptr_, lanes_);
 
   // fill vehicle properties
-  egoBase = egoObj.base();
-  input.vehicle.v = sqrt(egoBase.velocity().x() * egoBase.velocity().x() +
-                         egoBase.velocity().y() * egoBase.velocity().y());
+  ego_base_ = egoObj.base();
+  input.vehicle.v = sqrt(ego_base_.velocity().x() * ego_base_.velocity().x() +
+                         ego_base_.velocity().y() * ego_base_.velocity().y());
   input.vehicle.a =
-    sqrt(egoBase.acceleration().x() * egoBase.acceleration().x() +
-         egoBase.acceleration().y() * egoBase.acceleration().y());
+    sqrt(ego_base_.acceleration().x() * ego_base_.acceleration().x() +
+         ego_base_.acceleration().y() * ego_base_.acceleration().y());
 
   // compute ego road coordinates and set member variables to new values
-  double dx = egoBase.position().x() - lastPosition.x;
-  double dy = egoBase.position().y() - lastPosition.y;
+  double dx = ego_base_.position().x() - last_position_.x;
+  double dy = ego_base_.position().y() - last_position_.y;
 
   // calculate traveled distance
-  lastPosition.x = egoBase.position().x();
-  lastPosition.y = egoBase.position().y();
-  lastS += sqrt(dx * dx + dy * dy);
-  input.vehicle.s = lastS;
+  last_position_.x = ego_base_.position().x();
+  last_position_.y = ego_base_.position().y();
+  last_s_ += sqrt(dx * dx + dy * dy);
+  input.vehicle.s = last_s_;
 
   // save angle of ego x/s-axis because targets.psi and horizon.psi are relative
-  egoPsi = egoBase.orientation().yaw();
-  input.vehicle.dPsi = egoBase.orientation_rate().yaw();
+  ego_psi_ = ego_base_.orientation().yaw();
+  input.vehicle.dPsi = ego_base_.orientation_rate().yaw();
 
   // projection of ego coordiantes on centerline
   int curCLidx =
-    closestCenterlinePoint(lastPosition, pathCenterLine, egoClPoint);
+    closestCenterlinePoint(last_position_, path_centerline_, ego_centerline_point_);
 
   // calculate s, psi, k of ego lane
   std::vector<double> s, psi, k;
-  xy2curv(pathCenterLine, s, psi, k);
+  xy2Curv(path_centerline_, s, psi, k);
 
   // seems to have errors...
   input.vehicle.psi =
-    egoPsi - interpolateXY2value(psi, pathCenterLine, egoClPoint);
+    ego_psi_ - interpolateXY2Value(psi, path_centerline_, ego_centerline_point_);
 
   double dirCL =
-    atan2(egoClPoint.y - lastPosition.y, egoClPoint.x - lastPosition.x);
-  double orientation = egoPsi - dirCL;
+    atan2(ego_centerline_point_.y - last_position_.y, ego_centerline_point_.x - last_position_.x);
+  double orientation = ego_psi_ - dirCL;
   if (orientation < -M_PI) orientation = orientation + 2 * M_PI;
   if (orientation > M_PI) orientation = orientation - 2 * M_PI;
   int d_sig = (orientation > 0) - (orientation < 0);
-  double distCL = sqrt(pow(lastPosition.x - egoClPoint.x, 2) +
-                       pow(lastPosition.y - egoClPoint.y, 2));
+  double distCL = sqrt(pow(last_position_.x - ego_centerline_point_.x, 2) +
+                       pow(last_position_.y - ego_centerline_point_.y, 2));
   input.vehicle.d = d_sig * distCL;
 
   // dummy values
@@ -406,7 +406,7 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
     osi3::TrafficLight light = groundTruth->traffic_light(i);
     osi3::TrafficLight_Classification clas = light.classification();
 
-    auto it = lanes.end();
+    auto it = lanes_.end();
     // check: sign is assigned to lane along the route?
     bool assigned = false;
     for (int k = 0; k < clas.assigned_lane_id_size(); k++) {
@@ -416,8 +416,8 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
       else
         knownAsLane.push_back(clas.assigned_lane_id(k).value());
 
-      it = find(lanes.begin(), lanes.end(), clas.assigned_lane_id(k).value());
-      if (it != lanes.end()) {
+      it = find(lanes_.begin(), lanes_.end(), clas.assigned_lane_id(k).value());
+      if (it != lanes_.end()) {
         assigned = true;
         break;
       }
@@ -429,10 +429,10 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
     Point2D sPoint(light.base().position().x(), light.base().position().y());
     Point2D target = sPoint;
 
-    closestCenterlinePoint(sPoint, pathCenterLine, cPoint);
+    closestCenterlinePoint(sPoint, path_centerline_, cPoint);
 
     // sLight holds s value along centerlines to reach the signal
-    double sLight = xy2s_sgn(egoClPoint, cPoint, pathCenterLine, egoPsi);
+    double sLight = xy2SSng(ego_centerline_point_, cPoint, path_centerline_, ego_psi_);
 
     // signal on future lane / deleted comments
     input.signals[signal].id =
@@ -506,7 +506,7 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
     osi3::TrafficSign_MainSign_Classification clas =
       sign.main_sign().classification();
 
-    auto it = lanes.end();
+    auto it = lanes_.end();
     // check that the sign is assigned to a lane along the route.
     bool assigned = false;
     for (int j = 0; j < clas.assigned_lane_id_size(); j++) {
@@ -516,8 +516,8 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
       else
         knownAsLane.push_back(clas.assigned_lane_id(j).value());
 
-      it = find(lanes.begin(), lanes.end(), clas.assigned_lane_id(j).value());
-      if (it != lanes.end()) {
+      it = find(lanes_.begin(), lanes_.end(), clas.assigned_lane_id(j).value());
+      if (it != lanes_.end()) {
         assigned = true;
         // std::cout << "\nsignal on lane: " << clas.assigned_lane_id(j).value()
         // << std::endl;
@@ -536,11 +536,11 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
     // knownSigPosition.push_back(sPoint);
 
     Point2D target = sPoint;
-    closestCenterlinePoint(sPoint, pathCenterLine, cPoint);
-    double sSig = xy2s_sgn(egoClPoint, cPoint, pathCenterLine, egoPsi);
+    closestCenterlinePoint(sPoint, path_centerline_, cPoint);
+    double sSig = xy2SSng(ego_centerline_point_, cPoint, path_centerline_, ego_psi_);
     // std::cout << "Spoint: (" << sPoint.x << "," << sPoint.y << ")" <<
     // std::endl; signal on future lane
-    /*if (*it != egoLanePtr->id().value()) {
+    /*if (*it != ego_lane_ptr_->id().value()) {
             // signal is not assigned to the current lane -> add distance along
     the signal's assigned lane
             // meaning assigned_lane beginning to sPoint
@@ -549,7 +549,7 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
             sSig += xy2s(pos.front(), sPoint, pos);
             pos.clear();
     }
-    while (it != futureLanes.begin() && *(it - 1) != egoLanePtr->id().value()) {
+    while (it != futureLanes.begin() && *(it - 1) != ego_lane_ptr_->id().value()) {
             it--;
             std::vector<Point2D> pos;
             getXY(findLane(*it, groundTruth), pos);
@@ -557,11 +557,11 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
             target = pos.front();
     }
 
-    //std::cout << "\nhost : (" << lastPosition.x << "," << lastPosition.y <<
+    //std::cout << "\nhost : (" << last_position_.x << "," << last_position_.y <<
     ")\nsignal: (" << sPoint.x << "," << sPoint.y << ") " << "\ntarget (" <<
     target.x << "," << target.y << ") " << std::endl;
 
-    sSig += xy2s(egoClPoint, target, elPoints);*/
+    sSig += xy2s(ego_centerline_point_, target, elPoints);*/
 
     input.signals[signal].id =
       signal + 1;  // could also take sign.id().value() as id here, OSI ids are
@@ -635,7 +635,7 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
       clas.type() ==
       osi3::TrafficSign_MainSign_Classification_Type_TYPE_RIGHT_OF_WAY_BEGIN) {
       // for (int j = 0; j < clas.assigned_lane_id_size(); j++)
-      //	priorityLanes.push_back(clas.assigned_lane_id(j).value());
+      //	priority_lanes_.push_back(clas.assigned_lane_id(j).value());
       input.signals[signal].type = agent_model::SIGNAL_PRIORITY;
     } else if (
       clas.type() ==
@@ -645,7 +645,7 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
           TrafficSign_MainSign_Classification_Type_TYPE_RIGHT_BEFORE_LEFT_NEXT_INTERSECTION) {
 
       // for (int j = 0; j < clas.assigned_lane_id_size(); j++)
-      //	yieldingLanes.push_back(clas.assigned_lane_id(j).value());
+      //	yielding_lanes_.push_back(clas.assigned_lane_id(j).value());
       input.signals[signal].type = agent_model::SIGNAL_YIELD;
     } else {
       input.signals[signal].type = agent_model::SIGNAL_NOT_SET;
@@ -681,7 +681,7 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
 
   int ti = 0;
   for (auto &mo : *groundTruth->mutable_moving_object()) {
-    if (mo.id().value() == ego_id) continue;
+    if (mo.id().value() == ego_id_) continue;
 
     osi3::BaseMoving moBase = mo.base();
     input.targets[ti].id = ti + 1;
@@ -691,7 +691,7 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
     // determine whether target is assigned to a lane along the host's path
     // (following possible)
     bool onPath = false;
-    auto it = lanes.end();
+    auto it = lanes_.end();
     int commonLaneIdx = 0;
     for (int j = 0; j < mo.assigned_lane_id_size(); j++) {
 
@@ -699,8 +699,8 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
                     mo.assigned_lane_id(j).value()) != intersectionLanes.end())
         input.targets[ti].priority = agent_model::TARGET_ON_INTERSECTION;
 
-      it = find(lanes.begin(), lanes.end(), mo.assigned_lane_id(j).value());
-      if (it != lanes.end()) {
+      it = find(lanes_.begin(), lanes_.end(), mo.assigned_lane_id(j).value());
+      if (it != lanes_.end()) {
         commonLaneIdx = j;
         onPath = true;
         break;
@@ -712,13 +712,13 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
       Point2D cPoint;
       Point2D bPoint(moBase.position().x(), moBase.position().y());
 
-      closestCenterlinePoint(bPoint, pathCenterLine, cPoint);
+      closestCenterlinePoint(bPoint, path_centerline_, cPoint);
       // osi3::Lane *tarLane = findLane(mo.assigned_lane_id(commonLane).value(),
       // groundTruth); Point2D current = bPoint;
 
-      double sTar = xy2s_sgn(egoClPoint, bPoint, pathCenterLine, egoPsi);
+      double sTar = xy2SSng(ego_centerline_point_, bPoint, path_centerline_, ego_psi_);
       /*double sTar = 0;
-      if (*it != egoLanePtr->id().value()) {
+      if (*it != ego_lane_ptr_->id().value()) {
               // target is not assigned to the current lane -> add distance
       along the target's assigned lane
               // meaning assigned_lane's beginning to bPoint
@@ -727,27 +727,27 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
               sTar += xy2s(pos.front(), bPoint, pos);
               pos.clear();
       }
-      while (it != futureLanes.begin() && *(it - 1) != egoLanePtr->id().value())
+      while (it != futureLanes.begin() && *(it - 1) != ego_lane_ptr_->id().value())
       { it--; std::vector<Point2D> pos; getXY(findLane(*it, groundTruth), pos);
               sTar += xy2s(pos.front(), pos.back(), pos);
               current = pos.front();
       }
-      sTar += xy2s(egoClPoint, current, elPoints);*/
+      sTar += xy2s(ego_centerline_point_, current, elPoints);*/
 
       double sTarNet;
       if (sTar > 0)
         sTarNet = sTar - 0.5 * moBase.dimension().length() -
-                  0.5 * egoBase.dimension().length();
+                  0.5 * ego_base_.dimension().length();
       else
         sTarNet = sTar + 0.5 * moBase.dimension().length() +
-                  0.5 * egoBase.dimension().length();
+                  0.5 * ego_base_.dimension().length();
 
       input.targets[ti].ds =
         sTarNet;  // TODO: check what happens when target is behind host vehicle
       input.targets[ti].d = sqrt(pow(moBase.position().x() - cPoint.x, 2) +
                                  pow(moBase.position().y() - cPoint.y, 2));
       input.targets[ti].lane =
-        egoLaneMapping[mo.assigned_lane_id(commonLaneIdx).value()];
+        ego_lane_mapping_[mo.assigned_lane_id(commonLaneIdx).value()];
     } else {
       input.targets[ti].ds = INFINITY;
       input.targets[ti].d = 0;
@@ -756,26 +756,26 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
       if (input.targets[ti].priority != agent_model::TARGET_ON_INTERSECTION) {
         // for (int j = 0; j < mo.assigned_lane_id_size(); j++) {
         for (auto &asLane : mo.assigned_lane_id()) {
-          junctionPath tmp;
+          JunctionPath tmp;
           bool apprJunc = false;
-          for (auto &yieldL : yieldingLanes) {
+          for (auto &yieldL : yielding_lanes_) {
             // target is on its way on a yield lane to the junction
-            if (find(yieldL.laneIds.begin(), yieldL.laneIds.end(),
-                     asLane.value()) != yieldL.laneIds.end()) {
+            if (find(yieldL.lane_ids.begin(), yieldL.lane_ids.end(),
+                     asLane.value()) != yieldL.lane_ids.end()) {
               input.targets[ti].priority = agent_model::TARGET_ON_GIVE_WAY_LANE;
-              tmp.laneIds = yieldL.laneIds;
+              tmp.lane_ids = yieldL.lane_ids;
               tmp.pts = yieldL.pts;
               apprJunc = true;
             }
           }
           if (!apprJunc) {
-            for (auto &prioL : priorityLanes) {
+            for (auto &prioL : priority_lanes_) {
               // target is on its way on a priority lane to the junction
-              if (find(prioL.laneIds.begin(), prioL.laneIds.end(),
-                       asLane.value()) != prioL.laneIds.end()) {
+              if (find(prioL.lane_ids.begin(), prioL.lane_ids.end(),
+                       asLane.value()) != prioL.lane_ids.end()) {
                 input.targets[ti].priority =
                   agent_model::TARGET_ON_PRIORITY_LANE;
-                tmp.laneIds = prioL.laneIds;
+                tmp.lane_ids = prioL.lane_ids;
                 tmp.pts = prioL.pts;
                 apprJunc = true;
               }
@@ -794,14 +794,14 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
                   getXY(findLane(mo.assigned_lane_id(j).value(), groundTruth),
           cl); input.targets[ti].dsIntersection =
           xy2s(Point2D(base.position().x(), base.position().y()), cl.back(),
-          cl); if (find(priorityLanes.begin(), priorityLanes.end(),
+          cl); if (find(priority_lanes_.begin(), priority_lanes_.end(),
           mo.assigned_lane_id(j).value())
-                          != priorityLanes.end())
+                          != priority_lanes_.end())
                           input.targets[ti].priority =
           agent_model::TARGET_ON_PRIORITY_LANE; else if
-          (find(yieldingLanes.begin(), yieldingLanes.end(),
+          (find(yielding_lanes_.begin(), yielding_lanes_.end(),
           mo.assigned_lane_id(j).value())
-                          != yieldingLanes.end())
+                          != yielding_lanes_.end())
                           input.targets[ti].priority =
           agent_model::TARGET_ON_GIVE_WAY_LANE;
 
@@ -817,15 +817,15 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
       }
     }
 
-    input.targets[ti].xy.x = moBase.position().x() - lastPosition.x;
-    input.targets[ti].xy.y = moBase.position().y() - lastPosition.y;
+    input.targets[ti].xy.x = moBase.position().x() - last_position_.x;
+    input.targets[ti].xy.y = moBase.position().y() - last_position_.y;
 
     input.targets[ti].v = sqrt(moBase.velocity().x() * moBase.velocity().x() +
                                moBase.velocity().y() * moBase.velocity().y());
     input.targets[ti].a =
       sqrt(moBase.acceleration().x() * moBase.acceleration().x() +
            moBase.acceleration().y() * moBase.acceleration().y());
-    input.targets[ti].psi = moBase.orientation().yaw() - egoPsi;
+    input.targets[ti].psi = moBase.orientation().yaw() - ego_psi_;
 
     input.targets[ti].size.length = moBase.dimension().length();
     input.targets[ti].size.width = moBase.dimension().width();
@@ -854,7 +854,7 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
           {
                   osi3::MovingObject egoObj = groundTruth->moving_object(i);
 
-                  if (egoObj.id().value() == ego_id)
+                  if (egoObj.id().value() == ego_id_)
                   {
                           input.targets[i].id = 0;
                           input.targets[i].ds = INFINITY;
@@ -905,13 +905,13 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
                                   getXY(findLane(egoObj.assigned_lane_id(j).value(),
   groundTruth), cl); input.targets[i].dsIntersection =
   xy2s(Point2D(base.position().x(), base.position().y()), cl.back(), cl); if
-  (find(priorityLanes.begin(), priorityLanes.end(),
+  (find(priority_lanes_.begin(), priority_lanes_.end(),
   egoObj.assigned_lane_id(j).value())
-                                          != priorityLanes.end())
+                                          != priority_lanes_.end())
                                           input.targets[i].priority =
-  agent_model::TARGET_ON_PRIORITY_LANE; else if (find(yieldingLanes.begin(),
-  yieldingLanes.end(), egoObj.assigned_lane_id(j).value())
-                                          != yieldingLanes.end())
+  agent_model::TARGET_ON_PRIORITY_LANE; else if (find(yielding_lanes_.begin(),
+  yielding_lanes_.end(), egoObj.assigned_lane_id(j).value())
+                                          != yielding_lanes_.end())
                                           input.targets[i].priority =
   agent_model::TARGET_ON_GIVE_WAY_LANE;
 
@@ -935,7 +935,7 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
 
                           Point2D current = bPoint;
 
-                          if (*it != egoLanePtr->id().value()) {
+                          if (*it != ego_lane_ptr_->id().value()) {
                                   // target is not assigned to the current lane
   -> add distance along the target's assigned lane
                                   // meaning assigned_lane's beginning to bPoint
@@ -945,13 +945,13 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
                                   pos.clear();
                           }
                           while (it != futureLanes.begin() && *(it - 1) !=
-  egoLanePtr->id().value()) { it--; std::vector<Point2D> pos;
+  ego_lane_ptr_->id().value()) { it--; std::vector<Point2D> pos;
                                   getXY(findLane(*it, groundTruth), pos);
                                   sTar += xy2s(pos.front(), pos.back(), pos);
                                   current = pos.front();
                           }
 
-                          sTar += xy2s(egoClPoint, current, elPoints);
+                          sTar += xy2s(ego_centerline_point_, current, elPoints);
 
                           input.targets[i].ds = sTar; //TODO: check what happens
   when target is behind host vehicle input.targets[i].d =
@@ -963,21 +963,21 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
                           input.targets[i].d = 0;
                   }
 
-                  input.targets[i].xy.x = base.position().x() - lastPosition.x;
-                  input.targets[i].xy.y = base.position().y() - lastPosition.y;
+                  input.targets[i].xy.x = base.position().x() - last_position_.x;
+                  input.targets[i].xy.y = base.position().y() - last_position_.y;
 
                   input.targets[i].v = sqrt(base.velocity().x() *
   base.velocity().x() + base.velocity().y() * base.velocity().y());
                   input.targets[i].a = sqrt(base.acceleration().x() *
   base.acceleration().x() + base.acceleration().y() * base.acceleration().y());
-                  input.targets[i].psi = base.orientation().yaw() - egoPsi;
+                  input.targets[i].psi = base.orientation().yaw() - ego_psi_;
 
                   input.targets[i].size.length = base.dimension().length();
                   input.targets[i].size.width = base.dimension().width();
 
 
                   input.targets[i].lane =
-  egoLaneMapping[egoObj.assigned_lane_id(0).value()];
+  ego_lane_mapping_[egoObj.assigned_lane_id(0).value()];
 
           }
           else
@@ -1015,50 +1015,50 @@ void OsiConverter::fillHorizon(osi3::SensorView &sensor_view,
 
   // NEW	//
   Point2D dummy;
-  // std::cout << "look here: " << lastPosition.x << ", " << lastPosition.y << "
-  // cl lenght: " << pathCenterLine.size() << "\n";
-  int hor_idx = closestCenterlinePoint(lastPosition, pathCenterLine, dummy);
-  double sTravel = pathS[hor_idx - 1] +
-                   sqrt((lastPosition.x - pathCenterLine[hor_idx - 1].x) *
-                          (lastPosition.x - pathCenterLine[hor_idx - 1].x) +
-                        (lastPosition.y - pathCenterLine[hor_idx - 1].y) *
-                          (lastPosition.y - pathCenterLine[hor_idx - 1].y));
+  // std::cout << "look here: " << last_position_.x << ", " << last_position_.y << "
+  // cl lenght: " << path_centerline_.size() << "\n";
+  int hor_idx = closestCenterlinePoint(last_position_, path_centerline_, dummy);
+  double sTravel = path_s_[hor_idx - 1] +
+                   sqrt((last_position_.x - path_centerline_[hor_idx - 1].x) *
+                          (last_position_.x - path_centerline_[hor_idx - 1].x) +
+                        (last_position_.y - path_centerline_[hor_idx - 1].y) *
+                          (last_position_.y - path_centerline_[hor_idx - 1].y));
   // std::cout << "sTravel: " << sTravel << " after idx: " << hor_idx << "\n";
 
   for (int i = 0; i < agent_model::NOH; i++) {
     double dsCur = (i + 1) * (i + 1) * delta * delta;
     // get correct space for interpolation
     int j = -1;
-    for (auto &ss : pathS) {
+    for (auto &ss : path_s_) {
       if (ss > sTravel + dsCur) break;
       j++;
     }
 
     Point2D hKnot;
-    if (sTravel + dsCur < pathS.back()) {
-      interpolation = (sTravel + dsCur - pathS[j]) / (pathS[j + 1] - pathS[j]);
-      hKnot.x = pathCenterLine[j].x +
-                interpolation * (pathCenterLine[j + 1].x - pathCenterLine[j].x);
-      hKnot.y = pathCenterLine[j].y +
-                interpolation * (pathCenterLine[j + 1].y - pathCenterLine[j].y);
+    if (sTravel + dsCur < path_s_.back()) {
+      interpolation = (sTravel + dsCur - path_s_[j]) / (path_s_[j + 1] - path_s_[j]);
+      hKnot.x = path_centerline_[j].x +
+                interpolation * (path_centerline_[j + 1].x - path_centerline_[j].x);
+      hKnot.y = path_centerline_[j].y +
+                interpolation * (path_centerline_[j + 1].y - path_centerline_[j].y);
 
       input.horizon.ds[i] = dsCur;
       input.horizon.psi[i] =
-        pathPsi[j] + interpolation * (pathPsi[j + 1] - pathPsi[j]) - egoPsi;
+        path_psi_[j] + interpolation * (path_psi_[j + 1] - path_psi_[j]) - ego_psi_;
       input.horizon.kappa[i] =
-        pathKappa[j] + interpolation * (pathKappa[j + 1] - pathKappa[j]);
+        path_kappa_[j] + interpolation * (path_kappa_[j + 1] - path_kappa_[j]);
     } else {
-      hKnot.x = pathCenterLine.back().x;
-      hKnot.y = pathCenterLine.back().y;
-      input.horizon.ds[i] = pathS.back() - sTravel;
+      hKnot.x = path_centerline_.back().x;
+      hKnot.y = path_centerline_.back().y;
+      input.horizon.ds[i] = path_s_.back() - sTravel;
       input.horizon.psi[i] = 0;
       input.horizon.kappa[i] = 0;
     }
 
-    input.horizon.x[i] = std::cos(egoPsi) * (hKnot.x - lastPosition.x) +
-                         std::sin(egoPsi) * (hKnot.y - lastPosition.y);
-    input.horizon.y[i] = -1.0 * std::sin(egoPsi) * (hKnot.x - lastPosition.x) +
-                         std::cos(egoPsi) * (hKnot.y - lastPosition.y);
+    input.horizon.x[i] = std::cos(ego_psi_) * (hKnot.x - last_position_.x) +
+                         std::sin(ego_psi_) * (hKnot.y - last_position_.y);
+    input.horizon.y[i] = -1.0 * std::sin(ego_psi_) * (hKnot.x - last_position_.x) +
+                         std::cos(ego_psi_) * (hKnot.y - last_position_.y);
     // TODO!!
     input.horizon.egoLaneWidth[i] = 3.75;
     input.horizon.leftLaneWidth[i] = 0;
@@ -1072,7 +1072,7 @@ void OsiConverter::fillHorizon(osi3::SensorView &sensor_view,
   std::vector<Point2D> currentCl = elPoints;
   std::vector<double> kappa = k;
 
-  int currentLane = egoLanePtr->id().value();
+  int currentLane = ego_lane_ptr_->id().value();
 
   int idx = 127;
   bool spline = false;
@@ -1084,7 +1084,7 @@ void OsiConverter::fillHorizon(osi3::SensorView &sensor_view,
   Point2D p1;
   Point2D p2;
 
-  idx = closestCenterlinePoint(egoClPoint, currentCl, p2);
+  idx = closestCenterlinePoint(ego_centerline_point_, currentCl, p2);
 
   //setup for horizon calculation: in most cases the current position will be
   somewhere within the scope of the centerline of the current lane.
@@ -1092,8 +1092,8 @@ void OsiConverter::fillHorizon(osi3::SensorView &sensor_view,
   relative position if (idx == 0) {
           //Host vehicle before scope of the centerline, create linear
   connection s.clear(); psi.clear(); kappa.clear(); if (ds.back() != 0) {
-                  currentCl.insert(currentCl.begin(), egoClPoint);
-                  xy2curv(currentCl, s, psi, kappa);
+                  currentCl.insert(currentCl.begin(), ego_centerline_point_);
+                  xy2Curv(currentCl, s, psi, kappa);
           }
   }
   else if (idx == currentCl.size()) {
@@ -1107,22 +1107,22 @@ void OsiConverter::fillHorizon(osi3::SensorView &sensor_view,
   groundTruth), tempLane);
 
                   //curved path? TODO criterium
-                  //spline3(egoClPoint, tempLane.front(),
-  Point2D(std::cos(egoPsi), std::sin(egoPsi)),
+                  //spline3(ego_centerline_point_, tempLane.front(),
+  Point2D(std::cos(ego_psi_), std::sin(ego_psi_)),
   Point2D((tempLane[1].x-tempLane[0].x),tempLane[1].y-tempLane[0].y),
   currentCl);
 
                   //straight path
-                  spline1(egoClPoint, tempLane.front(), currentCl);
+                  spline1(ego_centerline_point_, tempLane.front(), currentCl);
 
-                  xy2curv(currentCl, s, psi, kappa);
+                  xy2Curv(currentCl, s, psi, kappa);
           }
   }
   else {
           //somewhere within scope of currentCl, set sStart to the distance
   along current lane that should be disregarded sStart = s[idx - 1] +
-  sqrt((lastPosition.x - elPoints[idx - 1].x) * (lastPosition.x - elPoints[idx -
-  1].x) + (lastPosition.y - elPoints[idx - 1].y) * (lastPosition.y -
+  sqrt((last_position_.x - elPoints[idx - 1].x) * (last_position_.x - elPoints[idx -
+  1].x) + (last_position_.y - elPoints[idx - 1].y) * (last_position_.y -
   elPoints[idx - 1].y));
   }
 
@@ -1131,7 +1131,7 @@ void OsiConverter::fillHorizon(osi3::SensorView &sensor_view,
                   //determine correct lane. If s is already of the correct lane
   for this horizon point, the loop is not executed while ((s.back() + sPast -
   sStart) < ds[i]) //s.back: s at the end of current lane. sPast: s along the
-  lanes on the path already considered, sStart: s at starting point
+  lanes_ on the path already considered, sStart: s at starting point
                   {
                           if (currentLane == finalLane) return;
 
@@ -1142,7 +1142,7 @@ void OsiConverter::fillHorizon(osi3::SensorView &sensor_view,
                           currentLane = nextLane;
                           nextLane = *(find(futureLanes.begin(),
   futureLanes.end(), currentLane) + 1); getXY(findLane(currentLane,
-  groundTruth), currentCl); xy2curv(currentCl, s, psi, kappa);
+  groundTruth), currentCl); xy2Curv(currentCl, s, psi, kappa);
 
                   }
 
@@ -1170,14 +1170,14 @@ void OsiConverter::fillHorizon(osi3::SensorView &sensor_view,
 
                                   horizon.push_back(hKnot);
 
-                                  input.horizon.x[i] = std::cos(egoPsi) *
-  (horizon.back().x - lastPosition.x) + std::sin(egoPsi) * (horizon.back().y -
-  lastPosition.y); input.horizon.y[i] = -1.0 * std::sin(egoPsi) *
-  (horizon.back().x - lastPosition.x) + std::cos(egoPsi) * (horizon.back().y -
-  lastPosition.y); input.horizon.ds[i] = ds[i];
+                                  input.horizon.x[i] = std::cos(ego_psi_) *
+  (horizon.back().x - last_position_.x) + std::sin(ego_psi_) * (horizon.back().y -
+  last_position_.y); input.horizon.y[i] = -1.0 * std::sin(ego_psi_) *
+  (horizon.back().x - last_position_.x) + std::cos(ego_psi_) * (horizon.back().y -
+  last_position_.y); input.horizon.ds[i] = ds[i];
 
                                   input.horizon.psi[i] = psi[k - 1] +
-  interpolation * (psi[k] - psi[k - 1]) - egoPsi;
+  interpolation * (psi[k] - psi[k - 1]) - ego_psi_;
 
 
                                   input.horizon.kappa[i] = kappa[k - 1] +
@@ -1195,7 +1195,7 @@ void OsiConverter::fillHorizon(osi3::SensorView &sensor_view,
   = input.horizon.egoLaneWidth[i - 1]; else input.horizon.egoLaneWidth[i] =
   defaultWidth;
                                   }
-                                  //left and right lanes
+                                  //left and right lanes_
                                   osi3::Lane* lLane =
   lane->classification().left_adjacent_lane_id_size() > 0 ?
                                           findLane(lane->classification().left_adjacent_lane_id(0).value(),
@@ -1256,7 +1256,7 @@ void OsiConverter::fillHorizon(osi3::SensorView &sensor_view,
 
   //					//straight connection?
   //				spline1(p1, tempLane.front(), currentCl);
-  //				xy2curv(currentCl, s, psi, kappa);
+  //				xy2Curv(currentCl, s, psi, kappa);
   //				spline = true;
   //			}
   //			else {			//currently on a spline. Switching to lane
@@ -1265,7 +1265,7 @@ void OsiConverter::fillHorizon(osi3::SensorView &sensor_view,
   //				s.clear(); psi.clear(); kappa.clear();
   //currentCl.clear(); 				currentLane = nextLane; 				nextLane = 127;
   //				getXY(findLane(currentLane, groundTruth),
-  //currentCl); 				xy2curv(currentCl, s, psi, kappa);
+  //currentCl); 				xy2Curv(currentCl, s, psi, kappa);
 
   //				p1.x = currentCl.back().x; p1.y =
   //currentCl.back().y; 				p2.x = currentCl[currentCl.size() - 2].x; p2.y =
@@ -1294,15 +1294,15 @@ void OsiConverter::fillHorizon(osi3::SensorView &sensor_view,
 
   //				horizon.push_back(hKnot);
 
-  //				input.horizon.x[i] =  std::cos(egoPsi) * (horizon.back().x -
-  //lastPosition.x)+ std::sin(egoPsi) * (horizon.back().y - lastPosition.y);
-  ////pre.x * c + pre.y * s; egoPsi 				input.horizon.y[i] = -1.0*std::sin(egoPsi) *
-  //(horizon.back().x - lastPosition.x) + std::cos(egoPsi) * (horizon.back().y -
-  //lastPosition.y); //pre.x * (-1 * s) + pre.y * c; 				input.horizon.ds[i] =
+  //				input.horizon.x[i] =  std::cos(ego_psi_) * (horizon.back().x -
+  //last_position_.x)+ std::sin(ego_psi_) * (horizon.back().y - last_position_.y);
+  ////pre.x * c + pre.y * s; ego_psi_ 				input.horizon.y[i] = -1.0*std::sin(ego_psi_) *
+  //(horizon.back().x - last_position_.x) + std::cos(ego_psi_) * (horizon.back().y -
+  //last_position_.y); //pre.x * (-1 * s) + pre.y * c; 				input.horizon.ds[i] =
   //ds[i];
 
   //				input.horizon.psi[i] = psi[k - 1] + interpolation * (psi[k]
-  //- psi[k - 1]) - egoPsi; //heading of road at horizon point relative to
+  //- psi[k - 1]) - ego_psi_; //heading of road at horizon point relative to
   //heading of host vehicle.
   //					//Alternatively: angle between heading of host compared
   //to heading needed to reach horizon point meant here?
@@ -1322,19 +1322,19 @@ void OsiConverter::fillHorizon(osi3::SensorView &sensor_view,
 
   if (horizon.size() == 0) {
 
-          horizon.push_back(Point2D(lastPosition.x, lastPosition.y));
-          input.horizon.x[0] = horizon.back().x - lastPosition.x;
-          input.horizon.y[0] = horizon.back().y - lastPosition.y;
+          horizon.push_back(Point2D(last_position_.x, last_position_.y));
+          input.horizon.x[0] = horizon.back().x - last_position_.x;
+          input.horizon.y[0] = horizon.back().y - last_position_.y;
           input.horizon.ds[0] = ds.back();
           input.horizon.psi[0] = 0;
           input.horizon.kappa[0] = 0;
   }
   for (int i = horizon.size(); i < agent_model::NOH; i++) {
-          input.horizon.x[i] =  std::cos(egoPsi) * (horizon.back().x -
-  lastPosition.x)+ std::sin(egoPsi) * (horizon.back().y - lastPosition.y);
-  //pre.x * c + pre.y * s; egoPsi input.horizon.y[i] = -1.0*std::sin(egoPsi) *
-  (horizon.back().x - lastPosition.x) + std::cos(egoPsi) * (horizon.back().y -
-  lastPosition.y); //pre.x * (-1 * s) + pre.y * c; input.horizon.ds[i] =
+          input.horizon.x[i] =  std::cos(ego_psi_) * (horizon.back().x -
+  last_position_.x)+ std::sin(ego_psi_) * (horizon.back().y - last_position_.y);
+  //pre.x * c + pre.y * s; ego_psi_ input.horizon.y[i] = -1.0*std::sin(ego_psi_) *
+  (horizon.back().x - last_position_.x) + std::cos(ego_psi_) * (horizon.back().y -
+  last_position_.y); //pre.x * (-1 * s) + pre.y * c; input.horizon.ds[i] =
   ds.back(); input.horizon.psi[i] = input.horizon.psi[i - 1];
           input.horizon.kappa[i] = 0;
 
@@ -1352,12 +1352,12 @@ void OsiConverter::fillLanes(osi3::SensorView &sensor_view,
   int laneCounter = 0;
   double defaultWidth = 3.5;
 
-  // lanes along the host's path constitute one lane
-  osi3::Lane lane = *egoLanePtr;
-  input.lanes[laneCounter].id = egoLaneMapping[lanes[laneCounter]];
+  // lanes_ along the host's path constitute one lane
+  osi3::Lane lane = *ego_lane_ptr_;
+  input.lanes[laneCounter].id = ego_lane_mapping_[lanes_[laneCounter]];
 
   input.lanes[laneCounter].access =
-    agent_model::Accessibility::ACC_ACCESSIBLE;  // lanes along route are
+    agent_model::Accessibility::ACC_ACCESSIBLE;  // lanes_ along route are
                                                  // accessible by definition
   input.lanes[laneCounter].width = input.horizon.egoLaneWidth[0];
 
@@ -1366,13 +1366,13 @@ void OsiConverter::fillLanes(osi3::SensorView &sensor_view,
   std::vector<Point2D> lPoints;
   getXY(&lane, lPoints);
 
-  auto it = lanes.end();
+  auto it = lanes_.end();
   double dist = 0;
   Point2D current = lPoints.back();
-  
-  // iterate backwards over futureLanes and add distance along all lanes in
+
+  // iterate backwards over futureLanes and add distance along all lanes_ in
   // front of host
-  while (it != lanes.begin() && *(it - 1) != egoLanePtr->id().value()) {
+  while (it != lanes_.begin() && *(it - 1) != ego_lane_ptr_->id().value()) {
     it--;
     std::vector<Point2D> pos;
     getXY(findLane(*it, groundTruth), pos);
@@ -1380,7 +1380,7 @@ void OsiConverter::fillLanes(osi3::SensorView &sensor_view,
     current = pos.front();
   }
 
-  input.lanes[laneCounter].closed = dist + xy2s(egoClPoint, current, lPoints);
+  input.lanes[laneCounter].closed = dist + xy2s(ego_centerline_point_, current, lPoints);
   input.lanes[laneCounter].route = input.lanes[laneCounter].closed;
 
   laneCounter++;
@@ -1389,11 +1389,11 @@ void OsiConverter::fillLanes(osi3::SensorView &sensor_view,
     osi3::Lane lane = groundTruth->lane(i);
     // skip if lane is in futureLanes, that means it was already considered
     // before
-    if (find(lanes.begin(), lanes.end(), lane.id().value()) != lanes.end()) {
+    if (find(lanes_.begin(), lanes_.end(), lane.id().value()) != lanes_.end()) {
       continue;
     }
 
-    input.lanes[i].id = egoLaneMapping[lane.id().value()];
+    input.lanes[i].id = ego_lane_mapping_[lane.id().value()];
 
     // calculate type
     if (lane.classification().type() ==
@@ -1406,7 +1406,7 @@ void OsiConverter::fillLanes(osi3::SensorView &sensor_view,
 
     // calculate driving direction
     if (lane.classification().centerline_is_driving_direction() ==
-        egoLanePtr->classification().centerline_is_driving_direction())
+        ego_lane_ptr_->classification().centerline_is_driving_direction())
       input.lanes[i].dir = agent_model::DrivingDirection::DD_FORWARDS;
     else
       input.lanes[i].dir = agent_model::DrivingDirection::DD_BACKWARDS;

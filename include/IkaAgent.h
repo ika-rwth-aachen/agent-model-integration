@@ -28,21 +28,21 @@ class IkaAgent : public AgentModel {
            osi3::TrafficUpdate &traffic_update,
            setlevel4to5::DynamicsRequest &dynamic_request);
 
-  VehicleModel vehicle;
+  VehicleModel vehicle_;
 
  private:
-  bool initialized = false;
+  bool initialized_ = false;
 
   // converter
-  OsiConverter converter;
+  OsiConverter converter_;
 
   // pointers
-  agent_model::State *driver_state;
-  VehicleModel::State *vehicle_state;
+  agent_model::State *driver_state_;
+  VehicleModel::State *vehicle_state_;
 
   // controllers
-  PrimaryController steeringContr;
-  PrimaryController pedalContr;
+  PrimaryController steering_controller_;
+  PrimaryController pedal_controller_;
 
   void init(osi3::BaseMoving &host);
   int buildTrafficUpdate(osi3::TrafficUpdate &traffic_update);
