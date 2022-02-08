@@ -8,88 +8,83 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 #pragma once
+#include <cmath>
+#include <vector>
+
+#include "AgentModel.h"
+#include "Interface.h"
+#include "osi_sensorview.pb.h"
 #include "osi_trafficcommand.pb.h"
 #include "osi_trafficupdate.pb.h"
-#include "osi_sensorview.pb.h"
 #include "sl45_dynamicsrequest.pb.h"
-#include "Interface.h"
-#include "AgentModel.h"
-#include <vector>
-#include <cmath>
+
 using Point2D = agent_model::Position;
 
-struct junctionPath
-{
-    std::vector<int> laneIds;
-    std::vector<Point2D> pts;
-    int signalId;
+struct junctionPath {
+  std::vector<int> laneIds;
+  std::vector<Point2D> pts;
+  int signalId;
 };
 
-class OsiConverter
-{
-public:
-    OsiConverter(){};
-    ~OsiConverter(){};
+class OsiConverter {
+ public:
+  OsiConverter(){};
+  ~OsiConverter(){};
 
-    void init(AgentModel::Parameters *driver_param);
+  void init(AgentModel::Parameters *driver_param);
 
-    void convert(osi3::SensorView &sensor_view, 
-                osi3::TrafficCommand &traffic_command,
-                agent_model::Input &input);
-    
-private:
+  void convert(osi3::SensorView &sensor_view,
+               osi3::TrafficCommand &traffic_command,
+               agent_model::Input &input);
 
-    bool debug = false; //CGE sould be defined with compile flags
+ private:
+  bool debug = false;  // CGE sould be defined with compile flags
 
-    AgentModel::Parameters *driver_param; // CGE used only for setting the vComfort -> maybe move this paramater to the input struct (not a parameter, more a variable)
+  AgentModel::Parameters *driver_param;
+  // CGE used only for setting the vComfort -> maybe move this
+  // paramater to the input struct (not a parameter, more a
+  // variable)
 
-    // global path vectors
-    std::vector<Point2D> pathCenterLine;
-    std::vector<double> pathKappa;
-    std::vector<double> pathS;
-    std::vector<double> pathPsi;
+  // global path vectors
+  std::vector<Point2D> pathCenterLine;
+  std::vector<double> pathKappa;
+  std::vector<double> pathS;
+  std::vector<double> pathPsi;
 
-    // global lanes
-    std::vector<int> lanes;
-    std::vector<junctionPath> priorityLanes;
-    std::vector<junctionPath> yieldingLanes;
+  // global lanes
+  std::vector<int> lanes;
+  std::vector<junctionPath> priorityLanes;
+  std::vector<junctionPath> yieldingLanes;
 
-    // last action id's
-    int trajActionId = -1;
-    int pathActionId = -1;
-    int speedActionId = -1;
+  // last action id's
+  int trajActionId = -1;
+  int pathActionId = -1;
+  int speedActionId = -1;
 
-    // last position values
-    agent_model::Position lastPosition;
-    double lastS = 0;
+  // last position values
+  agent_model::Position lastPosition;
+  double lastS = 0;
 
-    // current ego values
-    int ego_id;
-    osi3::BaseMoving egoBase;
-    double egoPsi;
-	Point2D egoClPoint;    
-	osi3::Lane *egoLanePtr;
-	std::unordered_map<int, int> egoLaneMapping;
-    
+  // current ego values
+  int ego_id;
+  osi3::BaseMoving egoBase;
+  double egoPsi;
+  Point2D egoClPoint;
+  osi3::Lane *egoLanePtr;
+  std::unordered_map<int, int> egoLaneMapping;
 
-    // helper functions
-    void processTrafficCommand(osi3::SensorView &sensor_view,  
-                               osi3::TrafficCommand &traffic_command,
-                               agent_model::Input &input);
-    void classifyManeuver(osi3::SensorView &sensor_view,
-                          agent_model::Input &input);
-    void generatePath(osi3::SensorView &sensor_view,
+  // helper functions
+  void processTrafficCommand(osi3::SensorView &sensor_view,
+                             osi3::TrafficCommand &traffic_command,
+                             agent_model::Input &input);
+  void classifyManeuver(osi3::SensorView &sensor_view,
                         agent_model::Input &input);
+  void generatePath(osi3::SensorView &sensor_view, agent_model::Input &input);
 
-    // filling functions
-    void fillVehicle(osi3::SensorView &sensor_view,
-                        agent_model::Input &input);
-    void fillSignals(osi3::SensorView &sensor_view,
-                        agent_model::Input &input);
-    void fillTargets(osi3::SensorView &sensor_view,
-                        agent_model::Input &input);
-    void fillHorizon(osi3::SensorView &sensor_view,
-                        agent_model::Input &input);
-    void fillLanes(osi3::SensorView &sensor_view,
-                        agent_model::Input &input);
+  // filling functions
+  void fillVehicle(osi3::SensorView &sensor_view, agent_model::Input &input);
+  void fillSignals(osi3::SensorView &sensor_view, agent_model::Input &input);
+  void fillTargets(osi3::SensorView &sensor_view, agent_model::Input &input);
+  void fillHorizon(osi3::SensorView &sensor_view, agent_model::Input &input);
+  void fillLanes(osi3::SensorView &sensor_view, agent_model::Input &input);
 };

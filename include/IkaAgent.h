@@ -8,45 +8,42 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 #pragma once
-#include "Interface.h"
-#include "AgentModel.h"
-#include "OsiConverter.h"
-#include "VehicleModel.h"
-#include "PrimaryController.h"
-
-#include <vector>
 #include <cmath>
+#include <vector>
 
-class IkaAgent : public AgentModel
-{
-public:
-    explicit IkaAgent(){};
-    ~IkaAgent(){};
+#include "AgentModel.h"
+#include "Interface.h"
+#include "OsiConverter.h"
+#include "PrimaryController.h"
+#include "VehicleModel.h"
 
-    
-    int step(double time, 
-				   double step_size, 
-				   osi3::SensorView &sensor_view, 
-				   osi3::TrafficCommand &traffic_command, 
-				   osi3::TrafficUpdate &traffic_update, 
-				   setlevel4to5::DynamicsRequest &dynamic_request);
+class IkaAgent : public AgentModel {
+ public:
+  explicit IkaAgent(){};
 
-    VehicleModel vehicle;    
+  ~IkaAgent(){};
 
-private:
-    bool initialized = false;
+  int step(double time, double step_size, osi3::SensorView &sensor_view,
+           osi3::TrafficCommand &traffic_command,
+           osi3::TrafficUpdate &traffic_update,
+           setlevel4to5::DynamicsRequest &dynamic_request);
 
-    // converter
-    OsiConverter converter;
+  VehicleModel vehicle;
 
-    // pointers 
-    agent_model::State *driver_state; 
-    VehicleModel::State *vehicle_state;
+ private:
+  bool initialized = false;
 
-    // controllers
-    PrimaryController steeringContr;
-    PrimaryController pedalContr;
+  // converter
+  OsiConverter converter;
 
-    void init(osi3::BaseMoving &host);
-    int buildTrafficUpdate(osi3::TrafficUpdate &traffic_update);
+  // pointers
+  agent_model::State *driver_state;
+  VehicleModel::State *vehicle_state;
+
+  // controllers
+  PrimaryController steeringContr;
+  PrimaryController pedalContr;
+
+  void init(osi3::BaseMoving &host);
+  int buildTrafficUpdate(osi3::TrafficUpdate &traffic_update);
 };
