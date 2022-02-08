@@ -22,6 +22,12 @@ void IkaAgent::init(osi3::BaseMoving &host) {
 
   double wheel_base = 3.22;
 
+  //vehicle components
+  driver_param->vehicle.pos.x = 0.0;
+  driver_param->vehicle.pos.y= 0.0;
+  driver_param->vehicle.size.length= host.dimension().length();
+  driver_param->vehicle.size.width= host.dimension().width();
+
   // velocity components
   driver_param->velocity.a = 2.0;
   driver_param->velocity.b = -2.0;
