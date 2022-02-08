@@ -32,12 +32,11 @@ class OsiConverter {
   ~OsiConverter(){};
 
   void convert(osi3::SensorView &sensor_view,
-               osi3::TrafficCommand &traffic_command,
-               agent_model::Input &input,
+               osi3::TrafficCommand &traffic_command, agent_model::Input &input,
                agent_model::Parameters &param);
 
  private:
-  bool debug_ = false;  // CGE sould be defined with compile flags
+  bool debug_;
 
   // global path vectors
   std::vector<Point2D> path_centerline_;
