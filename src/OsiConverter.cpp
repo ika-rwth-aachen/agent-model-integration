@@ -14,14 +14,12 @@
 
 #include "OSI_helper.h"
 
-void OsiConverter::init(AgentModel::Parameters *_driver_param) {
-  driver_param_ = _driver_param;
-}
-
 void OsiConverter::convert(osi3::SensorView &sensor_view,
                            osi3::TrafficCommand &traffic_command,
-                           agent_model::Input &input) {
-  processTrafficCommand(sensor_view, traffic_command, input);
+                           agent_model::Input &input,
+                           agent_model::Parameters &param) {
+
+  processTrafficCommand(sensor_view, traffic_command, input, param);
 
   fillVehicle(sensor_view, input);
   fillSignals(sensor_view, input);
@@ -32,7 +30,8 @@ void OsiConverter::convert(osi3::SensorView &sensor_view,
 
 void OsiConverter::processTrafficCommand(osi3::SensorView &sensor_view,
                                          osi3::TrafficCommand &traffic_command,
-                                         agent_model::Input &input) {
+                                         agent_model::Input &input,
+                                         agent_model::Parameters &param) {
   if (traffic_command.action_size() == 0) return;
 
   osi3::GroundTruth *groundTruth = sensor_view.mutable_global_ground_truth();
@@ -105,7 +104,7 @@ void OsiConverter::processTrafficCommand(osi3::SensorView &sensor_view,
       osi3::TrafficAction_SpeedAction speed =
         traffic_command.action(i).speed_action();
       speed_action_id_ = speed.action_header().action_id().value();
-      driver_param_->velocity.vComfort = speed.absolute_target_speed();
+      param.velocity.vComfort = speed.absolute_target_speed();
     }
   }
 

@@ -31,19 +31,13 @@ class OsiConverter {
   OsiConverter(){};
   ~OsiConverter(){};
 
-  void init(AgentModel::Parameters *driver_param);
-
   void convert(osi3::SensorView &sensor_view,
                osi3::TrafficCommand &traffic_command,
-               agent_model::Input &input);
+               agent_model::Input &input,
+               agent_model::Parameters &param);
 
  private:
   bool debug_ = false;  // CGE sould be defined with compile flags
-
-  AgentModel::Parameters *driver_param_;
-  // CGE used only for setting the vComfort -> maybe move this
-  // paramater to the input struct (not a parameter, more a
-  // variable)
 
   // global path vectors
   std::vector<Point2D> path_centerline_;
@@ -76,7 +70,8 @@ class OsiConverter {
   // helper functions
   void processTrafficCommand(osi3::SensorView &sensor_view,
                              osi3::TrafficCommand &traffic_command,
-                             agent_model::Input &input);
+                             agent_model::Input &input,
+                             agent_model::Parameters &param);
   void classifyManeuver(osi3::SensorView &sensor_view,
                         agent_model::Input &input);
   void generatePath(osi3::SensorView &sensor_view, agent_model::Input &input);

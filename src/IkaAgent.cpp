@@ -88,7 +88,6 @@ void IkaAgent::init(osi3::BaseMoving &host) {
   vehicle_state_->v = sqrt(pow(v.x(), 2) + pow(v.y(), 2) + pow(v.z(), 2));
   vehicle_state_->psi = host.orientation().yaw();
 
-
   // set controller parameters (lateral motion control)
   steering_controller_.setParameters(10.0 * wheel_base, 0.1 * wheel_base, 0.0, 1.0);
   steering_controller_.setRange(-1.0, 1.0, INFINITY);
@@ -120,13 +119,11 @@ int IkaAgent::step(double time, double step_size, osi3::SensorView &sensor_view,
     osi3::BaseMoving host = sensor_view.host_vehicle_data().location();
 
     IkaAgent::init(host);
-    converter_.init(this->getParameters());
-
     initialized_ = true;
   }
 
   // converter converts from osi to agent_model::input
-  converter_.convert(sensor_view, traffic_command, _input);
+  converter_.convert(sensor_view, traffic_command, _input, _param);
 
   // ika agent model step
   this->AgentModel::step(time);
