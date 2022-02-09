@@ -238,13 +238,12 @@ void COSMPTrafficAgent::refresh_fmi_sensor_view_config_request() {
 
 template <>
 void COSMPTrafficAgent::setAgentParameter(size_t vr, fmi2Real param) {
-  // CGE: do we really need this as initialization?
   switch (vr) {
-    case FMI_REAL_VELOCITY_V_COMFORT:
-      agentModel.getParameters()->velocity.vComfort = param;
+    case FMI_REAL_VELOCITY_V_DESIRED:
+      agentModel.v_desired_ = param;
       return;
     case FMI_REAL_VELOCITY_V_INIT:
-      agentModel.vehicle_.getState()->v = param;
+      agentModel.v_init_= param;
       return;
     default:
       assert(false);
@@ -395,8 +394,8 @@ fmi2Status COSMPTrafficAgent::doCalc(
 
   /* initial speed */
   if (time == 0) {
+    updateAgentParameter<fmi2Real>(FMI_REAL_VELOCITY_V_DESIRED);
     updateAgentParameter<fmi2Real>(FMI_REAL_VELOCITY_V_INIT);
-    updateAgentParameter<fmi2Real>(FMI_REAL_VELOCITY_V_COMFORT);
   }
 
   /* Update state point */

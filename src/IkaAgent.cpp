@@ -13,6 +13,19 @@
 #include <iostream>
 
 void IkaAgent::init(osi3::BaseMoving &host) {
+
+  // host values
+  osi3::Vector3d v = host.velocity();
+  double length = host.dimension().length();
+  double width = host.dimension().width();
+  double x = host.position().x();
+  double y = host.position().y();
+  double yaw = host.orientation().yaw();
+
+  // check external variables
+  if (v_init_ == -1) v_init_ = sqrt(pow(v.x(), 2) + pow(v.y(), 2));
+  if (v_desired_ == -1) v_desired_ = 50.0 / 3.6;
+
   // get global pointers
   driver_state_ = this->getState();
   vehicle_state_ = vehicle_.getState();
@@ -22,11 +35,11 @@ void IkaAgent::init(osi3::BaseMoving &host) {
 
   double wheel_base = 3.22;
 
-  //vehicle components
+  // vehicle components
   driver_param->vehicle.pos.x = 0.0;
-  driver_param->vehicle.pos.y= 0.0;
-  driver_param->vehicle.size.length= host.dimension().length();
-  driver_param->vehicle.size.width= host.dimension().width();
+  driver_param->vehicle.pos.y = 0.0;
+  driver_param->vehicle.size.length = length;
+  driver_param->vehicle.size.width = width;
 
   // velocity components
   driver_param->velocity.a = 2.0;
@@ -34,8 +47,8 @@ void IkaAgent::init(osi3::BaseMoving &host) {
   driver_param->velocity.thwMax = 10.0;
   driver_param->velocity.delta = 4.0;
   driver_param->velocity.deltaPred = 3.0;
-  driver_param->velocity.vComfort = 50.0 / 3.6;
   driver_param->velocity.ayMax = 1.5;
+  driver_param->velocity.vComfort = v_desired_;
 
   // stop components
   driver_param->stop.T = 2.0;
@@ -77,19 +90,19 @@ void IkaAgent::init(osi3::BaseMoving &host) {
   vehicle_param->roll_coefficient[2] = 4.0 * 1.76e-9;
   vehicle_param->driver_position.x = 0.0;
   vehicle_param->driver_position.y = 0.0;
-  vehicle_param->size.x = host.dimension().length();
-  vehicle_param->size.y = host.dimension().width();
+  vehicle_param->size.x = length;
+  vehicle_param->size.y = width;
 
   // set initial vehicle state
   vehicle_.reset();
-  vehicle_state_->position.x = host.position().x();
-  vehicle_state_->position.y = host.position().y();
-  osi3::Vector3d v = host.velocity();
-  vehicle_state_->v = sqrt(pow(v.x(), 2) + pow(v.y(), 2) + pow(v.z(), 2));
-  vehicle_state_->psi = host.orientation().yaw();
+  vehicle_state_->position.x = x;
+  vehicle_state_->position.y = y;
+  vehicle_state_->psi = yaw;
+  vehicle_state_->v = v_init_;
 
   // set controller parameters (lateral motion control)
-  steering_controller_.setParameters(10.0 * wheel_base, 0.1 * wheel_base, 0.0, 1.0);
+  steering_controller_.setParameters(10.0 * wheel_base, 0.1 * wheel_base, 0.0,
+                                     1.0);
   steering_controller_.setRange(-1.0, 1.0, INFINITY);
 
   // set controller parameters (longitudinal motion control)
@@ -97,12 +110,12 @@ void IkaAgent::init(osi3::BaseMoving &host) {
   pedal_controller_.setRange(-1.0, 1.0, INFINITY);
 
   // set variables
-  pedal_controller_.setVariables(&vehicle_state_->a, &driver_state_->subconscious.a,
-                          &vehicle_input->pedal,
-                          &driver_state_->subconscious.pedal);
+  pedal_controller_.setVariables(
+    &vehicle_state_->a, &driver_state_->subconscious.a, &vehicle_input->pedal,
+    &driver_state_->subconscious.pedal);
   steering_controller_.setVariables(&vehicle_state_->kappa,
-                             &driver_state_->subconscious.kappa,
-                             &vehicle_input->steer);
+                                    &driver_state_->subconscious.kappa,
+                                    &vehicle_input->steer);
 
   pedal_controller_.reset();
   steering_controller_.reset();

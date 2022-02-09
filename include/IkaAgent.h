@@ -28,10 +28,15 @@ class IkaAgent : public AgentModel {
            osi3::TrafficUpdate &traffic_update,
            setlevel4to5::DynamicsRequest &dynamic_request);
 
-  VehicleModel vehicle_;
+  // external variables
+  double v_init_ = -1;
+  double v_desired_ = -1;
 
  private:
   bool initialized_ = false;
+
+  // vehicle
+  VehicleModel vehicle_;
 
   // converter
   OsiConverter converter_;
