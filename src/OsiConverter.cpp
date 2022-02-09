@@ -72,6 +72,14 @@ void OsiConverter::extractEgoInformation(osi3::SensorView &sensor_view,
 
   // find lane pointer
   ego_lane_ptr_ = findLane(ego_lane_id_, ground_truth);
+
+  if (!initialized)
+  {
+    ego_position_.x = ego_base_.position().x();
+    ego_position_.y = ego_base_.position().y();
+    initialized = true;
+  }
+
 }
 
 void OsiConverter::preprocess(osi3::SensorView &sensor_view,
@@ -374,326 +382,246 @@ void OsiConverter::classifyManeuver(osi3::SensorView &sensor_view,
 void OsiConverter::fillVehicle(osi3::SensorView &sensor_view,
                                agent_model::Input &input) {
 
+  // calculate traveled distance
+  double dx = ego_base_.position().x() - ego_position_.x;
+  double dy = ego_base_.position().y() - ego_position_.y;
+  input.vehicle.s += sqrt(dx * dx + dy * dy);
+
+  // set velocity and acceleration
   input.vehicle.v = getNorm(ego_base_.velocity());
   input.vehicle.a = getNorm(ego_base_.acceleration());
 
-  // compute ego road coordinates and set member variables to new values
-  double dx = ego_base_.position().x() - last_position_.x;
-  double dy = ego_base_.position().y() - last_position_.y;
-
-  double ego_psi = ego_base_.orientation().yaw();
-
-  // calculate traveled distance
-  last_position_.x = ego_base_.position().x();
-  last_position_.y = ego_base_.position().y();
-  last_s_ += sqrt(dx * dx + dy * dy);
-  input.vehicle.s = last_s_;
-
-  // save angle of ego x/s-axis because targets.psi and horizon.psi are
-  // relative
-  input.vehicle.dPsi = ego_base_.orientation_rate().yaw();
+  // update positions
+  ego_position_.x = ego_base_.position().x();
+  ego_position_.y = ego_base_.position().y();
 
   // projection of ego coordiantes on centerline
-  int curCLidx = closestCenterlinePoint(last_position_, path_centerline_,
-                                        ego_centerline_point_);
+  closestCenterlinePoint(ego_position_, path_centerline_,ego_centerline_point_);
 
   // calculate s, psi, k of ego lane
   std::vector<double> s, psi, k;
   xy2Curv(path_centerline_, s, psi, k);
 
-  // seems to have errors...
-  input.vehicle.psi =
-    ego_psi - interpolateXY2Value(psi, path_centerline_, ego_centerline_point_);
+  // angle between ego yaw and deviation from centerline point
+  input.vehicle.psi = ego_base_.orientation().yaw() - 
+              interpolateXY2Value(psi, path_centerline_, ego_centerline_point_);
+  input.vehicle.dPsi = ego_base_.orientation_rate().yaw();
 
-  double dirCL = atan2(ego_centerline_point_.y - last_position_.y,
-                       ego_centerline_point_.x - last_position_.x);
-  double orientation = ego_psi - dirCL;
+  // calculate orientation from position to centerline projection
+  double angle_to_centerline = atan2(ego_centerline_point_.y - ego_position_.y,
+                       ego_centerline_point_.x - ego_position_.x);
+  double orientation =  ego_base_.orientation().yaw() - angle_to_centerline;
+  
+  // adjust angle
   if (orientation < -M_PI) orientation = orientation + 2 * M_PI;
   if (orientation > M_PI) orientation = orientation - 2 * M_PI;
   int d_sig = (orientation > 0) - (orientation < 0);
-  double distCL = sqrt(pow(last_position_.x - ego_centerline_point_.x, 2) +
-                       pow(last_position_.y - ego_centerline_point_.y, 2));
-  input.vehicle.d = d_sig * distCL;
 
-  // dummy values
-  input.vehicle.pedal = 0;     // TODO
-  input.vehicle.steering = 0;  // TODO
+  // calculate distance to centerline point (on t axis)
+  double distance = sqrt(pow(ego_position_.x - ego_centerline_point_.x, 2) +
+                       pow(ego_position_.y - ego_centerline_point_.y, 2));
+  input.vehicle.d = d_sig * distance;
+
+  // set dummy values
+  input.vehicle.pedal = 0;
+  input.vehicle.steering = 0;
 }
-
 
 void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
                                agent_model::Input &input) {
   osi3::GroundTruth *ground_truth = sensor_view.mutable_global_ground_truth();
 
   int signal = 0;
-  std::vector<int> knownAsLane;
-  std::vector<int> allTLS_IDs;            // save all IDs of TrafficLight's
-  std::vector<Point2D> knownSigPosition;  // save all known/processed signal
-                                          // positions in this vector
+  std::vector<int> signal_lanes; // TODO CGE: ist das nicht eher falsch? wir können doch mehrere signals auf einer lane haben
 
-  auto it_knownSigPosition = knownSigPosition.begin();
+  std::vector<int> traffic_light_ids;            
+  std::vector<Point2D> traffic_light_positions;
 
-  int DEBUG_TLS_Size = ground_truth->traffic_light_size();
-  int DEBUG_SIGN_Size = ground_truth->traffic_sign_size();
-  int DEBUG_ID_Value;
-
+  // iterate over all traffic lights
   for (int i = 0; i < ground_truth->traffic_light_size(); i++) {
+
+    // only consider NOTL signals
     if (signal >= agent_model::NOTL) break;
 
     osi3::TrafficLight light = ground_truth->traffic_light(i);
-    osi3::TrafficLight_Classification clas = light.classification();
+    osi3::TrafficLight_Classification cls = light.classification();
 
-    auto it = lanes_.end();
-    // check: sign is assigned to lane along the route?
+    // check if signal is assigned along the route
     bool assigned = false;
-    for (int k = 0; k < clas.assigned_lane_id_size(); k++) {
-      if (find(knownAsLane.begin(), knownAsLane.end(),
-               clas.assigned_lane_id(k).value()) != knownAsLane.end())
+    for (int j = 0; j < cls.assigned_lane_id_size(); j++) {
+
+      // check that a lane has only one signal
+      if (find(signal_lanes.begin(), signal_lanes.end(),
+               cls.assigned_lane_id(j).value()) != signal_lanes.end())
         continue;
       else
-        knownAsLane.push_back(clas.assigned_lane_id(k).value());
+        signal_lanes.push_back(cls.assigned_lane_id(j).value());
 
-      it = find(lanes_.begin(), lanes_.end(), clas.assigned_lane_id(k).value());
-      if (it != lanes_.end()) {
+      // check if lane on route
+      auto signal_lane = find(lanes_.begin(), lanes_.end(), cls.assigned_lane_id(j).value());
+      if (signal_lane != lanes_.end()) {
         assigned = true;
         break;
       }
     }
-
+    // skip a non-assigned signal    
     if (!assigned) continue;
-    // projection of trafficlight_signal position on centerline: cPoint
-    Point2D cPoint;
-    Point2D sPoint(light.base().position().x(), light.base().position().y());
-    Point2D target = sPoint;
 
-    closestCenterlinePoint(sPoint, path_centerline_, cPoint);
+    // projection of signal position to centerline
+    Point2D centerline_point;
+    Point2D signal_point(light.base().position().x(), light.base().position().y());
+    closestCenterlinePoint(signal_point, path_centerline_, centerline_point);
+    traffic_light_positions.push_back(signal_point);
 
-    // sLight holds s value along centerlines to reach the signal
-    double sLight = xy2SSng(ego_centerline_point_, cPoint, path_centerline_,
-                            ego_base_.orientation().yaw());
+    // save all orignal signal ids
+    traffic_light_ids.push_back(light.id().value());
 
-    // signal on future lane / deleted comments
-    input.signals[signal].id =
-      signal + 1;  // could also take light.id().value() as id here, OSI
-                   // ids are often larger numbers
-    input.signals[signal].ds = sLight;
+    // add signal with id
+    input.signals[signal].id = signal + 1;
 
-    // save postition to check later on: signal is standalone signal or sign
-    // combined with TLS?
-    knownSigPosition.push_back(sPoint);
+    // ds along centerline to reach signal 
+    input.signals[signal].ds = xy2SSng(ego_centerline_point_, centerline_point, path_centerline_, ego_base_.orientation().yaw());
 
-    // int k = light.id().value();
-    // save all TLS IDs to assign IDs of combined signs later on
-    allTLS_IDs.push_back(light.id().value());
-
-    DEBUG_ID_Value = light.id().value();
-
-    // TODO: Write function to set Icons
-    // Calculate Color and Type/Icon
-    if (clas.color() == osi3::TrafficLight_Classification_Color_COLOR_RED) {
-      // if(clas.is_out_of_service() ==
-      // osi3::TrafficLight_Classification::is_out_of_service)
-      // osi3::TrafficLight_Classification::is_out_of_service;
-
+    // set Color and type/icon
+    if (cls.color() == osi3::TrafficLight_Classification_Color_COLOR_RED) {
       input.signals[signal].color = agent_model::COLOR_RED;
 
-      if (clas.icon() == osi3::TrafficLight_Classification_Icon_ICON_NONE)
+      if (cls.icon() == osi3::TrafficLight_Classification_Icon_ICON_NONE)
         input.signals[signal].icon = agent_model::ICON_NONE;
-      else if (clas.icon() ==
+      else if (cls.icon() ==
                osi3::TrafficLight_Classification_Icon_ICON_ARROW_LEFT)
         input.signals[signal].icon = agent_model::ICON_ARROW_LEFT;
-      else if (clas.icon() ==
+      else if (cls.icon() ==
                osi3::TrafficLight_Classification_Icon_ICON_ARROW_RIGHT)
         input.signals[signal].icon = agent_model::ICON_ARROW_RIGHT;
-    } else if (clas.color() ==
+    } else if (cls.color() ==
                osi3::TrafficLight_Classification_Color_COLOR_YELLOW) {
       input.signals[signal].color = agent_model::COLOR_YELLOW;
 
-      if (clas.icon() == osi3::TrafficLight_Classification_Icon_ICON_NONE)
+      if (cls.icon() == osi3::TrafficLight_Classification_Icon_ICON_NONE)
         input.signals[signal].icon = agent_model::ICON_NONE;
-      else if (clas.icon() ==
+      else if (cls.icon() ==
                osi3::TrafficLight_Classification_Icon_ICON_ARROW_LEFT)
         input.signals[signal].icon = agent_model::ICON_ARROW_LEFT;
-      else if (clas.icon() ==
+      else if (cls.icon() ==
                osi3::TrafficLight_Classification_Icon_ICON_ARROW_RIGHT)
         input.signals[signal].icon = agent_model::ICON_ARROW_RIGHT;
-    } else if (clas.color() ==
+    } else if (cls.color() ==
                osi3::TrafficLight_Classification_Color_COLOR_GREEN) {
       input.signals[signal].color = agent_model::COLOR_GREEN;
 
-      if (clas.icon() == osi3::TrafficLight_Classification_Icon_ICON_NONE)
+      if (cls.icon() == osi3::TrafficLight_Classification_Icon_ICON_NONE)
         input.signals[signal].icon = agent_model::ICON_NONE;
-      else if (clas.icon() ==
+      else if (cls.icon() ==
                osi3::TrafficLight_Classification_Icon_ICON_ARROW_LEFT)
         input.signals[signal].icon = agent_model::ICON_ARROW_LEFT;
-      else if (clas.icon() ==
+      else if (cls.icon() ==
                osi3::TrafficLight_Classification_Icon_ICON_ARROW_RIGHT)
         input.signals[signal].icon = agent_model::ICON_ARROW_RIGHT;
     }
     signal++;
   }
 
-  int amountLights = signal;
-
-  auto it_allTLS_IDs = allTLS_IDs.begin();
-
+  // iterate over all traffic signs
   for (int i = 0; i < ground_truth->traffic_sign_size(); i++) {
+
+    // only consider NOTL signals
     if (signal >= agent_model::NOS) break;
 
     osi3::TrafficSign sign = ground_truth->traffic_sign(i);
-    osi3::TrafficSign_MainSign_Classification clas =
+    osi3::TrafficSign_MainSign_Classification cls =
       sign.main_sign().classification();
 
-    auto it = lanes_.end();
     // check that the sign is assigned to a lane along the route.
     bool assigned = false;
-    for (int j = 0; j < clas.assigned_lane_id_size(); j++) {
-      if (find(knownAsLane.begin(), knownAsLane.end(),
-               clas.assigned_lane_id(j).value()) != knownAsLane.end())
+    for (int j = 0; j < cls.assigned_lane_id_size(); j++) {
+      if (find(signal_lanes.begin(), signal_lanes.end(),
+               cls.assigned_lane_id(j).value()) != signal_lanes.end())
         continue;
       else
-        knownAsLane.push_back(clas.assigned_lane_id(j).value());
+        signal_lanes.push_back(cls.assigned_lane_id(j).value());
 
-      it = find(lanes_.begin(), lanes_.end(), clas.assigned_lane_id(j).value());
-      if (it != lanes_.end()) {
+      // check if lane on route
+      auto signal_lane = find(lanes_.begin(), lanes_.end(), cls.assigned_lane_id(j).value());
+      if (signal_lane != lanes_.end()) {
         assigned = true;
-        // std::cout << "\nsignal on lane: " <<
-        // clas.assigned_lane_id(j).value()
-        // << std::endl;
+        break;
+      }
+    }
+    // skip a non-assigned signal    
+    if (!assigned) continue;
+
+    // projection of signal position to centerline
+    Point2D centerline_point;
+    Point2D signal_point(sign.main_sign().base().position().x(),
+                   sign.main_sign().base().position().y());
+    closestCenterlinePoint(signal_point, path_centerline_, centerline_point);
+
+    // add signal with id
+    input.signals[signal].id = signal + 1; 
+
+      // ds along centerline to reach signal 
+    input.signals[signal].ds = xy2SSng(ego_centerline_point_, centerline_point, path_centerline_, ego_base_.orientation().yaw());
+
+    // set defaults
+    input.signals[signal].subsignal = false;
+    input.signals[signal].sign_is_in_use = true;
+
+    // check if signal position is already known (due to prior traffic light)
+    auto known_position =
+      find(traffic_light_positions.begin(), traffic_light_positions.end(), signal_point);
+
+    // iterate over known_position's
+    int count = 0;
+    bool all_out_of_service = true;
+    while ((known_position != traffic_light_positions.end())) {
+      
+      // calculate and set paired_signal_id
+      int paired_signal_id = traffic_light_ids[known_position - traffic_light_positions.begin()];
+      input.signals[signal].pairedSignalID[count] = paired_signal_id;
+
+      // calculate if all signals out of service
+      if (!ground_truth->traffic_light(paired_signal_id).classification().        is_out_of_service()) all_out_of_service = false;
+
+      // get next known position
+      known_position =
+        find(known_position, traffic_light_positions.end(), signal_point);
+
+      count++;
+
+      // break if three known positions are detected
+      if (count == 3)
+      {
+        if (!all_out_of_service) input.signals[signal].sign_is_in_use = false;
         break;
       }
     }
 
-    if (!assigned) continue;
-
-    // sSig will hold s value along centerlines to reach the signal
-    // projection of signal position on centerline: cPoint
-    Point2D cPoint;
-    Point2D sPoint(sign.main_sign().base().position().x(),
-                   sign.main_sign().base().position().y());
-    // closestCenterlinePoint(sPoint, elPoints, cPoint);
-    // knownSigPosition.push_back(sPoint);
-
-    Point2D target = sPoint;
-    closestCenterlinePoint(sPoint, path_centerline_, cPoint);
-    double sSig = xy2SSng(ego_centerline_point_, cPoint, path_centerline_,
-                          ego_base_.orientation().yaw());
-    // std::cout << "Spoint: (" << sPoint.x << "," << sPoint.y << ")" <<
-    // std::endl; signal on future lane
-    /*if (*it != ego_lane_ptr_->id().value()) {
-            // signal is not assigned to the current lane -> add distance
-    along the signal's assigned lane
-            // meaning assigned_lane beginning to sPoint
-            std::vector<Point2D> pos;
-            getXY(findLane(*it, ground_truth), pos);
-            sSig += xy2s(pos.front(), sPoint, pos);
-            pos.clear();
-    }
-    while (it != futureLanes.begin() && *(it - 1) !=
-    ego_lane_ptr_->id().value()) { it--; std::vector<Point2D> pos;
-            getXY(findLane(*it, ground_truth), pos);
-            sSig += xy2s(pos.front(), pos.back(), pos);
-            target = pos.front();
-    }
-
-    //std::cout << "\nhost : (" << last_position_.x << "," <<
-    last_position_.y <<
-    ")\nsignal: (" << sPoint.x << "," << sPoint.y << ") " << "\ntarget (" <<
-    target.x << "," << target.y << ") " << std::endl;
-
-    sSig += xy2s(ego_centerline_point_, target, elPoints);*/
-
-    input.signals[signal].id =
-      signal + 1;  // could also take sign.id().value() as id here, OSI
-                   // ids are often larger numbers
-    input.signals[signal].ds = sSig;
-
-    // check if signal position is already known (due to prior signs)
-    it_knownSigPosition =
-      find(knownSigPosition.begin(), knownSigPosition.end(), sPoint);
-
-    if (it_knownSigPosition != knownSigPosition.end()) {
-      input.signals[signal].subsignal = true;
-    }
-
-    int itDistance[3];
-    int k = 0;
-
-    while ((it_knownSigPosition != knownSigPosition.end())) {
-      itDistance[k] = it_knownSigPosition - knownSigPosition.begin();
-      it_knownSigPosition =
-        find(it_knownSigPosition, knownSigPosition.end(), sPoint);
-
-      k++;
-      if (k >= 3) break;
-    }
-
-    if (!allTLS_IDs.empty() /*||amountLights != 0*/) {
-      for (int k = 0; k < 3; k++) {
-        // it_allTLS_IDs is at same index as it_knownSigPosition was
-        std::advance(it_allTLS_IDs, itDistance[k]);
-        // it_allTLS_IDs + itDistance[k];
-        input.signals[signal].pairedSignalID[k] = *it_allTLS_IDs;
-      }
-
-      // check if whole Trafficlight is out of service -> Sign must be in
-      // use
-      if (ground_truth->mutable_traffic_light()
-            ->Get(input.signals[signal].pairedSignalID[0])
-            .classification()
-            .is_out_of_service() &&
-          ground_truth->mutable_traffic_light()
-            ->Get(input.signals[signal].pairedSignalID[1])
-            .classification()
-            .is_out_of_service() &&
-          ground_truth->mutable_traffic_light()
-            ->Get(input.signals[signal].pairedSignalID[2])
-            .classification()
-            .is_out_of_service())
-        input.signals[signal].sign_is_in_use = true;
-      else
-        input.signals[signal].sign_is_in_use = false;
-    } else {
-      input.signals[signal].subsignal = false;
-      input.signals[signal].sign_is_in_use = true;
-    }
-
-    // if (find(knownSigPosition.begin(),knownSigPosition.end(),sPoint) !=
-    // knownSigPosition.end()) 	input.signals[signal].subsignal=true;
-
-    // calculate type
-    if (clas.type() ==
+    // set type/value
+    if (cls.type() ==
         osi3::TrafficSign_MainSign_Classification_Type_TYPE_STOP) {
       input.signals[signal].type = agent_model::SIGNAL_STOP;
-      // no value for stop
       input.signals[signal].value = 0;
     } else if (
-      clas.type() ==
+      cls.type() ==
       osi3::TrafficSign_MainSign_Classification_Type_TYPE_SPEED_LIMIT_BEGIN) {
       input.signals[signal].type = agent_model::SIGNAL_SPEED_LIMIT;
-      input.signals[signal].value = clas.value().value();
+      input.signals[signal].value = cls.value().value();
     } else if (
-      clas.type() ==
+      cls.type() ==
       osi3::TrafficSign_MainSign_Classification_Type_TYPE_RIGHT_OF_WAY_BEGIN) {
-      // for (int j = 0; j < clas.assigned_lane_id_size(); j++)
-      //	priority_lanes_.push_back(clas.assigned_lane_id(j).value());
       input.signals[signal].type = agent_model::SIGNAL_PRIORITY;
     } else if (
-      clas.type() ==
+      cls.type() ==
         osi3::TrafficSign_MainSign_Classification_Type_TYPE_GIVE_WAY ||
-      clas.type() ==
+      cls.type() ==
         osi3::
           TrafficSign_MainSign_Classification_Type_TYPE_RIGHT_BEFORE_LEFT_NEXT_INTERSECTION) {
-
-      // for (int j = 0; j < clas.assigned_lane_id_size(); j++)
-      //	yielding_lanes_.push_back(clas.assigned_lane_id(j).value());
       input.signals[signal].type = agent_model::SIGNAL_YIELD;
     } else {
       input.signals[signal].type = agent_model::SIGNAL_NOT_SET;
-      // no value for unset type
       input.signals[signal].value = 0;
     }
-
     signal++;
   }
 
@@ -752,10 +680,10 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
 
     // only fill ds, lane and d fields when target is along the host's path
     if (onPath) {
-      Point2D cPoint;
+      Point2D centerline_point;
       Point2D bPoint(moBase.position().x(), moBase.position().y());
 
-      closestCenterlinePoint(bPoint, path_centerline_, cPoint);
+      closestCenterlinePoint(bPoint, path_centerline_, centerline_point);
       // osi3::Lane *tarLane =
       // findLane(mo.assigned_lane_id(commonLane).value(), ground_truth);
       // Point2D current = bPoint;
@@ -789,8 +717,8 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
 
       input.targets[ti].ds = sTarNet;  // TODO: check what happens when
                                        // target is behind host vehicle
-      input.targets[ti].d = sqrt(pow(moBase.position().x() - cPoint.x, 2) +
-                                 pow(moBase.position().y() - cPoint.y, 2));
+      input.targets[ti].d = sqrt(pow(moBase.position().x() - centerline_point.x, 2) +
+                                 pow(moBase.position().y() - centerline_point.y, 2));
       input.targets[ti].lane =
         lane_mapping_[mo.assigned_lane_id(commonLaneIdx).value()];
     } else {
@@ -863,8 +791,8 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
       }
     }
 
-    input.targets[ti].xy.x = moBase.position().x() - last_position_.x;
-    input.targets[ti].xy.y = moBase.position().y() - last_position_.y;
+    input.targets[ti].xy.x = moBase.position().x() - ego_position_.x;
+    input.targets[ti].xy.y = moBase.position().y() - ego_position_.y;
 
     input.targets[ti].v = sqrt(moBase.velocity().x() * moBase.velocity().x() +
                                moBase.velocity().y() * moBase.velocity().y());
@@ -972,10 +900,10 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
                   }
 
                   // only fill ds and d fields when target is along the host's
-  path if (assigned) { Point2D cPoint; Point2D bPoint(base.position().x(),
+  path if (assigned) { Point2D centerline_point; Point2D bPoint(base.position().x(),
   base.position().y());
 
-                          closestCenterlinePoint(bPoint, elPoints, cPoint);
+                          closestCenterlinePoint(bPoint, elPoints, centerline_point);
 
                           osi3::Lane* tarLane =
   findLane(egoObj.assigned_lane_id(0).value(), ground_truth);
@@ -1003,8 +931,8 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
 
                           input.targets[i].ds = sTar; //TODO: check what
   happens when target is behind host vehicle input.targets[i].d =
-  sqrt(pow(base.position().x() - cPoint.x, 2) + pow(base.position().y() -
-  cPoint.y, 2));
+  sqrt(pow(base.position().x() - centerline_point.x, 2) + pow(base.position().y() -
+  centerline_point.y, 2));
                   }
                   else {
                           input.targets[i].ds = 0;
@@ -1012,8 +940,8 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
                   }
 
                   input.targets[i].xy.x = base.position().x() -
-  last_position_.x; input.targets[i].xy.y = base.position().y() -
-  last_position_.y;
+  ego_position_.x; input.targets[i].xy.y = base.position().y() -
+  ego_position_.y;
 
                   input.targets[i].v = sqrt(base.velocity().x() *
   base.velocity().x() + base.velocity().y() * base.velocity().y());
@@ -1067,14 +995,14 @@ void OsiConverter::fillHorizon(osi3::SensorView &sensor_view,
 
   // NEW	//
   Point2D dummy;
-  // std::cout << "look here: " << last_position_.x << ", " <<
-  // last_position_.y << " cl lenght: " << path_centerline_.size() << "\n";
-  int hor_idx = closestCenterlinePoint(last_position_, path_centerline_, dummy);
+  // std::cout << "look here: " << ego_position_.x << ", " <<
+  // ego_position_.y << " cl lenght: " << path_centerline_.size() << "\n";
+  int hor_idx = closestCenterlinePoint(ego_position_, path_centerline_, dummy);
   double sTravel = path_s_[hor_idx - 1] +
-                   sqrt((last_position_.x - path_centerline_[hor_idx - 1].x) *
-                          (last_position_.x - path_centerline_[hor_idx - 1].x) +
-                        (last_position_.y - path_centerline_[hor_idx - 1].y) *
-                          (last_position_.y - path_centerline_[hor_idx - 1].y));
+                   sqrt((ego_position_.x - path_centerline_[hor_idx - 1].x) *
+                          (ego_position_.x - path_centerline_[hor_idx - 1].x) +
+                        (ego_position_.y - path_centerline_[hor_idx - 1].y) *
+                          (ego_position_.y - path_centerline_[hor_idx - 1].y));
   // std::cout << "sTravel: " << sTravel << " after idx: " << hor_idx << "\n";
 
   for (int i = 0; i < agent_model::NOH; i++) {
@@ -1111,11 +1039,11 @@ void OsiConverter::fillHorizon(osi3::SensorView &sensor_view,
       input.horizon.kappa[i] = 0;
     }
 
-    input.horizon.x[i] = std::cos(ego_psi) * (hKnot.x - last_position_.x) +
-                         std::sin(ego_psi) * (hKnot.y - last_position_.y);
+    input.horizon.x[i] = std::cos(ego_psi) * (hKnot.x - ego_position_.x) +
+                         std::sin(ego_psi) * (hKnot.y - ego_position_.y);
     input.horizon.y[i] =
-      -1.0 * std::sin(ego_psi) * (hKnot.x - last_position_.x) +
-      std::cos(ego_psi) * (hKnot.y - last_position_.y);
+      -1.0 * std::sin(ego_psi) * (hKnot.x - ego_position_.x) +
+      std::cos(ego_psi) * (hKnot.y - ego_position_.y);
     input.horizon.egoLaneWidth[i] = 3.75;
     input.horizon.leftLaneWidth[i] = 0;
     input.horizon.rightLaneWidth[i] = 0;
@@ -1177,9 +1105,9 @@ void OsiConverter::fillHorizon(osi3::SensorView &sensor_view,
   else {
           //somewhere within scope of currentCl, set sStart to the distance
   along current lane that should be disregarded sStart = s[idx - 1] +
-  sqrt((last_position_.x - elPoints[idx - 1].x) * (last_position_.x -
-  elPoints[idx - 1].x) + (last_position_.y - elPoints[idx - 1].y) *
-  (last_position_.y - elPoints[idx - 1].y));
+  sqrt((ego_position_.x - elPoints[idx - 1].x) * (ego_position_.x -
+  elPoints[idx - 1].x) + (ego_position_.y - elPoints[idx - 1].y) *
+  (ego_position_.y - elPoints[idx - 1].y));
   }
 
   [&] {
@@ -1227,10 +1155,10 @@ void OsiConverter::fillHorizon(osi3::SensorView &sensor_view,
                                   horizon.push_back(hKnot);
 
                                   input.horizon.x[i] = std::cos(ego_psi) *
-  (horizon.back().x - last_position_.x) + std::sin(ego_psi) *
-  (horizon.back().y - last_position_.y); input.horizon.y[i] = -1.0 *
-  std::sin(ego_psi) * (horizon.back().x - last_position_.x) +
-  std::cos(ego_psi) * (horizon.back().y - last_position_.y);
+  (horizon.back().x - ego_position_.x) + std::sin(ego_psi) *
+  (horizon.back().y - ego_position_.y); input.horizon.y[i] = -1.0 *
+  std::sin(ego_psi) * (horizon.back().x - ego_position_.x) +
+  std::cos(ego_psi) * (horizon.back().y - ego_position_.y);
   input.horizon.ds[i] = ds[i];
 
                                   input.horizon.psi[i] = psi[k - 1] +
@@ -1359,12 +1287,12 @@ void OsiConverter::fillHorizon(osi3::SensorView &sensor_view,
 
   //				input.horizon.x[i] =  std::cos(ego_psi) *
   //(horizon.back().x
-  //- last_position_.x)+ std::sin(ego_psi) * (horizon.back().y -
-  // last_position_.y);
+  //- ego_position_.x)+ std::sin(ego_psi) * (horizon.back().y -
+  // ego_position_.y);
   ////pre.x * c + pre.y * s; ego_psi input.horizon.y[i] =
   ///-1.0*std::sin(ego_psi) *
-  //(horizon.back().x - last_position_.x) + std::cos(ego_psi) *
-  //(horizon.back().y - last_position_.y); //pre.x * (-1 * s) + pre.y * c;
+  //(horizon.back().x - ego_position_.x) + std::cos(ego_psi) *
+  //(horizon.back().y - ego_position_.y); //pre.x * (-1 * s) + pre.y * c;
   // input.horizon.ds[i] = ds[i];
 
   //				input.horizon.psi[i] = psi[k - 1] +
@@ -1394,20 +1322,20 @@ void OsiConverter::fillHorizon(osi3::SensorView &sensor_view,
 
   if (horizon.size() == 0) {
 
-          horizon.push_back(Point2D(last_position_.x, last_position_.y));
-          input.horizon.x[0] = horizon.back().x - last_position_.x;
-          input.horizon.y[0] = horizon.back().y - last_position_.y;
+          horizon.push_back(Point2D(ego_position_.x, ego_position_.y));
+          input.horizon.x[0] = horizon.back().x - ego_position_.x;
+          input.horizon.y[0] = horizon.back().y - ego_position_.y;
           input.horizon.ds[0] = ds.back();
           input.horizon.psi[0] = 0;
           input.horizon.kappa[0] = 0;
   }
   for (int i = horizon.size(); i < agent_model::NOH; i++) {
           input.horizon.x[i] =  std::cos(ego_psi) * (horizon.back().x -
-  last_position_.x)+ std::sin(ego_psi) * (horizon.back().y -
-  last_position_.y);
+  ego_position_.x)+ std::sin(ego_psi) * (horizon.back().y -
+  ego_position_.y);
   //pre.x * c + pre.y * s; ego_psi input.horizon.y[i] = -1.0*std::sin(ego_psi)
-  * (horizon.back().x - last_position_.x) + std::cos(ego_psi) *
-  (horizon.back().y - last_position_.y); //pre.x * (-1 * s) + pre.y * c;
+  * (horizon.back().x - ego_position_.x) + std::cos(ego_psi) *
+  (horizon.back().y - ego_position_.y); //pre.x * (-1 * s) + pre.y * c;
   input.horizon.ds[i] = ds.back(); input.horizon.psi[i] = input.horizon.psi[i
   - 1]; input.horizon.kappa[i] = 0;
 

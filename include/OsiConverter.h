@@ -38,6 +38,7 @@ class OsiConverter {
  private:
 
   bool open_pass = true;
+  bool initialized = false;
   
   // global path vectors
   std::vector<Point2D> path_centerline_;
@@ -56,17 +57,13 @@ class OsiConverter {
   int path_action_id_ = -1;
   int speed_action_id_ = -1;
 
-  // last position values
-  agent_model::Position last_position_;
-  double last_s_ = 0;
-
   // current ego values
   int ego_id_;
   int ego_lane_id_;
   osi3::MovingObject ego_;
   osi3::BaseMoving ego_base_;
   osi3::Lane *ego_lane_ptr_;
-
+  Point2D ego_position_;
   Point2D ego_centerline_point_;
 
   // helper functions
