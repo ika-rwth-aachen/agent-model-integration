@@ -171,7 +171,7 @@ void OsiConverter::classifyManeuver(osi3::SensorView &sensor_view,
       xy2Curv(pos, s, p, k);
       double avg = std::accumulate(k.cbegin(), k.cend(), 0.0) / k.size();
       std::cout << "avg: " << avg << "\n";
-      double eps = 0.0000001;
+      double eps = 0.01;
       if (avg > eps)
         input.vehicle.maneuver = agent_model::Maneuver::TURN_LEFT;
       else if (avg < (-1 * eps))
