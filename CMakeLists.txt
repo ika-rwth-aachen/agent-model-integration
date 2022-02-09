@@ -134,10 +134,18 @@ add_dependencies(static_osi_lib osi_submodule)
 set_target_properties(static_osi_lib PROPERTIES 
 	IMPORTED_LOCATION "${OSI}/lib/osi3/libopen_simulation_interface_pic.a")
 
-target_link_libraries(${PROJECT_NAME}
-	PUBLIC static_osi_lib
-	PUBLIC static_protobuf_lib
-	PUBLIC agent_model)
+
+if(WIN32)
+	target_link_libraries(${PROJECT_NAME}
+		PUBLIC static_osi_lib
+		PUBLIC static_protobuf_lib
+		PUBLIC agent_model -static-libgcc -static-libstdc++ -static)	
+elseif(UNIX)
+	target_link_libraries(${PROJECT_NAME}
+		PUBLIC static_osi_lib
+		PUBLIC static_protobuf_lib
+		PUBLIC agent_model)
+endif()
 
 add_executable(${PROJECT_NAME}_ositrace
 	src/IkaAgent.cpp
