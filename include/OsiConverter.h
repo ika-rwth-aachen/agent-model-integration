@@ -36,8 +36,6 @@ class OsiConverter {
                agent_model::Parameters &param);
 
  private:
-  bool debug_;
-
   // global path vectors
   std::vector<Point2D> path_centerline_;
   std::vector<double> path_kappa_;
@@ -60,20 +58,29 @@ class OsiConverter {
 
   // current ego values
   int ego_id_;
+  osi3::MovingObject ego_;
   osi3::BaseMoving ego_base_;
-  double ego_psi_;
   Point2D ego_centerline_point_;
   osi3::Lane *ego_lane_ptr_;
   std::unordered_map<int, int> ego_lane_mapping_;
 
   // helper functions
-  void processTrafficCommand(osi3::SensorView &sensor_view,
+  
+  void preprocess(osi3::SensorView &sensor_view,
                              osi3::TrafficCommand &traffic_command,
                              agent_model::Input &input,
                              agent_model::Parameters &param);
+
+  void processTrafficCommand(osi3::SensorView &sensor_view,
+                            osi3::TrafficCommand &traffic_command, 
+                            agent_model::Parameters &param);
+
   void classifyManeuver(osi3::SensorView &sensor_view,
                         agent_model::Input &input);
   void generatePath(osi3::SensorView &sensor_view, agent_model::Input &input);
+
+  void extractEgoInformation(osi3::SensorView &sensor_view,
+                                         agent_model::Input &input);
 
   // filling functions
   void fillVehicle(osi3::SensorView &sensor_view, agent_model::Input &input);
