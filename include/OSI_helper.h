@@ -954,6 +954,8 @@ double getNorm(osi3::Vector3d v) {
 }
 
 void removeDuplicates(std::vector<Point2D> &v) {
+  if (v.size() == 0) return;
+
   for (int i = 0; i < v.size() - 1; i++) {
     double ds = pow(v[i + 1].x - v[i].x, 2) + pow(v[i + 1].y - v[i].y, 2);
 

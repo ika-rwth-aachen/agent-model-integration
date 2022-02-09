@@ -85,11 +85,11 @@ void OsiConverter::preprocess(osi3::SensorView &sensor_view,
   // analyize traffic commands
   trafficCommandToLanes(sensor_view, traffic_command, param);
 
+  // generate paths
+  generatePath(sensor_view, input);
+
   // determine type of maneuver on intersection
   classifyManeuver(sensor_view, input);
-
-  // generate horizon
-  generatePath(sensor_view, input);
 }
 
 void OsiConverter::trafficCommandToLanes(osi3::SensorView &sensor_view,
