@@ -46,6 +46,7 @@ class OsiConverter {
   std::vector<int> lanes_;
   std::vector<JunctionPath> priority_lanes_;
   std::vector<JunctionPath> yielding_lanes_;
+  std::unordered_map<int, int> lane_mapping_;
 
   // last action id's
   int traj_action_id_ = -1;
@@ -58,11 +59,12 @@ class OsiConverter {
 
   // current ego values
   int ego_id_;
+  int ego_lane_id_;
   osi3::MovingObject ego_;
   osi3::BaseMoving ego_base_;
-  Point2D ego_centerline_point_;
   osi3::Lane *ego_lane_ptr_;
-  std::unordered_map<int, int> ego_lane_mapping_;
+
+  Point2D ego_centerline_point_;
 
   // helper functions
   
