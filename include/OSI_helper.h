@@ -952,3 +952,14 @@ void spline1(Point2D start, Point2D end, std::vector<Point2D>& cl) {
 double getNorm(osi3::Vector3d v) {
   return sqrt(pow(v.x(), 2) + pow(v.y(), 2) + pow(v.z(), 2));
 }
+
+void removeDuplicates(std::vector<Point2D> &v) {
+  for (int i = 0; i < v.size() - 1; i++) {
+    double ds = pow(v[i + 1].x - v[i].x, 2) + pow(v[i + 1].y - v[i].y, 2);
+
+    if (ds < 0.01) {
+        v.erase(v.begin() + i);
+        i--;
+    }
+  }
+}
