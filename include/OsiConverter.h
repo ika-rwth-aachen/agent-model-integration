@@ -36,6 +36,9 @@ class OsiConverter {
                agent_model::Parameters &param);
 
  private:
+
+  bool open_pass = true;
+  
   // global path vectors
   std::vector<Point2D> path_centerline_;
   std::vector<double> path_kappa_;
@@ -73,7 +76,7 @@ class OsiConverter {
                              agent_model::Input &input,
                              agent_model::Parameters &param);
 
-  void processTrafficCommand(osi3::SensorView &sensor_view,
+  void trafficCommandToLanes(osi3::SensorView &sensor_view,
                             osi3::TrafficCommand &traffic_command, 
                             agent_model::Parameters &param);
 
