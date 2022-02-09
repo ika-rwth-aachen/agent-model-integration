@@ -19,7 +19,10 @@
 
 class IkaAgent : public AgentModel {
  public:
-  explicit IkaAgent(){};
+  explicit IkaAgent(){
+    v_init_ = 0;
+    v_desired_ = 0;
+  };
 
   ~IkaAgent(){};
 
@@ -29,8 +32,8 @@ class IkaAgent : public AgentModel {
            setlevel4to5::DynamicsRequest &dynamic_request);
 
   // external variables
-  double v_init_ = -1;
-  double v_desired_ = -1;
+  double v_init_;
+  double v_desired_;
 
  private:
   bool initialized_ = false;

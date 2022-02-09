@@ -23,8 +23,8 @@ void IkaAgent::init(osi3::BaseMoving &host) {
   double yaw = host.orientation().yaw();
 
   // check external variables
-  if (v_init_ == -1) v_init_ = sqrt(pow(v.x(), 2) + pow(v.y(), 2));
-  if (v_desired_ == -1) v_desired_ = 50.0 / 3.6;
+  if (v_init_ == 0) v_init_ = sqrt(pow(v.x(), 2) + pow(v.y(), 2));
+  if (v_desired_ == 0) v_desired_ = 50.0 / 3.6;
 
   // get global pointers
   driver_state_ = this->getState();
