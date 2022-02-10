@@ -965,3 +965,21 @@ void removeDuplicates(std::vector<Point2D> &v) {
     }
   }
 }
+
+double computeDistanceInRefAngleSystem(Point2D ego, Point2D centerline, double ref_angle) {
+
+  // calculate orientation from position to centerline projection
+  double orientation = ref_angle - atan2(centerline.y - ego.y,
+                                       centerline.x - ego.x);
+
+  // adjust orientation
+  if (orientation < -M_PI) orientation = orientation + 2 * M_PI;
+  if (orientation > M_PI) orientation = orientation - 2 * M_PI;
+  int d_sig = (orientation > 0) - (orientation < 0);
+
+  // calculate distance to centerline point
+  double d = sqrt(pow(ego.x - centerline.x, 2) +
+                       pow(ego.y - centerline.y, 2));
+  
+  return d_sig * d;
+}
