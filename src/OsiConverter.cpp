@@ -775,66 +775,75 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
 
 void OsiConverter::fillHorizon(osi3::SensorView &sensor_view,
                                agent_model::Input &input) {
-  double sMax = std::max(15.0, 15.0 * input.vehicle.v);
-  double ego_psi = ego_base_.orientation().yaw();
+  
+  double horizon_thw = 15;
+  double s_max = std::max(15.0, horizon_thw * input.vehicle.v);
+
+  double ego_psi = ego_base_.orientation().yaw(); //TODO
 
   // distance (along centerline) to each horizon point from current location
   std::vector<double> ds(agent_model::NOH, 0);
-
-  double delta = sqrt(sMax) / double(agent_model::NOH);  // linear spaces
-  for (int i = 0; i < agent_model::NOH; i++) {  // create squared spaces
-    ds[i] = (i + 1) * (i + 1) * delta * delta;
+  for (int i = 0; i < agent_model::NOH; i++) {    
+    ds[i] = pow((i + 1) / double(agent_model::NOH), 2)  * s_max;
   }
 
-  double interpolation = 0;
-
+  // caculate current ego s
   Point2D dummy;
   int hor_idx = closestCenterlinePoint(ego_position_, path_centerline_, dummy);
-  double sTravel = path_s_[hor_idx - 1] +
-                   sqrt((ego_position_.x - path_centerline_[hor_idx - 1].x) *
-                          (ego_position_.x - path_centerline_[hor_idx - 1].x) +
-                        (ego_position_.y - path_centerline_[hor_idx - 1].y) *
-                          (ego_position_.y - path_centerline_[hor_idx - 1].y));
+  double ego_s = path_s_[hor_idx - 1] + sqrt(
+              pow(ego_position_.x - path_centerline_[hor_idx - 1].x,2) + 
+              pow(ego_position_.y - path_centerline_[hor_idx - 1].y,2));
 
+  // iterate over all horizon points
   for (int i = 0; i < agent_model::NOH; i++) {
-    double dsCur = (i + 1) * (i + 1) * delta * delta;
-    // get correct space for interpolation
-    int j = -1;
+
+    // get correct idx on path array
+    int idx = -1;
     for (auto &ss : path_s_) {
-      if (ss > sTravel + dsCur) break;
-      j++;
+      if (ss > ego_s + ds[i]) break;
+      idx++;
     }
 
-    Point2D hKnot;
-    if (sTravel + dsCur < path_s_.back()) {
-      interpolation =
-        (sTravel + dsCur - path_s_[j]) / (path_s_[j + 1] - path_s_[j]);
-      hKnot.x =
-        path_centerline_[j].x +
-        interpolation * (path_centerline_[j + 1].x - path_centerline_[j].x);
-      hKnot.y =
-        path_centerline_[j].y +
-        interpolation * (path_centerline_[j + 1].y - path_centerline_[j].y);
+    // calculate properties at current horizon knot
+    Point2D horizon_knot;
 
-      input.horizon.ds[i] = dsCur;
-      input.horizon.psi[i] = path_psi_[j] +
-                             interpolation * (path_psi_[j + 1] - path_psi_[j]) -
-                             ego_psi;
-      input.horizon.kappa[i] =
-        path_kappa_[j] + interpolation * (path_kappa_[j + 1] - path_kappa_[j]);
-    } else {
-      hKnot.x = path_centerline_.back().x;
-      hKnot.y = path_centerline_.back().y;
-      input.horizon.ds[i] = path_s_.back() - sTravel;
-      input.horizon.psi[i] = 0;
-      input.horizon.kappa[i] = 0;
+    // interpolate if end of path not reached
+    if (ego_s + ds[i] < path_s_.back()) {
+      
+      double ds_path = path_s_[idx + 1] - path_s_[idx];
+      double frac = (ego_s + ds[i] - path_s_[idx]) / ds_path;
+
+      double dx_path = path_centerline_[idx + 1].x - path_centerline_[idx].x;
+      double dy_path = path_centerline_[idx + 1].y - path_centerline_[idx].y;
+      double dpsi_path = path_psi_[idx + 1] - path_psi_[idx];
+      double dkappa_path = path_kappa_[idx + 1] - path_kappa_[idx];
+
+      horizon_knot.x = path_centerline_[idx].x + frac * dx_path;
+      horizon_knot.y = path_centerline_[idx].y + frac * dy_path;
+
+      input.horizon.psi[i] = path_psi_[idx] + frac * dpsi_path - ego_psi;
+      input.horizon.kappa[i] = path_kappa_[idx] + frac * dkappa_path;
+
+      input.horizon.ds[i] = ds[i];
+    }
+    // take last values if end of path reached
+    else {
+      horizon_knot.x = path_centerline_.back().x;
+      horizon_knot.y = path_centerline_.back().y;
+
+      input.horizon.psi[i] = path_psi_.back();
+      input.horizon.kappa[i] = path_kappa_.back();
+
+      input.horizon.ds[i] = path_s_.back() - ego_s;
     }
 
-    input.horizon.x[i] = std::cos(ego_psi) * (hKnot.x - ego_position_.x) +
-                         std::sin(ego_psi) * (hKnot.y - ego_position_.y);
-    input.horizon.y[i] =
-      -1.0 * std::sin(ego_psi) * (hKnot.x - ego_position_.x) +
-      std::cos(ego_psi) * (hKnot.y - ego_position_.y);
+    // set x and y relative to ego position
+    input.horizon.x[i] = std::cos(ego_psi) * (horizon_knot.x - ego_position_.x)
+                       + std::sin(ego_psi) * (horizon_knot.y - ego_position_.y);
+    input.horizon.y[i] =-std::sin(ego_psi) * (horizon_knot.x - ego_position_.x) 
+                       + std::cos(ego_psi) * (horizon_knot.y - ego_position_.y);
+
+    // set lane widths
     input.horizon.egoLaneWidth[i] = 3.75;
     input.horizon.leftLaneWidth[i] = 0;
     input.horizon.rightLaneWidth[i] = 0;
