@@ -779,8 +779,6 @@ void OsiConverter::fillHorizon(osi3::SensorView &sensor_view,
   double horizon_thw = 15;
   double s_max = std::max(15.0, horizon_thw * input.vehicle.v);
 
-  double ego_psi = ego_base_.orientation().yaw(); //TODO
-
   // distance (along centerline) to each horizon point from current location
   std::vector<double> ds(agent_model::NOH, 0);
   for (int i = 0; i < agent_model::NOH; i++) {    
@@ -793,6 +791,7 @@ void OsiConverter::fillHorizon(osi3::SensorView &sensor_view,
   double ego_s = path_s_[hor_idx - 1] + sqrt(
               pow(ego_position_.x - path_centerline_[hor_idx - 1].x,2) + 
               pow(ego_position_.y - path_centerline_[hor_idx - 1].y,2));
+  double ego_psi = ego_base_.orientation().yaw();
 
   // iterate over all horizon points
   for (int i = 0; i < agent_model::NOH; i++) {
@@ -854,88 +853,100 @@ void OsiConverter::fillLanes(osi3::SensorView &sensor_view,
                              agent_model::Input &input) {
   osi3::GroundTruth *ground_truth = sensor_view.mutable_global_ground_truth();
 
-  int laneCounter = 0;
-  double defaultWidth = 3.5;
+  int lane = 0;
 
-  // lanes_ along the host's path constitute one lane
-  osi3::Lane lane = *ego_lane_ptr_;
-  input.lanes[laneCounter].id = lane_mapping_[lanes_[laneCounter]];
+  // host path (lanes_) constitutes only one lane in input
+  input.lanes[lane].id = lane_mapping_[lanes_[lane]];
+  input.lanes[lane].access = agent_model::Accessibility::ACC_ACCESSIBLE; 
+  input.lanes[lane].width = input.horizon.egoLaneWidth[0];
+  input.lanes[lane].dir = agent_model::DrivingDirection::DD_FORWARDS;
 
-  input.lanes[laneCounter].access =
-    agent_model::Accessibility::ACC_ACCESSIBLE;  // lanes_ along route are
-                                                 // accessible by definition
-  input.lanes[laneCounter].width = input.horizon.egoLaneWidth[0];
+  // get points of ego lane
+  std::vector<Point2D> ego_lane_points;
+  getXY(ego_lane_ptr_, ego_lane_points);
 
-  input.lanes[laneCounter].dir = agent_model::DrivingDirection::DD_FORWARDS;
-
-  std::vector<Point2D> lPoints;
-  getXY(&lane, lPoints);
-
+  // initialize parameters
   auto it = lanes_.end();
-  double dist = 0;
-  Point2D current = lPoints.back();
+  double distance_to_end = 0;
+  Point2D current_end_point = ego_lane_points.back();
 
-  // iterate backwards over futureLanes and add distance along all lanes_ in
-  // front of host
-  while (it != lanes_.begin() && *(it - 1) != ego_lane_ptr_->id().value()) {
+  // iterate backwards over path and increase distance_to_end over all lanes
+  while (it != lanes_.begin()) {
     it--;
-    std::vector<Point2D> pos;
-    getXY(findLane(*it, ground_truth), pos);
-    dist += xy2s(pos.front(), pos.back(), pos);
-    current = pos.front();
+    
+    // break if ego_lane_ptr_ reached
+    if (*it ==  ego_lane_ptr_->id().value()) break;
+
+    std::vector<Point2D> tmp_lane_points;
+    getXY(findLane(*it, ground_truth), tmp_lane_points);
+
+    // increase distance_to_end
+    distance_to_end += xy2s(tmp_lane_points.front(), tmp_lane_points.back(), tmp_lane_points);
+
+    // update current_end_point
+    current_end_point = tmp_lane_points.front();
   }
 
-  input.lanes[laneCounter].closed =
-    dist + xy2s(ego_centerline_point_, current, lPoints);
-  input.lanes[laneCounter].route = input.lanes[laneCounter].closed;
+  // get remaining distance on ego lane
+  double dist = xy2s(ego_centerline_point_, current_end_point, ego_lane_points);
 
-  laneCounter++;
+  // set road end in input struct
+  input.lanes[lane].closed = dist + distance_to_end;
+  input.lanes[lane].route = input.lanes[lane].closed;
+  lane++;
 
+  //iterate over all remaining lanes
   for (int i = 0; i < ground_truth->lane_size() && i < agent_model::NOL; i++) {
-    osi3::Lane lane = ground_truth->lane(i);
-    // skip if lane is in futureLanes, that means it was already considered
-    // before
-    if (find(lanes_.begin(), lanes_.end(), lane.id().value()) != lanes_.end()) {
+    osi3::Lane tmp_lane = ground_truth->lane(i);
+
+    // skip if tmp_lane on host path, already considered before
+    if (find(lanes_.begin(), lanes_.end(), tmp_lane.id().value()) != lanes_.end()) {
       continue;
     }
 
-    input.lanes[i].id = lane_mapping_[lane.id().value()];
+    // set id from lane_mapping_
+    input.lanes[lane].id = lane_mapping_[tmp_lane.id().value()];
 
     // calculate type
-    if (lane.classification().type() ==
+    if (tmp_lane.classification().type() ==
         osi3::Lane_Classification_Type_TYPE_DRIVING) {
-      input.lanes[i].access = agent_model::Accessibility::ACC_ACCESSIBLE;
-    } else if (lane.classification().type() ==
+      input.lanes[lane].access = agent_model::Accessibility::ACC_ACCESSIBLE;
+    } else if (tmp_lane.classification().type() ==
                osi3::Lane_Classification_Type_TYPE_NONDRIVING) {
-      input.lanes[i].access = agent_model::Accessibility::ACC_NOT_ACCESSIBLE;
+      input.lanes[lane].access = agent_model::Accessibility::ACC_NOT_ACCESSIBLE;
+    } else
+    {
+      input.lanes[lane].access = agent_model::ACC_NOT_SET;
     }
 
     // calculate driving direction
-    if (lane.classification().centerline_is_driving_direction() ==
-        ego_lane_ptr_->classification().centerline_is_driving_direction())
-      input.lanes[i].dir = agent_model::DrivingDirection::DD_FORWARDS;
-    else
-      input.lanes[i].dir = agent_model::DrivingDirection::DD_BACKWARDS;
+    if (tmp_lane.classification().centerline_is_driving_direction() ==
+        ego_lane_ptr_->classification().centerline_is_driving_direction()){
+      input.lanes[lane].dir = agent_model::DrivingDirection::DD_FORWARDS;
+    }
+    else {
+      input.lanes[lane].dir = agent_model::DrivingDirection::DD_BACKWARDS;
+    }
 
     // save average of width
-    input.lanes[i].width = defaultWidth;
+    input.lanes[lane].width = input.horizon.egoLaneWidth[0];
 
-    std::vector<Point2D> lPoints;
+    std::vector<Point2D> lane_points;
+    getXY(&tmp_lane, lane_points);
 
-    getXY(&lane, lPoints);
+    input.lanes[lane].closed = 0;
+    input.lanes[lane].route = 0;
 
-    input.lanes[i].closed = xy2s(lPoints.front(), lPoints.back(), lPoints);
-    input.lanes[i].route = input.lanes[i].closed;  // TODO
-
-    laneCounter++;
+    lane++;
   }
-  while (laneCounter < agent_model::NOL) {
-    input.lanes[laneCounter].id = 127;
-    input.lanes[laneCounter].width = 0;
-    input.lanes[laneCounter].route = 0;
-    input.lanes[laneCounter].closed = 0;
-    input.lanes[laneCounter].access = agent_model::ACC_NOT_SET;
-    input.lanes[laneCounter].dir = agent_model::DD_NOT_SET;
-    laneCounter++;
+
+  // fill remaining lanes with default values
+  for (int i = lane; i < agent_model::NOL; i++) {
+    input.lanes[i].id = 127;
+    input.lanes[i].width = 0;
+    input.lanes[i].route = 0;
+    input.lanes[i].closed = 0;
+    input.lanes[i].access = agent_model::ACC_NOT_SET;
+    input.lanes[i].dir = agent_model::DD_NOT_SET;
   }
 }
