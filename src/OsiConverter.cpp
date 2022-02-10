@@ -349,7 +349,7 @@ void OsiConverter::classifyManeuver(osi3::SensorView &sensor_view,
     if (lane->classification().type() ==
         osi3::Lane_Classification_Type_TYPE_INTERSECTION) {
       if (lane->classification().free_lane_boundary_id_size() > 0) {
-        // TODO: not yet implemented (standard OSI)
+        // TODO: not yet implemented for standard OSI
       } else {
         getXY(lane, positions);
       }
@@ -432,7 +432,7 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
   osi3::GroundTruth *ground_truth = sensor_view.mutable_global_ground_truth();
 
   int signal = 0;
-  std::vector<int> signal_lanes; // TODO CGE: ist das nicht eher falsch? wir können doch mehrere signals auf einer lane haben
+  std::vector<int> signal_lanes; // TODO CGE: is this correct? we could also have multiple signals on a single lane?
 
   std::vector<int> traffic_light_ids;            
   std::vector<Point2D> traffic_light_positions;

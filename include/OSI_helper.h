@@ -568,7 +568,7 @@ void mapLanes(osi3::GroundTruth* ground_truth,
 
   // not all lanes are adjascent to EgoLane, assign arbitrary ID to the rest
   // (using left_lane_count so IDs are positive and not used multiple times)
-  // TODO CGE: why assign lanes and not leave them out?
+  // TODO CGE: why store all lanes and not leave them out?
   for (int i = 0; i < ground_truth->lane_size(); i++) {
 
     if (mapping.find(ground_truth->lane(i).id().value()) == mapping.end()) {
