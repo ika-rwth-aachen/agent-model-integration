@@ -48,6 +48,7 @@ class OsiConverter {
 
   // global lanes
   std::vector<int> lanes_;
+  std::vector<int> intersection_lanes_;
   std::vector<JunctionPath> priority_lanes_;
   std::vector<JunctionPath> yielding_lanes_;
   std::unordered_map<int, int> lane_mapping_;

@@ -638,175 +638,129 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
                                agent_model::Input &input) {
   osi3::GroundTruth *ground_truth = sensor_view.mutable_global_ground_truth();
 
-  std::vector<int> intersectionLanes;
+  // iterate over all targets
+  int target = 0;
+  for (auto &tar : *ground_truth->mutable_moving_object()) {
 
-  for (int i = 0; i < ground_truth->lane_size(); i++) {
-    osi3::Lane lane = ground_truth->lane(i);
-    // Workaround until intersection type is filled TODO
-    if (lane.classification().type() ==
-        osi3::Lane_Classification_Type_TYPE_INTERSECTION)
-      intersectionLanes.push_back(lane.id().value());
-  }
+    // skip ego vehicle
+    if (tar.id().value() == ego_id_) continue;
 
-  double ego_psi = ego_base_.orientation().yaw();
+    osi3::BaseMoving target_base = tar.base();
 
-  int ti = 0;
-  for (auto &mo : *ground_truth->mutable_moving_object()) {
-    if (mo.id().value() == ego_id_) continue;
+    // set general properties
+    input.targets[target].id = target + 1;
+    input.targets[target].priority = agent_model::TARGET_PRIORITY_NOT_SET;
+    input.targets[target].dsIntersection = 0;    
+    input.targets[target].ds = INFINITY;
+    input.targets[target].d = 0;
+    input.targets[target].lane = 127;
 
-    osi3::BaseMoving moBase = mo.base();
-    input.targets[ti].id = ti + 1;
-    input.targets[ti].priority = agent_model::TARGET_PRIORITY_NOT_SET;
-    input.targets[ti].dsIntersection = 0;
+    input.targets[target].xy.x = target_base.position().x() - ego_position_.x;
+    input.targets[target].xy.y = target_base.position().y() - ego_position_.y;
 
-    // determine whether target is assigned to a lane along the host's path
-    // (following possible)
-    bool onPath = false;
-    auto it = lanes_.end();
-    int commonLaneIdx = 0;
-    for (int j = 0; j < mo.assigned_lane_id_size(); j++) {
+    input.targets[target].v = getNorm(target_base.velocity());
+    input.targets[target].a = getNorm(target_base.acceleration());
+    input.targets[target].psi = target_base.orientation().yaw() - ego_base_.orientation().yaw();
 
-      if (std::find(intersectionLanes.begin(), intersectionLanes.end(),
-                    mo.assigned_lane_id(j).value()) != intersectionLanes.end())
-        input.targets[ti].priority = agent_model::TARGET_ON_INTERSECTION;
+    input.targets[target].size.length = target_base.dimension().length();
+    input.targets[target].size.width = target_base.dimension().width();
 
-      it = find(lanes_.begin(), lanes_.end(), mo.assigned_lane_id(j).value());
-      if (it != lanes_.end()) {
-        commonLaneIdx = j;
-        onPath = true;
+    // check if target is assigned along the route
+    bool assigned = false;
+    int assigned_lane_idx = -1;
+    for (int j = 0; j < tar.assigned_lane_id_size(); j++) {
+      
+      // check if assigned to intersection
+      if (std::find(intersection_lanes_.begin(), intersection_lanes_.end(),
+                  tar.assigned_lane_id(j).value()) != intersection_lanes_.end()){
+        input.targets[target].priority = agent_model::TARGET_ON_INTERSECTION;
+      }
+
+      // check if target on route
+      auto target_lane = find(lanes_.begin(), lanes_.end(), tar.assigned_lane_id(j).value());
+      if (target_lane != lanes_.end()) {
+        assigned_lane_idx = lane_mapping_[tar.assigned_lane_id(j).value()];
+        assigned = true;
         break;
       }
     }
 
-    // only fill ds, lane and d fields when target is along the host's path
-    if (onPath) {
+    // only fill ds, d, lane and fields when target is assigned to host's path
+    if (assigned) {
+
+      // projection of target position to centerline
       Point2D centerline_point;
-      Point2D bPoint(moBase.position().x(), moBase.position().y());
+      Point2D target_point(target_base.position().x(), target_base.position().y());
+      closestCenterlinePoint(target_point, path_centerline_, centerline_point);
 
-      closestCenterlinePoint(bPoint, path_centerline_, centerline_point);
-      // osi3::Lane *tarLane =
-      // findLane(mo.assigned_lane_id(commonLane).value(), ground_truth);
-      // Point2D current = bPoint;
+      // ds along centerline to reach target 
+      double ds_target = xy2SSng(ego_centerline_point_, target_point,  
+                         path_centerline_, ego_base_.orientation().yaw());
 
-      double sTar =
-        xy2SSng(ego_centerline_point_, bPoint, path_centerline_, ego_psi);
-      /*double sTar = 0;
-      if (*it != ego_lane_ptr_->id().value()) {
-              // target is not assigned to the current lane -> add
-      distance along the target's assigned lane
-              // meaning assigned_lane's beginning to bPoint
-              std::vector<Point2D> pos;
-              getXY(findLane(*it, ground_truth), pos);
-              sTar += xy2s(pos.front(), bPoint, pos);
-              pos.clear();
-      }
-      while (it != futureLanes.begin() && *(it - 1) !=
-      ego_lane_ptr_->id().value()) { it--; std::vector<Point2D> pos;
-      getXY(findLane(*it, ground_truth), pos); sTar += xy2s(pos.front(),
-      pos.back(), pos); current = pos.front();
-      }
-      sTar += xy2s(ego_centerline_point_, current, elPoints);*/
+      double ds_correction = 0.5 * (ego_base_.dimension().length() + target_base.dimension().length());
 
-      double sTarNet;
-      if (sTar > 0)
-        sTarNet = sTar - 0.5 * moBase.dimension().length() -
-                  0.5 * ego_base_.dimension().length();
+      // apply length correction
+      if (ds_target > 0)
+        ds_target -= ds_correction;
       else
-        sTarNet = sTar + 0.5 * moBase.dimension().length() +
-                  0.5 * ego_base_.dimension().length();
+        ds_target += ds_correction;
 
-      input.targets[ti].ds = sTarNet;  // TODO: check what happens when
-                                       // target is behind host vehicle
-      input.targets[ti].d = sqrt(pow(moBase.position().x() - centerline_point.x, 2) +
-                                 pow(moBase.position().y() - centerline_point.y, 2));
-      input.targets[ti].lane =
-        lane_mapping_[mo.assigned_lane_id(commonLaneIdx).value()];
-    } else {
-      input.targets[ti].ds = INFINITY;
-      input.targets[ti].d = 0;
-      input.targets[ti].lane = 127;
+      input.targets[target].ds = ds_target;
 
-      if (input.targets[ti].priority != agent_model::TARGET_ON_INTERSECTION) {
-        // for (int j = 0; j < mo.assigned_lane_id_size(); j++) {
-        for (auto &assigned_lane : mo.assigned_lane_id()) {
-          JunctionPath tmp;
-          bool apprJunc = false;
-          for (auto &yieldL : yielding_lanes_) {
-            // target is on its way on a yield lane to the junction
-            if (find(yieldL.lane_ids.begin(), yieldL.lane_ids.end(),
-                     assigned_lane.value()) != yieldL.lane_ids.end()) {
-              input.targets[ti].priority = agent_model::TARGET_ON_GIVE_WAY_LANE;
-              tmp.lane_ids = yieldL.lane_ids;
-              tmp.pts = yieldL.pts;
-              apprJunc = true;
-            }
+      // calculate distance to centerline point
+      Point2D target_position(target_base.position().x(), target_base.position().y());
+      input.targets[target].d = computeDistanceInRefAngleSystem(target_position, centerline_point, target_base.orientation().yaw());
+
+      // set assigned lane id
+      input.targets[target].lane = assigned_lane_idx;
+    } 
+    
+    // compute if target (not on path and interesection) approaches intersection
+    if (!assigned && input.targets[target].priority != agent_model::TARGET_ON_INTERSECTION) {
+      
+      // iterate over assigned lanes
+      for (auto &assigned_lane : tar.assigned_lane_id()) {
+
+        std::vector<Point2D> path_points;
+        bool approaching_junction = false;
+
+        // target is on a yield lane to the heading to the junction
+        for (auto &yield_lane : yielding_lanes_) {
+          if (find(yield_lane.lane_ids.begin(), yield_lane.lane_ids.end(),
+                    assigned_lane.value()) != yield_lane.lane_ids.end()) {
+            input.targets[target].priority = agent_model::TARGET_ON_GIVE_WAY_LANE;
+            path_points = yield_lane.pts;
+            approaching_junction = true;
+            break;
           }
-          if (!apprJunc) {
-            for (auto &prioL : priority_lanes_) {
-              // target is on its way on a priority lane to the
-              // junction
-              if (find(prioL.lane_ids.begin(), prioL.lane_ids.end(),
-                       assigned_lane.value()) != prioL.lane_ids.end()) {
-                input.targets[ti].priority =
-                  agent_model::TARGET_ON_PRIORITY_LANE;
-                tmp.lane_ids = prioL.lane_ids;
-                tmp.pts = prioL.pts;
-                apprJunc = true;
-              }
-            }
+        }
+        
+        // target is on a priority lane to the heading to the junction
+        for (auto &prioL : priority_lanes_) {
+          if (find(prioL.lane_ids.begin(), prioL.lane_ids.end(),
+                    assigned_lane.value()) != prioL.lane_ids.end()) {
+            input.targets[target].priority =
+              agent_model::TARGET_ON_PRIORITY_LANE;
+            path_points = prioL.pts;
+            approaching_junction = true;
+            break;
           }
-          if (apprJunc)
-            input.targets[ti].dsIntersection =
-              xy2s(Point2D(moBase.position().x(), moBase.position().y()),
-                   tmp.pts.back(), tmp.pts);
+        }
 
-          /*if (find(intersectionLanes.begin(),
-          intersectionLanes.end(), mo.assigned_lane_id(j).value())
-                  != intersectionLanes.end()) {
-                  //target is on a lane ending in an intersection
-                  std::vector<Point2D> cl;
-                  getXY(findLane(mo.assigned_lane_id(j).value(),
-          ground_truth), cl); input.targets[ti].dsIntersection =
-          xy2s(Point2D(base.position().x(), base.position().y()),
-          cl.back(), cl); if (find(priority_lanes_.begin(),
-          priority_lanes_.end(), mo.assigned_lane_id(j).value())
-                          != priority_lanes_.end())
-                          input.targets[ti].priority =
-          agent_model::TARGET_ON_PRIORITY_LANE; else if
-          (find(yielding_lanes_.begin(), yielding_lanes_.end(),
-          mo.assigned_lane_id(j).value())
-                          != yielding_lanes_.end())
-                          input.targets[ti].priority =
-          agent_model::TARGET_ON_GIVE_WAY_LANE;
-
-                  break;
-          }
-          else if (findLane(mo.assigned_lane_id(j).value(),
-          ground_truth)->classification().type() ==
-          osi3::Lane_Classification_Type_TYPE_INTERSECTION) {
-                  input.targets[ti].priority =
-          agent_model::TARGET_ON_INTERSECTION;
-          }*/
+        // calculate distance to intersection if approaching intersection
+        if (approaching_junction)
+        {
+          input.targets[target].dsIntersection =
+            xy2s(Point2D(target_base.position().x(), target_base.position().y()), path_points.back(), path_points);  
+          break;
         }
       }
     }
-
-    input.targets[ti].xy.x = moBase.position().x() - ego_position_.x;
-    input.targets[ti].xy.y = moBase.position().y() - ego_position_.y;
-
-    input.targets[ti].v = sqrt(moBase.velocity().x() * moBase.velocity().x() +
-                               moBase.velocity().y() * moBase.velocity().y());
-    input.targets[ti].a =
-      sqrt(moBase.acceleration().x() * moBase.acceleration().x() +
-           moBase.acceleration().y() * moBase.acceleration().y());
-    input.targets[ti].psi = moBase.orientation().yaw() - ego_psi;
-
-    input.targets[ti].size.length = moBase.dimension().length();
-    input.targets[ti].size.width = moBase.dimension().width();
-
-    ti++;
+    target++;
   }
-  for (int i = ti; i < agent_model::NOT; i++) {
+
+  // fill remaining targets with default values
+  for (int i = target; i < agent_model::NOT; i++) {
     input.targets[i].id = 0;
     input.targets[i].ds = INFINITY;
     input.targets[i].xy.x = 0;
@@ -821,159 +775,6 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
     input.targets[i].dsIntersection = 0;
     input.targets[i].priority = agent_model::TARGET_PRIORITY_NOT_SET;
   }
-  /*
-  for (int i = 0; i < agent_model::NOT; i++)
-  {
-          if (i < ground_truth->moving_object_size())
-          {
-                  osi3::MovingObject egoObj = ground_truth->moving_object(i);
-
-                  if (egoObj.id().value() == ego_id_)
-                  {
-                          input.targets[i].id = 0;
-                          input.targets[i].ds = INFINITY;
-                          input.targets[i].xy.x = 0;
-                          input.targets[i].xy.y = 0;
-                          input.targets[i].v = 0;
-                          input.targets[i].a = 0;
-                          input.targets[i].d = 0;
-                          input.targets[i].psi = 0;
-                          input.targets[i].lane = 127;
-                          input.targets[i].size.width = 0;
-                          input.targets[i].size.length = 0;
-                          input.targets[i].dsIntersection = 0;
-                          continue;
-                  }
-
-                  input.targets[i].priority =
-  agent_model::TARGET_PRIORITY_NOT_SET; osi3::BaseMoving base = egoObj.base();
-
-                  input.targets[i].id = i+1;
-
-                  auto it = futureLanes.end();
-                  bool assigned = false;
-
-                  double sTar = 0;
-
-                  // determine whether target is assigned to a lane along the
-  host's path (following possible) for (int j = 0; j <
-  egoObj.assigned_lane_id_size(); j++) {
-
-                          it = find(futureLanes.begin(), futureLanes.end(),
-  egoObj.assigned_lane_id(j).value());
-
-                          if (it != futureLanes.end()) {
-                                  assigned = true;
-                                  break;
-                          }
-                  }
-
-                  for (int j = 0; j < egoObj.assigned_lane_id_size(); j++) {
-                          if (find(lanesEnteringIntersection.begin(),
-  lanesEnteringIntersection.end(), egoObj.assigned_lane_id(j).value())
-                                  != lanesEnteringIntersection.end()) {
-                                  //target is on a lane ending in an
-  intersection
-
-                                  std::vector<Point2D> cl;
-                                  getXY(findLane(egoObj.assigned_lane_id(j).value(),
-  ground_truth), cl); input.targets[i].dsIntersection =
-  xy2s(Point2D(base.position().x(), base.position().y()), cl.back(), cl); if
-  (find(priority_lanes_.begin(), priority_lanes_.end(),
-  egoObj.assigned_lane_id(j).value())
-                                          != priority_lanes_.end())
-                                          input.targets[i].priority =
-  agent_model::TARGET_ON_PRIORITY_LANE; else if (find(yielding_lanes_.begin(),
-  yielding_lanes_.end(), egoObj.assigned_lane_id(j).value())
-                                          != yielding_lanes_.end())
-                                          input.targets[i].priority =
-  agent_model::TARGET_ON_GIVE_WAY_LANE;
-
-                                  break;
-                          }
-                          else if
-  (findLane(egoObj.assigned_lane_id(j).value(),
-  ground_truth)->classification().type() ==
-  osi3::Lane_Classification_Type_TYPE_INTERSECTION) {
-  input.targets[i].priority = agent_model::TARGET_ON_INTERSECTION;
-                          }
-                  }
-
-                  // only fill ds and d fields when target is along the host's
-  path if (assigned) { Point2D centerline_point; Point2D bPoint(base.position().x(),
-  base.position().y());
-
-                          closestCenterlinePoint(bPoint, elPoints, centerline_point);
-
-                          osi3::Lane* tarLane =
-  findLane(egoObj.assigned_lane_id(0).value(), ground_truth);
-
-                          Point2D current = bPoint;
-
-                          if (*it != ego_lane_ptr_->id().value()) {
-                                  // target is not assigned to the current
-  lane
-  -> add distance along the target's assigned lane
-                                  // meaning assigned_lane's beginning to
-  bPoint std::vector<Point2D> pos; getXY(findLane(*it, ground_truth), pos);
-                                  sTar += xy2s(pos.front(), bPoint, pos);
-                                  pos.clear();
-                          }
-                          while (it != futureLanes.begin() && *(it - 1) !=
-  ego_lane_ptr_->id().value()) { it--; std::vector<Point2D> pos;
-                                  getXY(findLane(*it, ground_truth), pos);
-                                  sTar += xy2s(pos.front(), pos.back(), pos);
-                                  current = pos.front();
-                          }
-
-                          sTar += xy2s(ego_centerline_point_, current,
-  elPoints);
-
-                          input.targets[i].ds = sTar; //TODO: check what
-  happens when target is behind host vehicle input.targets[i].d =
-  sqrt(pow(base.position().x() - centerline_point.x, 2) + pow(base.position().y() -
-  centerline_point.y, 2));
-                  }
-                  else {
-                          input.targets[i].ds = 0;
-                          input.targets[i].d = 0;
-                  }
-
-                  input.targets[i].xy.x = base.position().x() -
-  ego_position_.x; input.targets[i].xy.y = base.position().y() -
-  ego_position_.y;
-
-                  input.targets[i].v = sqrt(base.velocity().x() *
-  base.velocity().x() + base.velocity().y() * base.velocity().y());
-                  input.targets[i].a = sqrt(base.acceleration().x() *
-  base.acceleration().x() + base.acceleration().y() *
-  base.acceleration().y()); input.targets[i].psi = base.orientation().yaw() -
-  ego_psi;
-
-                  input.targets[i].size.length = base.dimension().length();
-                  input.targets[i].size.width = base.dimension().width();
-
-
-                  input.targets[i].lane =
-  lane_mapping_[egoObj.assigned_lane_id(0).value()];
-
-          }
-          else
-          {
-                  input.targets[i].id = 0;
-                  input.targets[i].ds = INFINITY;
-                  input.targets[i].xy.x = 0;
-                  input.targets[i].xy.y = 0;
-                  input.targets[i].v = 0;
-                  input.targets[i].a = 0;
-                  input.targets[i].d = 0;
-                  input.targets[i].psi = 0;
-                  input.targets[i].lane = 127;
-                  input.targets[i].size.width = 0;
-                  input.targets[i].size.length = 0;
-                  input.targets[i].dsIntersection = 0;
-          }
-  }*/
 }
 
 void OsiConverter::fillHorizon(osi3::SensorView &sensor_view,
