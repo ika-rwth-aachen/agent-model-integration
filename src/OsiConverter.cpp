@@ -404,7 +404,7 @@ void OsiConverter::fillVehicle(osi3::SensorView &sensor_view,
   ego_position_.y = ego_base_.position().y();
 
   // projection of ego coordiantes on centerline
-  closestCenterlinePoint(ego_position_, path_centerline_,ego_centerline_point_);
+  closestCenterlinePoint(ego_position_, path_centerline_, ego_centerline_point_);
 
   // calculate s, psi, k of ego lane
   std::vector<double> s, psi, k;
@@ -415,20 +415,8 @@ void OsiConverter::fillVehicle(osi3::SensorView &sensor_view,
               interpolateXY2Value(psi, path_centerline_, ego_centerline_point_);
   input.vehicle.dPsi = ego_base_.orientation_rate().yaw();
 
-  // calculate orientation from position to centerline projection
-  double angle_to_centerline = atan2(ego_centerline_point_.y - ego_position_.y,
-                       ego_centerline_point_.x - ego_position_.x);
-  double orientation =  ego_base_.orientation().yaw() - angle_to_centerline;
-  
-  // adjust angle
-  if (orientation < -M_PI) orientation = orientation + 2 * M_PI;
-  if (orientation > M_PI) orientation = orientation - 2 * M_PI;
-  int d_sig = (orientation > 0) - (orientation < 0);
-
-  // calculate distance to centerline point (on t axis)
-  double distance = sqrt(pow(ego_position_.x - ego_centerline_point_.x, 2) +
-                       pow(ego_position_.y - ego_centerline_point_.y, 2));
-  input.vehicle.d = d_sig * distance;
+  // compute distance between ego and centerline
+  input.vehicle.d = computeDistanceInRefAngleSystem(ego_position_, ego_centerline_point_, ego_base_.orientation().yaw());
 
   // set dummy values
   input.vehicle.pedal = 0;
