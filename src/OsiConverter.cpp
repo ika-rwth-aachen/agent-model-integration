@@ -326,6 +326,14 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view,
     std::reverse(pl.lane_ids.begin(), pl.lane_ids.end());
     for (auto &l : pl.lane_ids) getXY(findLane(l, ground_truth), pl.pts);
   }
+
+  // set interesection lanes
+  for (int i = 0; i < ground_truth->lane_size(); i++) {
+    osi3::Lane lane = ground_truth->lane(i);
+    if (ground_truth->lane(i).classification().type() ==
+        osi3::Lane_Classification_Type_TYPE_INTERSECTION)
+      intersection_lanes_.push_back(ground_truth->lane(i).id().value());
+  }
 }
 
 /**
