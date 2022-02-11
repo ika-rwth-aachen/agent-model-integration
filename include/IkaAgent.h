@@ -41,6 +41,11 @@ class IkaAgent : public AgentModel {
  private:
   bool initialized_ = false;
 
+  // debug information logger
+  int ego_id_;
+  json json_logger;
+  int json_counter = 0;
+
   // vehicle
   VehicleModel vehicle_;
 
@@ -57,4 +62,5 @@ class IkaAgent : public AgentModel {
 
   void init(osi3::BaseMoving &host);
   int buildTrafficUpdate(osi3::TrafficUpdate &traffic_update);
+  void saveDebugInformation(double time);
 };

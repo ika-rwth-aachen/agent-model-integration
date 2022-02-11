@@ -130,7 +130,8 @@ int IkaAgent::step(double time, double step_size, osi3::SensorView &sensor_view,
   // initialize agent
   if (!initialized_) {
     osi3::BaseMoving host = sensor_view.host_vehicle_data().location();
-
+    ego_id_ = sensor_view.host_vehicle_id().value();
+    
     IkaAgent::init(host);
     initialized_ = true;
   }
@@ -154,6 +155,8 @@ int IkaAgent::step(double time, double step_size, osi3::SensorView &sensor_view,
   dynamic_request.set_curvature_target(driver_state_->subconscious.kappa);
   this->buildTrafficUpdate(traffic_update);
 
+  saveDebugInformation(time);
+  
   return 0;
 }
 
@@ -171,4 +174,93 @@ int IkaAgent::buildTrafficUpdate(osi3::TrafficUpdate &traffic_update) {
     vehicle_state_->d_psi);
 
   return 0;
+}
+
+void IkaAgent::saveDebugInformation(double time){
+
+  // settings
+  double dt_log = 0.1;
+  double dt_save = 1.0;
+
+  if (std::fmod(time, dt_save) == 0) {
+
+    json json_conscious_follow;
+    json_conscious_follow["distance"] = driver_state_->conscious.follow.distance;
+    json_conscious_follow["standing"] = driver_state_->conscious.follow.standing;
+    json_conscious_follow["velocity"] = driver_state_->conscious.follow.velocity;
+
+    json json_conscious_stop;
+    json_conscious_stop["ds"] = driver_state_->conscious.stop.ds;
+    json_conscious_stop["dsMax"] = driver_state_->conscious.stop.dsMax;
+    json_conscious_stop["standing"] = driver_state_->conscious.stop.standing;
+
+    
+    json json_conscious_lateral;
+    for (int i=0; i < 3; i++)
+    {
+      json_conscious_lateral[i]["factor"] = driver_state_->conscious.lateral.paths[i].factor;
+      json_conscious_lateral[i]["offset"] = driver_state_->conscious.lateral.paths[i].offset;
+      json_conscious_lateral[i]["ref_point_x"] = driver_state_->conscious.lateral.paths[i].refPoints->x;
+      json_conscious_lateral[i]["ref_point_y"] = driver_state_->conscious.lateral.paths[i].refPoints->y;
+    }
+
+    json json_conscious_velocity;
+    json_conscious_velocity["local"] = driver_state_->conscious.velocity.local;
+    json_conscious_velocity["prediction"] = driver_state_->conscious.velocity.prediction;
+
+    json json_conscious;
+    json_conscious["follow"] = json_conscious_follow; 
+    json_conscious["stop"] = json_conscious_stop;
+    json_conscious["lateral"] = json_conscious_lateral;
+    json_conscious["velocity"] = json_conscious_velocity; 
+    
+    json json_subconscious;
+    json_subconscious["a"] = driver_state_->subconscious.a;
+    json_subconscious["dPsi"] = driver_state_->subconscious.dPsi;
+    json_subconscious["kappa"] = driver_state_->subconscious.kappa;
+    json_subconscious["pedal"] = driver_state_->subconscious.pedal;
+    json_subconscious["steering"] = driver_state_->subconscious.steering;
+
+    json json_driver_state;
+    json_driver_state["conscious"] = json_conscious;
+    json_driver_state["subconscious"] = json_subconscious;
+    
+    json json_vehicle_state;
+    json_vehicle_state["a"] = vehicle_state_->a;
+    json_vehicle_state["ay"] = vehicle_state_->ay;
+    json_vehicle_state["d_psi"] = vehicle_state_->d_psi;
+    json_vehicle_state["d_psi"] = vehicle_state_->d_psi;
+    json_vehicle_state["delta"] = vehicle_state_->delta;
+    json_vehicle_state["ds"] = vehicle_state_->ds;
+    json_vehicle_state["force"] = vehicle_state_->force;
+    json_vehicle_state["kappa"] = vehicle_state_->kappa;
+    json_vehicle_state["position_x"] = vehicle_state_->position.x;
+    json_vehicle_state["position_y"] = vehicle_state_->position.y;
+    json_vehicle_state["psi"] = vehicle_state_->psi;
+    json_vehicle_state["s"] = vehicle_state_->s;
+    json_vehicle_state["v"] = vehicle_state_->v;
+
+    json json_horizon;
+    json_horizon["x"] = _input.horizon.x;
+    json_horizon["y"] = _input.horizon.y;
+    json_horizon["ds"] = _input.horizon.ds;
+    json_horizon["kappa"] = _input.horizon.kappa;
+    json_horizon["psi"] = _input.horizon.psi;
+
+    // concatenate debug information
+    json_logger[json_counter]["ego_id"] = ego_id_;
+    json_logger[json_counter]["time"] = time;
+    json_logger[json_counter]["vehicle_state"] = json_vehicle_state;
+    json_logger[json_counter]["driver_state"] = json_driver_state;
+    json_logger[json_counter]["horizon"] = json_horizon;
+
+    json_counter++;
+  }
+
+  // save debug file
+  if (std::fmod(time, dt_save) == 0) {
+    std::ofstream output("debug_vehicle_" + std::to_string(ego_id_) + ".json", std::ofstream::out);
+    output << json_logger.dump(4) << ",\n";
+    output.close();
+  }
 }
