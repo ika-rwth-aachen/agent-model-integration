@@ -10,12 +10,15 @@
 #pragma once
 #include <cmath>
 #include <vector>
+#include "../lib/json/single_include/nlohmann/json.hpp"
 
 #include "AgentModel.h"
 #include "Interface.h"
 #include "OsiConverter.h"
 #include "PrimaryController.h"
 #include "VehicleModel.h"
+
+using json = nlohmann::json;
 
 class IkaAgent : public AgentModel {
  public:
