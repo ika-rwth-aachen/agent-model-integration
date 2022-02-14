@@ -9,9 +9,6 @@
  */
 #include "IkaAgent.h"
 
-#include <fstream>
-#include <iostream>
-
 void IkaAgent::init(osi3::BaseMoving &host) {
 
   // host values
@@ -119,6 +116,14 @@ void IkaAgent::init(osi3::BaseMoving &host) {
 
   pedal_controller_.reset();
   steering_controller_.reset();
+
+  // check if debug folder exist
+  if (debug_) {
+    struct stat buffer;
+    if (stat ("debug", &buffer) != 0) {
+      std::filesystem::create_directories("debug");
+    }
+  }
 }
 
 int IkaAgent::step(double time, double step_size, osi3::SensorView &sensor_view,
@@ -259,7 +264,7 @@ void IkaAgent::saveDebugInformation(double time){
 
   // save debug file
   if (debug_ && std::fmod(time, dt_save) == 0) {
-    std::ofstream output("debug_vehicle_" + std::to_string(ego_id_) + ".json", std::ofstream::out);
+    std::ofstream output("debug/vehicle_" + std::to_string(ego_id_) + ".json", std::ofstream::out);
     output << json_logger.dump(4) << ",\n";
     output.close();
   }
