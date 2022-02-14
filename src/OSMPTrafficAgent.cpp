@@ -282,7 +282,7 @@ void COSMPTrafficAgent::updateAgentParameter<fmi2Boolean>(size_t vr) {
   // if(!mVariableChangedSet.count(varTypePair))
   //    return;
   assert(vr <= FMI_BOOLEAN_DEBUG_IDX);
-  fmi2Real param = boolean_vars[vr];
+  fmi2Boolean param = boolean_vars[vr];
   setAgentParameter(vr, param);
   mVariableChangedSet.erase(varTypePair);
 }
