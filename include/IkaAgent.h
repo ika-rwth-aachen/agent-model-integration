@@ -25,6 +25,7 @@ class IkaAgent : public AgentModel {
   explicit IkaAgent(){
     v_init_ = 0;
     v_desired_ = 0;
+    debug_ = false;
   };
 
   ~IkaAgent(){};
@@ -37,6 +38,7 @@ class IkaAgent : public AgentModel {
   // external variables
   double v_init_;
   double v_desired_;
+  bool debug_;
 
  private:
   bool initialized_ = false;
