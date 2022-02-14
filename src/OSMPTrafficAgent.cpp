@@ -252,6 +252,18 @@ void COSMPTrafficAgent::setAgentParameter(size_t vr, fmi2Real param) {
 }
 
 template <>
+void COSMPTrafficAgent::setAgentParameter(size_t vr, fmi2Boolean param) {
+  switch (vr) {
+    case FMI_BOOLEAN_DEBUG_IDX:
+      agentModel.debug_ = param;
+      return;
+    default:
+      assert(false);
+      break;
+  }
+}
+
+template <>
 void COSMPTrafficAgent::updateAgentParameter<fmi2Real>(size_t vr) {
   auto varTypePair = std::make_pair(vr, VariableType::Real);
   /// Only perform an update if the parameter changed
@@ -259,6 +271,18 @@ void COSMPTrafficAgent::updateAgentParameter<fmi2Real>(size_t vr) {
   //    return;
   assert(vr <= FMI_REAL_LAST_IDX);
   fmi2Real param = real_vars[vr];
+  setAgentParameter(vr, param);
+  mVariableChangedSet.erase(varTypePair);
+}
+
+template <>
+void COSMPTrafficAgent::updateAgentParameter<fmi2Boolean>(size_t vr) {
+  auto varTypePair = std::make_pair(vr, VariableType::Boolean);
+  /// Only perform an update if the parameter changed
+  // if(!mVariableChangedSet.count(varTypePair))
+  //    return;
+  assert(vr <= FMI_BOOLEAN_DEBUG_IDX);
+  fmi2Real param = boolean_vars[vr];
   setAgentParameter(vr, param);
   mVariableChangedSet.erase(varTypePair);
 }
@@ -396,6 +420,7 @@ fmi2Status COSMPTrafficAgent::doCalc(
   if (time == 0) {
     updateAgentParameter<fmi2Real>(FMI_REAL_VELOCITY_V_DESIRED);
     updateAgentParameter<fmi2Real>(FMI_REAL_VELOCITY_V_INIT);
+    updateAgentParameter<fmi2Boolean>(FMI_BOOLEAN_DEBUG_IDX);
   }
 
   /* Update state point */

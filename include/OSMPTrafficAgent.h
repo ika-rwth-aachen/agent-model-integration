@@ -44,7 +44,8 @@ using namespace std;
 
 /* Boolean Variables */
 #define FMI_BOOLEAN_VALID_IDX 0
-#define FMI_BOOLEAN_LAST_IDX FMI_BOOLEAN_VALID_IDX
+#define FMI_BOOLEAN_DEBUG_IDX 1
+#define FMI_BOOLEAN_LAST_IDX FMI_BOOLEAN_DEBUG_IDX
 #define FMI_BOOLEAN_VARS (FMI_BOOLEAN_LAST_IDX + 1)
 
 /* Integer Variables */

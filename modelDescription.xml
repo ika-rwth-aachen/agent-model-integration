@@ -144,6 +144,9 @@
     <ScalarVariable name="valid" valueReference="0" causality="output" variability="discrete" initial="exact">
       <Boolean start="false"/>
     </ScalarVariable>
+    <ScalarVariable name="debug" valueReference="1" causality="parameter" variability="discrete" initial="exact">
+      <Boolean start="false"/>
+    </ScalarVariable>
   </ModelVariables>
   <ModelStructure>
     <Outputs>
