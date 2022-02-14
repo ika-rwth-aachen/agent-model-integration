@@ -121,7 +121,8 @@ void IkaAgent::init(osi3::BaseMoving &host) {
   if (debug_) {
     struct stat buffer;
     if (stat ("debug", &buffer) != 0) {
-      std::filesystem::create_directories("debug");
+      std::cout << "Please create the 'debug' folder" << std::endl;
+      exit(0);
     }
   }
 }
