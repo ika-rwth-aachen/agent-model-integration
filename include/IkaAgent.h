@@ -8,76 +8,65 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 #pragma once
-#include "osi_trafficcommand.pb.h"
-#include "osi_trafficupdate.pb.h"
-#include "osi_sensorview.pb.h"
-#include "sl45_dynamicsrequest.pb.h"
-#include "Interface.h"
-#include "AgentModel.h"
-#include "VehicleModel.h"
-#include "PrimaryController.h"
-#include <vector>
 #include <cmath>
-using Point2D = agent_model::Position;
+#include <vector>
+#include <fstream>
+#include <iostream>
+#include <sys/stat.h>
 
-struct junctionPath
-{
-    std::vector<int> laneIds;
-    std::vector<Point2D> pts;
-    int signalId;
-};
+#include "../lib/json/single_include/nlohmann/json.hpp"
 
-class IkaAgent : public AgentModel
-{
-public:
-    explicit IkaAgent(){};
-    ~IkaAgent(){}; // = default;
+#include "AgentModel.h"
+#include "Interface.h"
+#include "OsiConverter.h"
+#include "PrimaryController.h"
+#include "VehicleModel.h"
 
-    int step(double time, double stepSize, osi3::SensorView &sensorViewData, 
-            osi3::TrafficCommand &commandData, osi3::TrafficUpdate &out, 
-            setlevel4to5::DynamicsRequest &dynOut);
-    void setVehicleSpeed(double v0);
-    int terminate();
-    bool isInitialized() {return initialized;}
+using json = nlohmann::json;
 
-private:
-    void init(osi3::BaseMoving &host);
-    bool initialized = false;
-    bool debug_files = false;
+class IkaAgent : public AgentModel {
+ public:
+  explicit IkaAgent(){
+    v_init_ = 0;
+    v_desired_ = 0;
+    debug_ = false;
+  };
 
-    // Ids identifying the last processed TrafficCommands
-    int trajActionId = -1;
-    int pathActionId = -1;
-    int speedActionId = -1;
-    int hostVehicleId;
+  ~IkaAgent(){};
 
-    double lastS;
-    double horizonTHW;
-    agent_model::Position lastPosition;
-    std::vector<Point2D> pathCenterLine;
-    std::vector<double> pathKappa;
-    std::vector<double> pathS;
-    std::vector<double> pathPsi;
-    std::vector<junctionPath> priorityLanes;
-    std::vector<junctionPath> yieldingLanes;
+  int step(double time, double step_size, osi3::SensorView &sensor_view,
+           osi3::TrafficCommand &traffic_command,
+           osi3::TrafficUpdate &traffic_update,
+           setlevel4to5::DynamicsRequest &dynamic_request);
 
-    // lanes along the path of the agent
-    std::vector<int> lanes;
+  // external variables
+  double v_init_;
+  double v_desired_;
+  bool debug_;
 
-    agent_model::Parameters *drParam;
-    agent_model::State *drState;
-    VehicleModel _vehicle;
-    PrimaryController steeringContr;
-    PrimaryController pedalContr;
-    VehicleModel::Input *vehInput;
-    VehicleModel::State *vehState;
-    VehicleModel::Parameters *vehParam;
+ private:
+  bool initialized_ = false;
 
-    int adapterOsiToInput(osi3::SensorView &sensorView, agent_model::Input &input, 
-                          std::vector<int> &futureLanes, double time);
-    int parseTrafficCommand(osi3::SensorView &sensorViewData, osi3::TrafficCommand &commandData);
-    void classifyManeuver(osi3::SensorView &sensorViewData);
-    int generateHorizon(osi3::SensorView &sensorView, std::vector<int> &futureLanes);
+  // debug information logger
+  int ego_id_;
+  json json_logger;
+  int json_counter = 0;
 
-    int applyDriverOutput(double time, osi3::TrafficUpdate &out);
+  // vehicle
+  VehicleModel vehicle_;
+
+  // converter
+  OsiConverter converter_;
+
+  // pointers
+  agent_model::State *driver_state_;
+  VehicleModel::State *vehicle_state_;
+
+  // controllers
+  PrimaryController steering_controller_;
+  PrimaryController pedal_controller_;
+
+  void init(osi3::BaseMoving &host);
+  int buildTrafficUpdate(osi3::TrafficUpdate &traffic_update);
+  void saveDebugInformation(double time);
 };

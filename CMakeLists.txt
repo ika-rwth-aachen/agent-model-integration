@@ -112,6 +112,7 @@ include_directories(
 add_library(${PROJECT_NAME} SHARED 
 	src/OSMPTrafficAgent.cpp 
 	src/IkaAgent.cpp 
+	src/OsiConverter.cpp 
 	src/VehicleModel.cpp
 	src/PrimaryController.cpp)
 
@@ -150,6 +151,7 @@ endif()
 add_executable(${PROJECT_NAME}_ositrace
 	src/IkaAgent.cpp
 	src/VehicleModel.cpp
+	src/OsiConverter.cpp
 	src/PrimaryController.cpp
 	test/osiTraceTest.cpp)
 target_link_libraries(${PROJECT_NAME}_ositrace

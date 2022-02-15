@@ -28,7 +28,7 @@ Due to the usage of the CMake feature 'ExternalProject_Add()', there is no need 
 
     Please note: The default build directory for the `FMU` is the subfolder `lib/`. If a specific `FMU` output dir shall be used, set the variable `FMU_OUTDIR`, e.g.
     ```
-    cmake -G "MSYS Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_BUILD_TYPE=Release -DFMU_OUTDIR=<dir> ..
+    cmake -G "MSYS Makefiles" -DCMAKE_BUILD_TYPE=Release -DFMU_OUTDIR=<dir> ..
     ```  
 
 3. Compile the library:
@@ -50,7 +50,7 @@ Due to the usage of the CMake feature 'ExternalProject_Add()', there is no need 
 
     Please note: The default build directory for the `FMU` is the subfolder `lib/`. If a specific `FMU` output dir shall be used, set the variable `FMU_OUTDIR`, e.g.
     ```
-    cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_BUILD_TYPE=Release -DFMU_OUTDIR=<dir> ..
+    cmake -DCMAKE_BUILD_TYPE=Release -DFMU_OUTDIR=<dir> ..
     ```  
 
 3. Compile the library:
@@ -58,3 +58,8 @@ Due to the usage of the CMake feature 'ExternalProject_Add()', there is no need 
     make
     ```
     Optional: `make -j4` for building on multiple cores (replace `4` with an arbitrary number).
+
+## Debugging
+The external FMU parameter `debug` enables debugging log information in the `${workspace}/debug` folder as `json` file and holds information about `horizon`, `vehicle_state` and `driver_state` at each timestep.
+
+In addition the plot python scripts in [scripts](scripts) can be used to visualize the debug information with `matplotlib`.

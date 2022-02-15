@@ -135,13 +135,16 @@
         <Tool name="net.pmsf.osmp" xmlns:osmp="http://xsd.pmsf.net/OSISensorModelPackaging"><osmp:osmp-binary-variable name="OSMPSensorViewInConfig" role="size" mime-type="application/x-open-simulation-interface; type=SensorViewConfiguration; version=3.0.0"/></Tool>
       </Annotations>
     </ScalarVariable>
-    <ScalarVariable name="velocity.vComfort" valueReference="0" causality="parameter" variability="tunable">
-      <Real start="14.0"/>
+    <ScalarVariable name="v_desired" valueReference="0" causality="parameter" variability="tunable">
+      <Real start="1.1"/>
     </ScalarVariable>
-    <ScalarVariable name="velocity.vInit" valueReference="1" causality="parameter" variability="tunable">
-      <Real start="14.5"/>
+    <ScalarVariable name="v_init" valueReference="1" causality="parameter" variability="tunable">
+      <Real start="2.2"/>
     </ScalarVariable>
     <ScalarVariable name="valid" valueReference="0" causality="output" variability="discrete" initial="exact">
+      <Boolean start="false"/>
+    </ScalarVariable>
+    <ScalarVariable name="debug" valueReference="1" causality="parameter" variability="discrete" initial="exact">
       <Boolean start="false"/>
     </ScalarVariable>
   </ModelVariables>
