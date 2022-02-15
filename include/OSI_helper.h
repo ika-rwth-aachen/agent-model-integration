@@ -527,7 +527,7 @@ void mapLanes(osi3::GroundTruth* ground_truth,
 
   // assigns all lanes along the path the id 0
   for (int i = 0; i < future_lanes.size(); i++)
-    mapping[future_lanes[i]] = right_lane_count;
+    mapping[future_lanes[i]] = 0;
 
   // assign right adjacent lanes
   if (ego_lane_ptr->classification().right_adjacent_lane_id_size() > 0)
@@ -566,14 +566,14 @@ void mapLanes(osi3::GroundTruth* ground_truth,
     }
   }
 
-  // not all lanes are adjascent to EgoLane, assign arbitrary ID to the rest
+  // not all lanes are adjacent to ego_lane, assign arbitrary ID to the rest
   // (using left_lane_count so IDs are positive and not used multiple times)
-  // TODO CGE: why store all lanes and not leave them out?
+  int lane_count = left_lane_count;
   for (int i = 0; i < ground_truth->lane_size(); i++) {
 
     if (mapping.find(ground_truth->lane(i).id().value()) == mapping.end()) {
       // lane has not been mapped already
-      mapping[ground_truth->lane(i).id().value()] = ++left_lane_count;
+      mapping[ground_truth->lane(i).id().value()] = ++lane_count;
     }
   }
 }
