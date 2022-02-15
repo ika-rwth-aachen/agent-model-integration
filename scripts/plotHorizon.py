@@ -20,7 +20,7 @@ def plotHorizon(args):
 
         if t == args.time:
             x = d["horizon"]["x"]
-            y = d["horizon"]["x"]
+            y = d["horizon"]["y"]
             ds = d["horizon"]["ds"]
             psi = d["horizon"]["psi"]
             kappa = d["horizon"]["kappa"]
