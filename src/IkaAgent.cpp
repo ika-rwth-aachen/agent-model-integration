@@ -266,7 +266,7 @@ void IkaAgent::saveDebugInformation(double time){
   // save debug file
   if (debug_ && std::fmod(time, dt_save) == 0) {
     std::ofstream output("debug/vehicle_" + std::to_string(ego_id_) + ".json", std::ofstream::out);
-    output << json_logger.dump(4) << ",\n";
+    output << json_logger.dump(4);
     output.close();
   }
 }
