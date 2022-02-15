@@ -295,14 +295,14 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view,
           }
 
           // break when another intersection is reached
-          if (findLane(next_id, ground_truth)->classification().type()) break;
+          if (findLane(next_id, ground_truth)->classification().type() == osi3::Lane_Classification_Type_TYPE_INTERSECTION) break;
 
           // from_id is only equal to current lane_id in openPASS OSI
           if (open_pass && from_id != lane_id) continue;
 
           // add new lane to junction path
           found_next_lane = true;
-          junction_path.lane_ids.push_back(lane_id);
+          junction_path.lane_ids.push_back(next_id);
           lane_id = next_id;
           break;
         }
