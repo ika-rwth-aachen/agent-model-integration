@@ -428,7 +428,7 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
   osi3::GroundTruth *ground_truth = sensor_view.mutable_global_ground_truth();
 
   int signal = 0;
-  std::vector<int> signal_lanes; // TODO CGE: is this correct? we could also have multiple signals on a single lane?
+  std::vector<int> signal_lanes;        // currently filled, but unused
 
   std::vector<int> traffic_light_ids;            
   std::vector<Point2D> traffic_light_positions;
@@ -442,24 +442,25 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
     osi3::TrafficLight light = ground_truth->traffic_light(i);
     osi3::TrafficLight_Classification cls = light.classification();
 
-    // check if signal is assigned along the route
+    // check if traffic light is assigned along the route
     bool assigned = false;
+
+    // iterate over all assigned lanes
     for (int j = 0; j < cls.assigned_lane_id_size(); j++) {
 
-      // check that a lane has only one signal
+      // add lane to signal_lanes
       if (find(signal_lanes.begin(), signal_lanes.end(),
-               cls.assigned_lane_id(j).value()) != signal_lanes.end())
-        continue;
-      else
+               cls.assigned_lane_id(j).value()) == signal_lanes.end()) {
         signal_lanes.push_back(cls.assigned_lane_id(j).value());
+      }
 
       // check if lane on route
       auto signal_lane = find(lanes_.begin(), lanes_.end(), cls.assigned_lane_id(j).value());
       if (signal_lane != lanes_.end()) {
         assigned = true;
-        break;
       }
     }
+
     // skip a non-assigned signal    
     if (!assigned) continue;
 
@@ -469,7 +470,7 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
     closestCenterlinePoint(signal_point, path_centerline_, centerline_point);
     traffic_light_positions.push_back(signal_point);
 
-    // save all orignal signal ids
+    // save all original signal ids
     traffic_light_ids.push_back(light.id().value());
 
     // add signal with id
@@ -528,14 +529,17 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
     osi3::TrafficSign_MainSign_Classification cls =
       sign.main_sign().classification();
 
-    // check that the sign is assigned to a lane along the route.
+    // check if sign is assigned along the route
     bool assigned = false;
+
+    // iterate over all assigned lanes
     for (int j = 0; j < cls.assigned_lane_id_size(); j++) {
+
+      // add lane to signal_lanes
       if (find(signal_lanes.begin(), signal_lanes.end(),
-               cls.assigned_lane_id(j).value()) != signal_lanes.end())
-        continue;
-      else
+               cls.assigned_lane_id(j).value()) == signal_lanes.end()) {
         signal_lanes.push_back(cls.assigned_lane_id(j).value());
+      }
 
       // check if lane on route
       auto signal_lane = find(lanes_.begin(), lanes_.end(), cls.assigned_lane_id(j).value());
@@ -544,6 +548,7 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
         break;
       }
     }
+
     // skip a non-assigned signal    
     if (!assigned) continue;
 
