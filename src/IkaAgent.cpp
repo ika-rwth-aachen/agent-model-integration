@@ -188,7 +188,9 @@ void IkaAgent::saveDebugInformation(double time){
   double dt_log = 0.1;
   double dt_save = 1.0;
 
-  if (std::fmod(time, dt_save) == 0) {
+  // convert time and dt_log to milliseconds (int) to allow modulo operator 
+  // add 0.5 for proper rounding
+  if (int(1000*time+0.5) % int(1000*dt_log+0.5) == 0) {
 
     json json_conscious_follow;
     json_conscious_follow["distance"] = driver_state_->conscious.follow.distance;
