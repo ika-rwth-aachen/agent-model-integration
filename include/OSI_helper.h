@@ -7,7 +7,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include "Interface.h"
 #include "osi_sensorview.pb.h"
 
 /**

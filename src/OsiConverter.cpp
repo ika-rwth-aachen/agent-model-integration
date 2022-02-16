@@ -9,10 +9,7 @@
  */
 #include "OsiConverter.h"
 
-#include <fstream>
-#include <iostream>
-
-#include "OSI_helper.h"
+#include "OSI_helper.h" 
 
 void OsiConverter::convert(osi3::SensorView &sensor_view,
                            osi3::TrafficCommand &traffic_command,

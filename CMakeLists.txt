@@ -5,8 +5,18 @@ include(ExternalProject)
 
 # Set a default build type if none was specified
 set(default_build_type "Release")
-if(EXISTS "${CMAKE_SOURCE_DIR}/../.git")
+if(EXISTS "${CMAKE_SOURCE_DIR}/.git")
   set(default_build_type "Debug")
+endif()
+
+# configure build version
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  message(STATUS "Setting ikaDriverAgent build type to '${default_build_type}' as none was specified.")
+  set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE
+      STRING "Choose the type of build." FORCE)
+  # Set the possible values of build type for cmake-gui
+  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
+               "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
 
 # FMU output directory
@@ -106,7 +116,8 @@ include_directories(
 	include
 	include/FMI
 	${OSI_INCLUDE_DIR}
-	${PROTOBUF_INCLUDE_DIR})
+	${PROTOBUF_INCLUDE_DIR}
+	lib/json/single_include/)
 
 # Define target library ikaDriver
 add_library(${PROJECT_NAME} SHARED 
