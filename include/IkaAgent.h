@@ -14,7 +14,7 @@
 #include <iostream>
 #include <sys/stat.h>
 
-#include "../lib/json/single_include/nlohmann/json.hpp"
+#include <nlohmann/json.hpp>
 
 #include "AgentModel.h"
 #include "Interface.h"
