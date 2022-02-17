@@ -255,11 +255,22 @@ void IkaAgent::saveDebugInformation(double time){
     json_horizon["kappa"] = _input.horizon.kappa;
     json_horizon["psi"] = _input.horizon.psi;
 
+    json json_ego_input;
+    json_ego_input["v"] = _input.vehicle.v;
+    json_ego_input["a"] = _input.vehicle.a;
+    json_ego_input["psi"] = _input.vehicle.psi;
+    json_ego_input["dPsi"] = _input.vehicle.dPsi;
+    json_ego_input["s"] = _input.vehicle.s;
+    json_ego_input["d"] = _input.vehicle.d;
+    // maybe later
+    //json_ego_input["maneuver"] = _input.vehicle.maneuver;
+
     // concatenate debug information
     json_logger[json_counter]["ego_id"] = ego_id_;
     json_logger[json_counter]["time"] = time;
     json_logger[json_counter]["vehicle_state"] = json_vehicle_state;
     json_logger[json_counter]["driver_state"] = json_driver_state;
+    json_logger[json_counter]["ego_input"] = json_ego_input;
     json_logger[json_counter]["horizon"] = json_horizon;
 
     json_counter++;
