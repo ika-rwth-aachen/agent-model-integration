@@ -30,10 +30,11 @@ def plotHorizon(args):
     if len(x) > 0:
         fig, axs = plt.subplots(2,2)    
         
-        axs[0, 0].plot(x, y, "x-")
+        axs[0, 0].plot(y, x, ".-")
         axs[0, 0].axis('equal')
+        axs[0, 0].invert_xaxis()    
         axs[0, 0].set_title('x-y values')
-        axs[0, 0].set(xlabel='x', ylabel='y')
+        axs[0, 0].set(xlabel='y', ylabel='x')
 
         axs[0, 1].plot(ds)
         axs[0, 1].set_title('ds values')
