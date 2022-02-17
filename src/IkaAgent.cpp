@@ -60,14 +60,14 @@ void IkaAgent::init(osi3::BaseMoving &host) {
   driver_param->follow.timeHeadway = 1.8;
 
   // steering components
-  driver_param->steering.thw[0] = 1.0;
+  driver_param->steering.thw[0] = 0.5;
   driver_param->steering.thw[1] = 3.0;
   driver_param->steering.dsMin[0] = 1.0;
-  driver_param->steering.dsMin[1] = 3.0;
-  driver_param->steering.P[0] = 0.03 * wheel_base;
-  driver_param->steering.P[1] = 0.015 * wheel_base;
-  driver_param->steering.D[0] = 0.1;
-  driver_param->steering.D[1] = 0.1;
+  driver_param->steering.dsMin[1] = 10.0;
+  driver_param->steering.P[0] = 0.075 * wheel_base;
+  driver_param->steering.P[1] = 0.03 * wheel_base;
+  driver_param->steering.D[0] = 0.25;
+  driver_param->steering.D[1] = 0.25;
 
   AgentModel::init();
 
