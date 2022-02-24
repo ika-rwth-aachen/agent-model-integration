@@ -14,8 +14,8 @@
 		
 
 		<!-- Optional TrafficParticipant related information if applicable for model type-->
-        <srmd:ClassificationEntry keyword="trafficparticipant.type">Type of traffic participant, eg: Car, Truck, Bus, 2 Wheelers, Pedestrian, …</srmd:ClassificationEntry>
-        <srmd:ClassificationEntry keyword="trafficparticipant.name">Actual Name of the real HW represented by the model, eg for Car, Truck, Bus, 2 Wheelers, …</srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="trafficparticipant.type">Car, Truck, Bus</srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="trafficparticipant.name">-</srmd:ClassificationEntry>
         <srmd:ClassificationEntry keyword="trafficparticipant.version">Actual Version of the real HW represented by the model, eg for Car, Truck, Bus, 2 Wheelers, …</srmd:ClassificationEntry>
         <srmd:ClassificationEntry keyword="trafficparticipant.actions-supported.OSI-FollowTrajectoryAction"> yes, no, can reject</srmd:ClassificationEntry>
         <srmd:ClassificationEntry keyword="trafficparticipant.actions-supported.OSI-FollowPathAction"> yes, no, can reject</srmd:ClassificationEntry>
