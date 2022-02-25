@@ -16,6 +16,7 @@ buildFMU1804:
   artifacts:
       paths:
         - lib/ikaDriverAgent.fmu
+  allow_failure: true
 
 buildFMU2004:
   image: ubuntu:20.04

@@ -22,6 +22,9 @@ endif()
 # FMU output directory
 set(FMU_OUTDIR "${CMAKE_SOURCE_DIR}/lib" CACHE STRING "Fmu output directory")
 
+# Debug output directory
+add_definitions(-DDEBUG_OUTDIR="${CMAKE_SOURCE_DIR}/debug")
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(LINK_WITH_SHARED_OSI ON CACHE BOOL "Link FMU with shared OSI library instead of statically linking")
@@ -124,6 +127,7 @@ add_library(${PROJECT_NAME} SHARED
 	src/OSMPTrafficAgent.cpp 
 	src/IkaAgent.cpp 
 	src/OsiConverter.cpp 
+	src/Logger.cpp 
 	src/VehicleModel.cpp
 	src/PrimaryController.cpp)
 
@@ -163,6 +167,7 @@ add_executable(${PROJECT_NAME}_ositrace
 	src/IkaAgent.cpp
 	src/VehicleModel.cpp
 	src/OsiConverter.cpp
+	src/Logger.cpp
 	src/PrimaryController.cpp
 	test/osiTraceTest.cpp)
 target_link_libraries(${PROJECT_NAME}_ositrace
