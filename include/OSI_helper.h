@@ -589,41 +589,23 @@ void createGraph(osi3::GroundTruth* ground_truth, std::vector<int> adj[]) {
 
     for (int j = 0;
          j < ground_truth->lane(i).classification().lane_pairing_size(); j++) {
-      if (ground_truth->lane(i)
-            .classification()
-            .centerline_is_driving_direction()) {
-        // if
-        // (ground_truth->lane(i).classification().lane_pairing(j).successor_lane_id().value()
-        // == ground_truth->lane(i).id().value())
-        //	adj[i].push_back(findLaneId(ground_truth,
-        // ground_truth->lane(i).classification().lane_pairing(j).antecessor_lane_id().value()));
-        if (ground_truth->lane(i)
-              .classification()
-              .lane_pairing(j)
-              .antecessor_lane_id()
-              .value() == ground_truth->lane(i).id().value())
-          adj[i].push_back(findLaneId(ground_truth, ground_truth->lane(i)
-                                                      .classification()
-                                                      .lane_pairing(j)
-                                                      .successor_lane_id()
-                                                      .value()));
-
-      } else {
-        // if
-        // (ground_truth->lane(i).classification().lane_pairing(j).antecessor_lane_id().value()
-        // == ground_truth->lane(i).id().value())
-        //	adj[i].push_back(findLaneId(ground_truth,
-        // ground_truth->lane(i).classification().lane_pairing(j).successor_lane_id().value()));
-        if (ground_truth->lane(i)
-              .classification()
-              .lane_pairing(j)
-              .successor_lane_id()
-              .value() == ground_truth->lane(i).id().value())
-          adj[i].push_back(findLaneId(ground_truth, ground_truth->lane(i)
-                                                      .classification()
+      
+      int ant_id = ground_truth->lane(i).classification()
                                                       .lane_pairing(j)
                                                       .antecessor_lane_id()
-                                                      .value()));
+                                                      .value();
+
+      int suc_id = ground_truth->lane(i).classification()
+                                                      .lane_pairing(j)
+                                                      .successor_lane_id()
+                                                      .value();
+
+      if (ground_truth->lane(i).classification().centerline_is_driving_direction()) {
+        if (suc_id == -1) continue;
+        adj[i].push_back(findLaneId(ground_truth, suc_id));
+      } else {
+        if (ant_id == -1) continue;
+        adj[i].push_back(findLaneId(ground_truth, ant_id));
       }
     }
   }

@@ -276,10 +276,10 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view,
       bool found_next_lane = true;
       while (found_next_lane) {
         auto *lane = findLane(lane_id, ground_truth);
+        found_next_lane = false;
 
         // iterate over all lane pairings
         for (auto &l_pairs : lane->classification().lane_pairing()) {
-          found_next_lane = false;
           int next_id, from_id;
 
           // set next_id of lane in front of signal as well as from_id
@@ -291,11 +291,11 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view,
             from_id = l_pairs.antecessor_lane_id().value();
           }
 
-          // break when another intersection is reached
-          if (findLane(next_id, ground_truth)->classification().type() == osi3::Lane_Classification_Type_TYPE_INTERSECTION) break;
+          // break if road end is reached
+          if (next_id == -1) break;
 
-          // from_id is only equal to current lane_id in openPASS OSI
-          if (open_pass && from_id != lane_id) continue;
+          // break if another intersection is reached
+          if (findLane(next_id, ground_truth)->classification().type() == osi3::Lane_Classification_Type_TYPE_INTERSECTION) break;
 
           // add new lane to junction path
           found_next_lane = true;
