@@ -10,19 +10,14 @@
 #pragma once
 #include <cmath>
 #include <vector>
-#include <fstream>
 #include <iostream>
-#include <sys/stat.h>
-
-#include <nlohmann/json.hpp>
 
 #include "AgentModel.h"
 #include "Interface.h"
 #include "OsiConverter.h"
+#include "Logger.h"
 #include "PrimaryController.h"
 #include "VehicleModel.h"
-
-using json = nlohmann::json;
 
 class IkaAgent : public AgentModel {
  public:
@@ -47,16 +42,14 @@ class IkaAgent : public AgentModel {
  private:
   bool initialized_ = false;
 
-  // debug information logger
-  int ego_id_;
-  json json_logger;
-  int json_counter = 0;
-
   // vehicle
   VehicleModel vehicle_;
 
   // converter
   OsiConverter converter_;
+
+  // logger
+  Logger logger;
 
   // pointers
   agent_model::State *driver_state_;
@@ -68,5 +61,4 @@ class IkaAgent : public AgentModel {
 
   void init(osi3::BaseMoving &host);
   int buildTrafficUpdate(osi3::TrafficUpdate &traffic_update);
-  void saveDebugInformation(double time);
 };
