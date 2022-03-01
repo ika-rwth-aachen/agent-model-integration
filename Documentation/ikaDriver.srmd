@@ -14,21 +14,21 @@
 		
 
 		<!-- Optional TrafficParticipant related information if applicable for model type-->
-        <srmd:ClassificationEntry keyword="trafficparticipant.type">Car, Truck, Bus</srmd:ClassificationEntry>
-        <srmd:ClassificationEntry keyword="trafficparticipant.name">-</srmd:ClassificationEntry>
-        <srmd:ClassificationEntry keyword="trafficparticipant.version">Actual Version of the real HW represented by the model, eg for Car, Truck, Bus, 2 Wheelers, …</srmd:ClassificationEntry>
-        <srmd:ClassificationEntry keyword="trafficparticipant.actions-supported.OSI-FollowTrajectoryAction"> yes, no, can reject</srmd:ClassificationEntry>
-        <srmd:ClassificationEntry keyword="trafficparticipant.actions-supported.OSI-FollowPathAction"> yes, no, can reject</srmd:ClassificationEntry>
-        <srmd:ClassificationEntry keyword="trafficparticipant.actions-supported.OSI-AcquireGlobalPositionAction"> yes, no, can reject</srmd:ClassificationEntry>
-        <srmd:ClassificationEntry keyword="trafficparticipant.actions-supported.OSI-LaneChangeAction"> yes, no, can reject</srmd:ClassificationEntry>
-        <srmd:ClassificationEntry keyword="trafficparticipant.actions-supported.OSI-SpeedAction"> yes, no, can reject</srmd:ClassificationEntry>
-        <srmd:ClassificationEntry keyword="trafficparticipant.actions-supported.OSI-AbortActionsAction"> yes, no, can reject</srmd:ClassificationEntry>
-        <srmd:ClassificationEntry keyword="trafficparticipant.actions-supported.OSI-EndActionsAction"> yes, no, can reject</srmd:ClassificationEntry>
-        <srmd:ClassificationEntry keyword="trafficparticipant.actions-supported.OSI-CustomAction"> yes, no, can reject</srmd:ClassificationEntry>
-        <srmd:ClassificationEntry keyword="trafficparticipant.actions-supported.OSI-LongitudinalDistanceAction"> yes, no, can reject</srmd:ClassificationEntry>
-        <srmd:ClassificationEntry keyword="trafficparticipant.actions-supported.OSI-LaneOffsetAction"> yes, no, can reject</srmd:ClassificationEntry>
-        <srmd:ClassificationEntry keyword="trafficparticipant.actions-supported.OSI-LateralDistanceAction"> yes, no, can reject</srmd:ClassificationEntry>
-        <srmd:ClassificationEntry keyword="trafficparticipant.actions-supported.OSI-TeleportAction"> yes, no, can reject</srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="trafficparticipant.type">Car</srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="trafficparticipant.name">ika-driver</srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="trafficparticipant.version">-</srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="trafficparticipant.actions-supported.OSI-FollowTrajectoryAction">yes but ignore time stamps</srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="trafficparticipant.actions-supported.OSI-FollowPathAction">yes</srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="trafficparticipant.actions-supported.OSI-AcquireGlobalPositionAction">yes</srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="trafficparticipant.actions-supported.OSI-LaneChangeAction">not yet</srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="trafficparticipant.actions-supported.OSI-SpeedAction">yes</srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="trafficparticipant.actions-supported.OSI-AbortActionsAction">no</srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="trafficparticipant.actions-supported.OSI-EndActionsAction">no</srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="trafficparticipant.actions-supported.OSI-CustomAction">no</srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="trafficparticipant.actions-supported.OSI-LongitudinalDistanceAction">no</srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="trafficparticipant.actions-supported.OSI-LaneOffsetAction">not yet</srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="trafficparticipant.actions-supported.OSI-LateralDistanceAction">no</srmd:ClassificationEntry>
+        <srmd:ClassificationEntry keyword="trafficparticipant.actions-supported.OSI-TeleportAction">not yet</srmd:ClassificationEntry>
 
 
         <!-- Model related information -->
