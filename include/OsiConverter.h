@@ -37,7 +37,6 @@ class OsiConverter {
 
  private:
 
-  bool open_pass = true;
   bool initialized = false;
   
   // global path vectors
