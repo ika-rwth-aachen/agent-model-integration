@@ -40,11 +40,11 @@ def plotHorizon(args):
         axs[0, 1].set_title('ds values')
         axs[0, 1].set(ylabel='ds')
 
-        axs[1, 0].plot(psi)
+        axs[1, 0].plot(ds, psi)
         axs[1, 0].set_title('psi values')
         axs[1, 0].set(ylabel='psi')
 
-        axs[1, 1].plot(kappa)
+        axs[1, 1].plot(ds, kappa)
         axs[1, 1].set_title('kappa values')
         axs[1, 1].set(ylabel='kappa')
         
