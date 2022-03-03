@@ -438,6 +438,7 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
 
     osi3::TrafficLight light = ground_truth->traffic_light(i);
     osi3::TrafficLight_Classification cls = light.classification();
+    Point2D signal_point(light.base().position().x(), light.base().position().y());
 
     // check if traffic light is assigned along the route
     bool assigned = false;
@@ -458,23 +459,44 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
       }
     }
 
-    // skip a non-assigned signal    
+    // find assigned lane if non-assigned directly    
+    if (!assigned && cls.assigned_lane_id_size() == 0){
+
+      // find assigned lane_id
+      int assigned_lane_id = closestLane(ground_truth, signal_point);
+
+      // check if lane on route
+      auto signal_lane = find(lanes_.begin(), lanes_.end(), assigned_lane_id);
+      if (signal_lane != lanes_.end()) {
+        assigned = true;
+      }
+    };
+
+    // continue if not assigned to route
     if (!assigned) continue;
+
+    // continue if off, flashing, counting, unknown or other
+    if (cls.mode() != osi3::TrafficLight_Classification_Mode_MODE_CONSTANT)
+      continue;
 
     // projection of signal position to centerline
     Point2D centerline_point;
-    Point2D signal_point(light.base().position().x(), light.base().position().y());
     closestCenterlinePoint(signal_point, path_centerline_, centerline_point);
     traffic_light_positions.push_back(signal_point);
 
     // save all original signal ids
-    traffic_light_ids.push_back(light.id().value());
+    traffic_light_ids.push_back(i);
 
     // add signal with id
     input.signals[signal].id = signal + 1;
 
     // ds along centerline to reach signal 
     input.signals[signal].ds = xy2SSng(ego_centerline_point_, centerline_point, path_centerline_, ego_base_.orientation().yaw());
+    
+    // set defaults
+    input.signals[signal].type = agent_model::SignalType::SIGNAL_TLS;
+    input.signals[signal].subsignal = false;
+    input.signals[signal].sign_is_in_use = true;
 
     // set Color and type/icon
     if (cls.color() == osi3::TrafficLight_Classification_Color_COLOR_RED) {
@@ -562,6 +584,7 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
     input.signals[signal].ds = xy2SSng(ego_centerline_point_, centerline_point, path_centerline_, ego_base_.orientation().yaw());
 
     // set defaults
+    input.signals[signal].type = agent_model::SignalType::SIGNAL_TLS;
     input.signals[signal].subsignal = false;
     input.signals[signal].sign_is_in_use = true;
 
