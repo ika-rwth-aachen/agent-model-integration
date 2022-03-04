@@ -440,15 +440,22 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
     osi3::TrafficLight_Classification cls = light.classification();
     Point2D signal_point(light.base().position().x(), light.base().position().y());
 
+    // continue if off, flashing, counting, unknown or other
+    if (cls.mode() != osi3::TrafficLight_Classification_Mode_MODE_CONSTANT)
+      continue;
+
     // check if traffic light is assigned along the route
     bool assigned = false;
 
     // iterate over all assigned lanes
     for (int j = 0; j < cls.assigned_lane_id_size(); j++) {
 
-      // add lane to signal_lanes
+      // skip if lane already has a valid signal 
       if (find(signal_lanes.begin(), signal_lanes.end(),
-               cls.assigned_lane_id(j).value()) == signal_lanes.end()) {
+               cls.assigned_lane_id(j).value()) != signal_lanes.end()) {
+        continue;
+      }
+      else {
         signal_lanes.push_back(cls.assigned_lane_id(j).value());
       }
 
@@ -459,25 +466,8 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
       }
     }
 
-    // find assigned lane if non-assigned directly    
-    if (!assigned && cls.assigned_lane_id_size() == 0){
-
-      // find assigned lane_id
-      int assigned_lane_id = closestLane(ground_truth, signal_point);
-
-      // check if lane on route
-      auto signal_lane = find(lanes_.begin(), lanes_.end(), assigned_lane_id);
-      if (signal_lane != lanes_.end()) {
-        assigned = true;
-      }
-    };
-
     // continue if not assigned to route
     if (!assigned) continue;
-
-    // continue if off, flashing, counting, unknown or other
-    if (cls.mode() != osi3::TrafficLight_Classification_Mode_MODE_CONSTANT)
-      continue;
 
     // projection of signal position to centerline
     Point2D centerline_point;
@@ -646,6 +636,8 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
     signal++;
   }
 
+  // TODO search for potential road markings and match them to modify ds
+  
   // fill remaining signals with default values
   for (int i = signal; i < agent_model::NOS; i++) {
     input.signals[i].id = 127;
