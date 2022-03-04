@@ -114,8 +114,7 @@ void OsiConverter::trafficCommandToLanes(osi3::SensorView &sensor_view,
       osi3::TrafficAction_AcquireGlobalPositionAction position =
         traffic_command.action(i).acquire_global_position_action();
 
-      Point2D dest_point =
-        Point2D(position.position().x(), position.position().y());
+      dest_point = Point2D(position.position().x(), position.position().y());
 
       lanes_.clear();
       futureLanes(ground_truth, starting_lane_idx, dest_point, lanes_);
@@ -132,7 +131,7 @@ void OsiConverter::trafficCommandToLanes(osi3::SensorView &sensor_view,
         traffic_command.action(i).follow_trajectory_action();
       traj_action_id_ = traj.action_header().action_id().value();
 
-      Point2D dest_point = Point2D(
+      dest_point = Point2D(
         traj.trajectory_point(traj.trajectory_point_size() - 1).position().x(),
         traj.trajectory_point(traj.trajectory_point_size() - 1).position().y());
 
@@ -151,7 +150,7 @@ void OsiConverter::trafficCommandToLanes(osi3::SensorView &sensor_view,
         traffic_command.action(i).follow_path_action();
       path_action_id_ = path.action_header().action_id().value();
 
-      Point2D dest_point =
+      dest_point =
         Point2D(path.path_point(path.path_point_size() - 1).position().x(),
                 path.path_point(path.path_point_size() - 1).position().y());
 
@@ -182,7 +181,7 @@ void OsiConverter::trafficCommandToLanes(osi3::SensorView &sensor_view,
       pos = ego_lane_ptr_->classification().centerline().size() - 1;
     }
 
-    Point2D dest_point =
+    dest_point =
       Point2D(ego_lane_ptr_->classification().centerline(pos).x(),
               ego_lane_ptr_->classification().centerline(pos).y());
 
@@ -194,7 +193,9 @@ void OsiConverter::trafficCommandToLanes(osi3::SensorView &sensor_view,
   mapLanes(ground_truth, lane_mapping_, ego_lane_ptr_, lanes_);
 
   // print lanes
-  std::cout << "This are the lanes to pass: ";
+  std::cout << "Destination at: " 
+    <<  dest_point.x << "," << dest_point.y << "\n";
+  std::cout << "With lanes to pass: ";
   for (auto &lane : lanes_) std::cout << lane << " ";
   std::cout << std::endl;
 }
@@ -337,8 +338,8 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view,
  * @brief classifies the host vehicle's path as either
  * TURN_RIGHT | TURN_LEFT | STRAIGHT (default)
  * based on curvature of the first lane with type INTERSECTION on path
- * @param sensor_view
- * @param input
+ * @param sensor_view osi sensor view from first time step
+ * @param input agent_models input
  */
 void OsiConverter::classifyManeuver(osi3::SensorView &sensor_view,
                                     agent_model::Input &input) {
@@ -433,8 +434,8 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
   // iterate over all traffic lights
   for (int i = 0; i < ground_truth->traffic_light_size(); i++) {
 
-    // only consider NOTL signals
-    if (signal >= agent_model::NOTL) break;
+    // break when signals array is full
+    if (signal >= agent_model::NOS-1) break;
 
     osi3::TrafficLight light = ground_truth->traffic_light(i);
     osi3::TrafficLight_Classification cls = light.classification();
@@ -532,7 +533,7 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
   for (int i = 0; i < ground_truth->traffic_sign_size(); i++) {
 
     // only consider NOTL signals
-    if (signal >= agent_model::NOS) break;
+    if (signal >= agent_model::NOS-1) break;
 
     osi3::TrafficSign sign = ground_truth->traffic_sign(i);
     osi3::TrafficSign_MainSign_Classification cls =
@@ -638,13 +639,22 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
 
   // TODO search for potential road markings and match them to modify ds
 
-  // fill remaining signals with default values
-  for (int i = signal; i < agent_model::NOS; i++) {
+  // fill all but last remaining signals with default values
+  for (int i = signal; i < agent_model::NOS-1; i++) {
     input.signals[i].id = 127;
     input.signals[i].ds = INFINITY;
     input.signals[i].type = agent_model::SIGNAL_NOT_SET;
     input.signals[i].value = 0;
   }
+
+  // convention: Last signal is simulation destination.
+  // Set id = NOS
+  signal = agent_model::NOS-1;
+  input.signals[signal].id = agent_model::NOS;
+  input.signals[signal].ds = xy2SSng(ego_centerline_point_, dest_point, 
+                          path_centerline_, ego_base_.orientation().yaw());
+  input.signals[signal].type = agent_model::SIGNAL_STOP;
+  input.signals[signal].value = 0;
 }
 
 void OsiConverter::fillTargets(osi3::SensorView &sensor_view,

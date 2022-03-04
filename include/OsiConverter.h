@@ -66,6 +66,9 @@ class OsiConverter {
   Point2D ego_position_;
   Point2D ego_centerline_point_;
 
+  // where to end the simulation
+  Point2D dest_point;
+  
   // helper functions
   
   void preprocess(osi3::SensorView &sensor_view,

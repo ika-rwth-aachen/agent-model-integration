@@ -753,10 +753,10 @@ void futureLanes(osi3::GroundTruth* ground_truth, const int& start_idx,
   // destination INDEX
   int dest_idx;
 
-  std::cout << "destination :" << destination.x << "," << destination.y << "\n";
+  //std::cout << "destination :" << destination.x << "," << destination.y << "\n";
   int dest_id = closestLane(ground_truth, destination);
   dest_idx = findLaneId(ground_truth, dest_id);
-  std::cout << " on lane " << dest_id << std::endl;
+  //std::cout << " on lane " << dest_id << std::endl;
   // Graph setup
   // create adjacency list for graph representing lane connections
   std::vector<int> adj[ground_truth->lane_size()];
