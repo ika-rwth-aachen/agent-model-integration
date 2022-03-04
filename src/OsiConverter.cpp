@@ -425,8 +425,8 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
   osi3::GroundTruth *ground_truth = sensor_view.mutable_global_ground_truth();
 
   int signal = 0;
-  std::vector<int> signal_lanes;        // currently filled, but unused
-
+  
+  std::vector<int> signal_lanes;  
   std::vector<int> traffic_light_ids;            
   std::vector<Point2D> traffic_light_positions;
 
@@ -637,7 +637,7 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
   }
 
   // TODO search for potential road markings and match them to modify ds
-  
+
   // fill remaining signals with default values
   for (int i = signal; i < agent_model::NOS; i++) {
     input.signals[i].id = 127;
