@@ -67,7 +67,7 @@ class OsiConverter {
   Point2D ego_centerline_point_;
 
   // where to end the simulation
-  Point2D dest_point;
+  Point2D dest_point_;
   
   // helper functions
   

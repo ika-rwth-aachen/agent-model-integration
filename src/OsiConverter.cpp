@@ -114,10 +114,10 @@ void OsiConverter::trafficCommandToLanes(osi3::SensorView &sensor_view,
       osi3::TrafficAction_AcquireGlobalPositionAction position =
         traffic_command.action(i).acquire_global_position_action();
 
-      dest_point = Point2D(position.position().x(), position.position().y());
+      dest_point_ = Point2D(position.position().x(), position.position().y());
 
       lanes_.clear();
-      futureLanes(ground_truth, starting_lane_idx, dest_point, lanes_);
+      futureLanes(ground_truth, starting_lane_idx, dest_point_, lanes_);
     }
 
     // take end position of trajectory for lane calculation
@@ -131,12 +131,12 @@ void OsiConverter::trafficCommandToLanes(osi3::SensorView &sensor_view,
         traffic_command.action(i).follow_trajectory_action();
       traj_action_id_ = traj.action_header().action_id().value();
 
-      dest_point = Point2D(
+      dest_point_ = Point2D(
         traj.trajectory_point(traj.trajectory_point_size() - 1).position().x(),
         traj.trajectory_point(traj.trajectory_point_size() - 1).position().y());
 
       lanes_.clear();
-      futureLanes(ground_truth, starting_lane_idx, dest_point, lanes_);
+      futureLanes(ground_truth, starting_lane_idx, dest_point_, lanes_);
     }
 
     // take end position of path for lane calculation
@@ -150,12 +150,12 @@ void OsiConverter::trafficCommandToLanes(osi3::SensorView &sensor_view,
         traffic_command.action(i).follow_path_action();
       path_action_id_ = path.action_header().action_id().value();
 
-      dest_point =
+      dest_point_ =
         Point2D(path.path_point(path.path_point_size() - 1).position().x(),
                 path.path_point(path.path_point_size() - 1).position().y());
 
       lanes_.clear();
-      futureLanes(ground_truth, starting_lane_idx, dest_point, lanes_);
+      futureLanes(ground_truth, starting_lane_idx, dest_point_, lanes_);
     }
 
     // speed action - no lane calculation
@@ -175,18 +175,18 @@ void OsiConverter::trafficCommandToLanes(osi3::SensorView &sensor_view,
 
   // check if lanes_ still empty (e.g. when no traffic_command is available)
   if (lanes_.size() == 0) {
-    // set dest_point to end of lane
+    // set dest_point_ to end of lane
     int pos = 0;
     if (ego_lane_ptr_->classification().centerline_is_driving_direction()) {
       pos = ego_lane_ptr_->classification().centerline().size() - 1;
     }
 
-    dest_point =
+    dest_point_ =
       Point2D(ego_lane_ptr_->classification().centerline(pos).x(),
               ego_lane_ptr_->classification().centerline(pos).y());
 
     lanes_.clear();
-    futureLanes(ground_truth, starting_lane_idx, dest_point, lanes_);
+    futureLanes(ground_truth, starting_lane_idx, dest_point_, lanes_);
   }
 
   // fill lane_mapping_
@@ -194,7 +194,7 @@ void OsiConverter::trafficCommandToLanes(osi3::SensorView &sensor_view,
 
   // print lanes
   std::cout << "Destination at: " 
-    <<  dest_point.x << "," << dest_point.y << "\n";
+    <<  dest_point_.x << "," << dest_point_.y << "\n";
   std::cout << "With lanes to pass: ";
   for (auto &lane : lanes_) std::cout << lane << " ";
   std::cout << std::endl;
@@ -651,7 +651,7 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
   // Set id = NOS
   signal = agent_model::NOS-1;
   input.signals[signal].id = agent_model::NOS;
-  input.signals[signal].ds = xy2SSng(ego_centerline_point_, dest_point, 
+  input.signals[signal].ds = xy2SSng(ego_centerline_point_, dest_point_, 
                           path_centerline_, ego_base_.orientation().yaw());
   input.signals[signal].type = agent_model::SIGNAL_STOP;
   input.signals[signal].value = 0;
