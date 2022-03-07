@@ -425,6 +425,8 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
                                agent_model::Input &input) {
   osi3::GroundTruth *ground_truth = sensor_view.mutable_global_ground_truth();
 
+  double ds_gap = 5;
+
   int signal = 0;
   
   std::vector<int> signal_lanes;  
@@ -482,7 +484,8 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
     input.signals[signal].id = signal + 1;
 
     // ds along centerline to reach signal 
-    input.signals[signal].ds = xy2SSng(ego_centerline_point_, centerline_point, path_centerline_, ego_base_.orientation().yaw());
+    double ds = xy2SSng(ego_centerline_point_, centerline_point, path_centerline_, ego_base_.orientation().yaw());
+    input.signals[signal].ds = ds - ds_gap;
     
     // set defaults
     input.signals[signal].type = agent_model::SignalType::SIGNAL_TLS;
@@ -571,8 +574,9 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
     // add signal with id
     input.signals[signal].id = signal + 1; 
 
-      // ds along centerline to reach signal 
-    input.signals[signal].ds = xy2SSng(ego_centerline_point_, centerline_point, path_centerline_, ego_base_.orientation().yaw());
+    // ds along centerline to reach signal 
+    double ds = xy2SSng(ego_centerline_point_, centerline_point, path_centerline_, ego_base_.orientation().yaw());
+    input.signals[signal].ds = ds - ds_gap;
 
     // set defaults
     input.signals[signal].type = agent_model::SignalType::SIGNAL_TLS;
