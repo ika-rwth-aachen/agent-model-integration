@@ -1,11 +1,19 @@
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
+  USER_AUTH_CODE: "geller:glpat-q8KxApwGqCAMWNaak2qW"
+  OPENPASS_URL: "gitlab.ika.rwth-aachen.de/setlevel/openpass.git"
+
+stages:
+  - build
+  - test
+
 before_script:
   - apt update
   - DEBIAN_FRONTEND="noninteractive" apt install -y cmake build-essential git
-  #- apt install -y libprotobuf-dev protobuf-compiler
-  #- git submodule sync --recursive
-  #- git submodule update --init --recursive
+  - git clone https://$USER_AUTH_CODE@$OPENPASS_URL /openPASS
+  - apt install -y libglib2.0-dev python3-pip python3-dev
+  - pip3 install --upgrade pip
+  - pip3 install -r /openPASS/pyOpenPASS/requirements.txt
 
 buildFMU1804:
   image: ubuntu:18.04
@@ -27,3 +35,63 @@ buildFMU2004:
   artifacts:
       paths:
         - lib/ikaDriverAgent.fmu
+
+generic:
+  image: ubuntu:20.04
+  stage: test
+  dependencies:
+    - buildFMU2004
+  script:
+    - cp lib/ikaDriverAgent.fmu /ikaDriverAgent.fmu
+    - cd /openPASS/pyOpenPASS
+    - >-
+      python3 ./main.py 
+      -s /openPASS 
+      -r /openPASS/test 
+      -c /openPASS/test/end_to_end.json 
+      --scope generic
+
+velocity:
+  image: ubuntu:20.04
+  stage: test
+  dependencies: 
+    - buildFMU2004
+  script:
+    - cp lib/ikaDriverAgent.fmu /ikaDriverAgent.fmu
+    - cd /openPASS/pyOpenPASS
+    - >-
+      python3 ./main.py 
+      -s /openPASS 
+      -r /openPASS/test 
+      -c /openPASS/test/end_to_end.json 
+      --scope velocity
+
+reachend:
+  image: ubuntu:20.04
+  stage: test
+  dependencies:
+    - buildFMU2004
+  script:
+    - cp lib/ikaDriverAgent.fmu /ikaDriverAgent.fmu
+    - cd /openPASS/pyOpenPASS
+    - >-
+      python3 ./main.py 
+      -s /openPASS 
+      -r /openPASS/test 
+      -c /openPASS/test/end_to_end.json 
+      --scope reachend
+
+toffset:
+  image: ubuntu:20.04
+  stage: test
+  dependencies:
+    - buildFMU2004
+  script:
+    - cp lib/ikaDriverAgent.fmu /ikaDriverAgent.fmu
+    - cd /openPASS/pyOpenPASS
+    - >-
+      python3 ./main.py 
+      -s /openPASS 
+      -r /openPASS/test 
+      -c /openPASS/test/end_to_end.json 
+      --scope toffset
