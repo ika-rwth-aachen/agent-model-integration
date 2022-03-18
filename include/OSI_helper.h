@@ -749,7 +749,6 @@ int closestLane(osi3::GroundTruth* ground_truth, const Point2D& point) {
 void futureLanes(osi3::GroundTruth* ground_truth, const int& start_idx,
                   const Point2D& destination, std::vector<int>& future_lanes) {
 
-  osi3::MovingObject host;
   // destination INDEX
   int dest_idx;
 
