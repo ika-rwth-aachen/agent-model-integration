@@ -16,7 +16,7 @@ The implementation uses the [OSI Sensor Model Packaging (OSMP)](https://github.c
 Fig. 1 illustrates the wrapping around the actual behavior model to end up with an encapsulated FMU. The input of the FMU consists of an `osi3::SensorView`  for the environment representation and an `osi3::TrafficCommand` which holds information on the agent's task in the simulation run. On the output side the simulator can either use the provided `osi3::TrafficUpdate` to manage the updated pose of the agent or forward the generated `sl4to5::DynamicsRequest` message to another module that then calculates an `osi3::TrafficUpdate` from that.  
 Inside the FMU, internal interfaces are used to feed the ika behavior model and then calculate its new position with a simple vehicle model and controllers for pedal values and the steering angle.
 
-![osmp](doc/drivermodel_osmp.png)  
+![osmp](Documentation/drivermodel_osmp.png)  
 Fig. 1: OSMP wrapping of the driver model  
 
 ### Behavior Model
@@ -27,13 +27,13 @@ On the left side of Fig. 2 the input interface is shown. It consists of informat
 The *Processing* layer takes the environment and traffic data and enriches them, e.g., with TTC or THW measures. Then, the most suitable maneuver is selected and modeled by conscious guiding variables (e.g. a time headway to a leading vehicle that should be maintained). Conscious variables are controlled by the sub-conscious variables acceleration and curvature (*Note:* `Z-micro` corresponds to the `sl4to5::DynamicsRequest` message here).  
 The *Action* column is actually located outside the "ika Agent Model" block from Fig. 1, but modeled in the most right block of Fig. 1.
 
-![architecutre](doc/04_architecture-en.svg)  
+![architecutre](Documentation/04_architecture-en.svg)  
 Fig. 2: Behavior model architecture (taken from [2])  
 
 #### Basic Maneuvers
 This section should help enlighten some blocks within the *Processing* column of Fig. 2. The driver model is implemented such that basic driving maneuvers are modeled which enables the model to perform most driving tasks that are required in urban scenarios (cf. [1]). Those capabilities or basic maneuvers are illustrated as a state diagram in Fig. 3.
 
-![states](doc/states-original.svg)  
+![states](Documentation/states-original.svg)  
 Fig. 3: Behavior model basic maneuvers (taken from [2])  
 
 **TODO: brief description of state diagram**
