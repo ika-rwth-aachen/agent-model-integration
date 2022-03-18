@@ -45,7 +45,83 @@ drParam->follow.timeHeadway  // The time headway the driver tries to reach durin
 ```
 
 ## Interface
-The simulation environment should fill the `osi3::GroundTruth` almost completely. A detailed list will follow.
+
+### OSI Input Fields
+The following fields are required as OSI inputs for the driver model
+
+```
+sensor_view
+  host_vehicle_id
+  global_ground_truth
+    moving_object
+      base --> all except base_polygon
+      id
+      assigned_lane_id --> Is deprecated in osi. Will be changed to classification soon
+      vehicle_classification --> maybe fill that as well. The deprecated signal above will be changed
+    lane
+      id
+      classification
+        type --> type_intersection is important
+        is_host_vehicle_lane
+        centerline
+        centerline_is_driving_direction
+        left_adjacent_lane_id
+        right_adjacent_lane_id
+        lane_pairing
+        right_lane_boundary_id
+        left_lane_boundary_id
+        subtype
+    lane_boundary
+      id
+      boundary_line
+      classification --> not that important for now, but maybe in the future 
+    traffic_sign
+        main_sign
+          base
+            position
+          classification
+            assigned_lane
+            type
+            value
+    traffic_light
+      base --> all except base_polygon
+      id
+      classification
+        color
+        icon
+        assigned_lane_id
+    road_marking --> not right now but for stop lines in the future
+
+traffic_command
+  action --> the following actions can be considered right now
+    acquire_global_position_action
+    # path and trajectory are implemented the same as acquire position:
+    # the last point of the list is taken and a path along the centerlines
+    # ist planned. So it is not really a follow path/trajectory action
+    follow_path_action 
+    follow_trajectory_action
+    speed_action --> the desired velocity is updated
+```
+### OSI Output Fields
+The following fields are filled from the driver model and can be used by the simulator.
+
+```
+osi3
+  # Values computed by a simple vehicle model and PID controllers for pedal and steering
+  traffic_update
+    position (x,y)
+    velocity (x,y)
+    acceleration (x,y)
+    orientation (yaw)
+    orientation_rate (yaw)
+
+# Can be used when a separate dynamic module is used
+# Note: these are *desired* values from the behavior model
+setlevel4to5
+  dynamic_request
+    curvature_target
+    longitudinal_acceleration_target
+```
 
 ## Building Instructions
 The model can be build on Linux with `cmake` quite straight forward 
