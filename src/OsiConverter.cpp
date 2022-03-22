@@ -285,11 +285,13 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view,
 
           // set next_id of lane in front of signal as well as from_id
           if (lane->classification().centerline_is_driving_direction()) {
+            // only continue when antecessor exists
+            if (!l_pairs.has_antecessor_lane_id()) break;
             next_id = l_pairs.antecessor_lane_id().value();
-            from_id = l_pairs.successor_lane_id().value();
           } else {
+            // only continue when successor exists
+            if (!l_pairs.has_successor_lane_id()) break;
             next_id = l_pairs.successor_lane_id().value();
-            from_id = l_pairs.antecessor_lane_id().value();
           }
 
           // break if road end is reached
