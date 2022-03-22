@@ -158,9 +158,18 @@ int closestCenterlinePoint(const Point2D point, const std::vector<Point2D>& cl,
   if (min_i > 0 && (min_dist < distEnd || min_dist < distStart)) return min_i;
 
   // x,y beyond scope of cl
+
+  /*
+    comment DBE:
+    The remainder is very strange... check what this is for!
+    Makes no sense from the "cloest CL" point of view...
+    * Why not take front or back?
+    * For ne the hotfix cl.size() <= 2 instead of cl.size() < 2 works 
+       --> but not a sufficient solition
+  */
   if (distEnd < distStart) {
 
-    if (cl.size() < 2) {
+    if (cl.size() <= 2) {
       closest = cl.back();
       return cl.size();
     } else {
@@ -177,7 +186,7 @@ int closestCenterlinePoint(const Point2D point, const std::vector<Point2D>& cl,
       return cl.size();
     }
   } else {
-    if (cl.size() < 2) {
+    if (cl.size() <= 2) {
       closest = cl.front();
       return 0;
     } else {
@@ -727,7 +736,7 @@ int closestLane(osi3::GroundTruth* ground_truth, const Point2D& point) {
     int idx = closestCenterlinePoint(point, centerline, closest);
     double d = (closest.x - point.x) * (closest.x - point.x) +
                (closest.y - point.y) * (closest.y - point.y);
-    // std::cout <<cur_lane.id().value() << ":"<< d << " idx:" << idx<< "\n";
+    //std::cout <<cur_lane.id().value() << ":\t"<< d << "\tidx:" << idx << "\n";
     if (distance > d) {
       distance = d;
       dest_id = cur_lane.id().value();
