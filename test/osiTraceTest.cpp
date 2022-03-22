@@ -44,6 +44,7 @@ int main(int argc, char *argv[])
     //std::cout << "\nTrafficCommand: " << tc.action(0).has_acquire_global_position_action() << std::endl;
     if (suc_read_sv && suc_read_tc)
     {
+        up.add_update();
         testAgent.step(0, 0.01, sv, tc, up, dr);
     }
     
