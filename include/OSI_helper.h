@@ -942,6 +942,17 @@ double getNorm(osi3::Vector3d v) {
   return sqrt(pow(v.x(), 2) + pow(v.y(), 2) + pow(v.z(), 2));
 }
 
+/**
+ * @brief get wrapped angle to [-pi,pi]
+ *
+ * @param v vector
+ * @return euclidean norm
+ */
+double wrapAngle(double psi) {
+  return std::atan2(std::sin(psi), std::cos(psi));
+}
+
+
 void removeDuplicates(std::vector<Point2D> &v) {
   if (v.size() == 0) return;
 
