@@ -111,7 +111,7 @@ int xy2Curv(std::vector<Point2D> pos, std::vector<double>& s,
  * @param cl centerline (can also be boundary line)
  * @param closest point
  * @return index of the next centerline point following the projected point. 0
- * when before scope of cl, cl.size() when after
+ * when before scope of cl, cl.size()-1 when after
  */
 int closestCenterlinePoint(const Point2D point, const std::vector<Point2D>& cl,
                            Point2D& closest) {
@@ -171,7 +171,7 @@ int closestCenterlinePoint(const Point2D point, const std::vector<Point2D>& cl,
 
     if (cl.size() <= 2) {
       closest = cl.back();
-      return cl.size();
+      return cl.size()-1;
     } else {
       double l2 = (cl.back().x - cl[cl.size() - 2].x) *
                     (cl.back().x - cl[cl.size() - 2].x) +
@@ -378,8 +378,6 @@ double xy2SSng(const Point2D start, const Point2D end,
                const std::vector<Point2D>& cl, double start_psi) {
   double s = 0;
   Point2D start_centerline, end_centerline;
-  int start_idx = closestCenterlinePoint(start, cl, start_centerline);
-  int end_idx = closestCenterlinePoint(end, cl, end_centerline);
   if (cl.size() == 2) {
     double start_end_psi = atan2(end.y - start.y, end.x - start.x);
     // std::cout << "target dir: " << start_end_psi-start_psi << "\n";
