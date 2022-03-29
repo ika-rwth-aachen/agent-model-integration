@@ -281,7 +281,7 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view,
 
         // iterate over all lane pairings
         for (auto &l_pairs : lane->classification().lane_pairing()) {
-          int next_id, from_id;
+          int next_id;
 
           // set next_id of lane in front of signal as well as from_id
           if (lane->classification().centerline_is_driving_direction()) {
