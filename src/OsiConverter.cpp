@@ -21,7 +21,7 @@ void OsiConverter::convert(osi3::SensorView &sensor_view,
 
   fillVehicle(sensor_view, input);
   fillSignals(sensor_view, input);
-  fillTargets(sensor_view, input);
+  fillTargets(sensor_view, input, param);
   fillHorizon(sensor_view, input);
   fillLanes(sensor_view, input);
 }

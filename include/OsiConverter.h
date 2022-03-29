@@ -90,7 +90,7 @@ class OsiConverter {
   // filling functions
   void fillVehicle(osi3::SensorView &sensor_view, agent_model::Input &input);
   void fillSignals(osi3::SensorView &sensor_view, agent_model::Input &input);
-  void fillTargets(osi3::SensorView &sensor_view, agent_model::Input &input);
+  void fillTargets(osi3::SensorView &sensor_view, agent_model::Input &input, agent_model::Parameters &param);
   void fillHorizon(osi3::SensorView &sensor_view, agent_model::Input &input);
   void fillLanes(osi3::SensorView &sensor_view, agent_model::Input &input);
 };
