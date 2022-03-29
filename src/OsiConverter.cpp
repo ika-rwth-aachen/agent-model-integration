@@ -728,10 +728,13 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
                           path_centerline_, ego_base_.orientation().yaw());
   input.signals[signal].type = agent_model::SIGNAL_STOP;
   input.signals[signal].value = 0;
+  input.signals[signal].subsignal = false;
+  input.signals[signal].sign_is_in_use = true;
 }
 
 void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
-                               agent_model::Input &input) {
+                               agent_model::Input &input,
+                               agent_model::Parameters &param) {
   osi3::GroundTruth *ground_truth = sensor_view.mutable_global_ground_truth();
 
   // iterate over all targets
@@ -746,6 +749,7 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
     // set general properties
     input.targets[target].id = target + 1;
     input.targets[target].priority = agent_model::TARGET_PRIORITY_NOT_SET;
+    input.targets[target].position = agent_model::TARGET_NOT_RELEVANT;
     input.targets[target].dsIntersection = 0;    
     input.targets[target].ds = INFINITY;
     input.targets[target].d = 0;
@@ -770,6 +774,7 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
       if (std::find(intersection_lanes_.begin(), intersection_lanes_.end(),
                   tar.assigned_lane_id(j).value()) != intersection_lanes_.end()){
         input.targets[target].priority = agent_model::TARGET_ON_INTERSECTION;
+        input.targets[target].position = agent_model::TARGET_ON_JUNCTION;
       }
 
       // check if target on route
@@ -809,6 +814,7 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
 
       // set assigned lane id
       input.targets[target].lane = assigned_lane_idx;
+      input.targets[target].position = agent_model::TARGET_NOT_RELEVANT; // TODO: maybe specify this? 
     } 
     
     // compute if target (not on path and interesection) approaches intersection
@@ -821,33 +827,49 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
         bool approaching_junction = false;
 
         // target is on a yield lane to the heading to the junction
-        for (auto &yield_lane : yielding_lanes_) {
-          if (find(yield_lane.lane_ids.begin(), yield_lane.lane_ids.end(),
-                    assigned_lane.value()) != yield_lane.lane_ids.end()) {
-            input.targets[target].priority = agent_model::TARGET_ON_GIVE_WAY_LANE;
-            path_points = yield_lane.pts;
+        for (auto &junction_path : junction_paths_) {
+          if (find(junction_path.lane_ids.begin(), junction_path.lane_ids.end(),
+                    assigned_lane.value()) != junction_path.lane_ids.end()) {
+
+            if (junction_path.type == 1)
+              input.targets[target].priority = agent_model::TARGET_ON_PRIORITY_LANE;
+            else if (junction_path.type == 2)
+              input.targets[target].priority = agent_model::TARGET_ON_GIVE_WAY_LANE;
+            else
+              input.targets[target].priority = agent_model::TARGET_PRIORITY_NOT_SET;
+
+            path_points = junction_path.pts;
             approaching_junction = true;
             break;
           }
         }
         
-        // target is on a priority lane to the heading to the junction
-        for (auto &prioL : priority_lanes_) {
-          if (find(prioL.lane_ids.begin(), prioL.lane_ids.end(),
-                    assigned_lane.value()) != prioL.lane_ids.end()) {
-            input.targets[target].priority =
-              agent_model::TARGET_ON_PRIORITY_LANE;
-            path_points = prioL.pts;
-            approaching_junction = true;
-            break;
-          }
-        }
-
         // calculate distance to intersection if approaching intersection
         if (approaching_junction)
         {
-          input.targets[target].dsIntersection =
-            xy2s(Point2D(target_base.position().x(), target_base.position().y()), path_points.back(), path_points);  
+          double dsIntersection = xy2s(Point2D(target_base.position().x(), target_base.position().y()), path_points.back(), path_points);
+
+          input.targets[target].dsIntersection = dsIntersection;  
+
+          // compute position if cose enough
+          if (dsIntersection <= input.targets[target].v * param.stop.TMax)
+          {
+            double tol = M_PI/8;
+            double psi = input.targets[target].psi;
+
+            if (abs(wrapAngle(M_PI/2 - psi)) < tol)
+            {
+              input.targets[target].position = agent_model::TARGET_ON_RIGHT;
+            }
+            if (abs(wrapAngle(M_PI - psi)) < tol)
+            {
+              input.targets[target].position = agent_model::TARGET_ON_OPPOSITE;
+            }
+            if (abs(wrapAngle(-M_PI/2 - psi)) < tol)
+            {
+              input.targets[target].position = agent_model::TARGET_ON_LEFT;
+            }
+          }
           break;
         }
       }
@@ -869,6 +891,7 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
     input.targets[i].size.width = 0;
     input.targets[i].size.length = 0;
     input.targets[i].dsIntersection = 0;
+    input.targets[i].position = agent_model::TARGET_NOT_RELEVANT;
     input.targets[i].priority = agent_model::TARGET_PRIORITY_NOT_SET;
   }
 }
