@@ -245,23 +245,86 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view,
   // calculate s, psi, kappa from centerline
   xy2Curv(path_centerline_, path_s_, path_psi_, path_kappa_);
 
-  // generate junction paths for traffic signs
+  // generate junction paths for traffic lights
   std::vector<int> start_lane_ids;
+  for (auto &light : *ground_truth->mutable_traffic_light()) {
+
+    // create path from assigned lane of light backwards
+    for (auto &assigned_lane : light.classification().assigned_lane_id()) {
+
+      // every lane can be starting point for only ONE signal
+      int lane_id = assigned_lane.value();
+      if (std::find(start_lane_ids.begin(), start_lane_ids.end(), lane_id) !=
+          start_lane_ids.end())
+        continue;
+      start_lane_ids.push_back(lane_id);
+
+      // create junction_path
+      JunctionPath junction_path;
+      junction_path.signal_id = light.id().value();
+      junction_path.lane_ids.push_back(lane_id);
+
+      // create path until no next lane is found
+      bool found_next_lane = true;
+      while (found_next_lane) {
+        auto *lane = findLane(lane_id, ground_truth);
+        found_next_lane = false;
+
+        // iterate over all lane pairings
+        for (auto &l_pairs : lane->classification().lane_pairing()) {
+          int next_id, from_id;
+
+          // set next_id of lane in front of signal as well as from_id
+          if (lane->classification().centerline_is_driving_direction()) {
+            // only continue when antecessor exists
+            if (!l_pairs.has_antecessor_lane_id()) break;
+            next_id = l_pairs.antecessor_lane_id().value();
+          } else {
+            // only continue when successor exists
+            if (!l_pairs.has_successor_lane_id()) break;
+            next_id = l_pairs.successor_lane_id().value();
+          }
+
+          // break if road end is reached
+          if (next_id == -1) break;
+
+          // break if another intersection is reached
+          if (findLane(next_id, ground_truth)->classification().type() == osi3::Lane_Classification_Type_TYPE_INTERSECTION) break;
+
+          // add new lane to junction path
+          found_next_lane = true;
+          junction_path.lane_ids.push_back(next_id);
+          lane_id = next_id;
+          break;
+        }
+      }
+
+      // mark as dynamic type
+      junction_path.type = 0; 
+      
+      // push junction path to global junction_paths_
+      junction_paths_.push_back(junction_path);
+    }
+  }
+
+  // generate junction paths for traffic signs 
+  // assumption: sign starts always on same lane as the parent traffic light
   for (auto &sign : *ground_truth->mutable_traffic_sign()) {
 
-    // only RIGHT_OF_WAY and GIVE_WAY is supported
+    // only RIGHT_OF_WAY, GIVE_WAY and STOP are supported
     if (sign.main_sign().classification().type() !=
-          osi3::
-            TrafficSign_MainSign_Classification_Type_TYPE_RIGHT_OF_WAY_BEGIN &&
+      osi3::TrafficSign_MainSign_Classification_Type_TYPE_RIGHT_OF_WAY_BEGIN && 
         sign.main_sign().classification().type() !=
-          osi3::TrafficSign_MainSign_Classification_Type_TYPE_GIVE_WAY)
+          osi3::TrafficSign_MainSign_Classification_Type_TYPE_GIVE_WAY &&
+        sign.main_sign().classification().type() !=
+          osi3::TrafficSign_MainSign_Classification_Type_TYPE_STOP)
       continue;
 
     // create path from assigned lane of sign backwards
     for (auto &assigned_lane :
          sign.main_sign().classification().assigned_lane_id()) {
 
-      // every lane can be starting point for only ONE sign
+      // every lane can be starting point for only ONE signal
       int lane_id = assigned_lane.value();
       if (std::find(start_lane_ids.begin(), start_lane_ids.end(), lane_id) !=
           start_lane_ids.end())
@@ -308,26 +371,30 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view,
         }
       }
 
-      // push junction path to global lanes
+      // mark as priority path
       if (sign.main_sign().classification().type() ==
-          osi3::TrafficSign_MainSign_Classification_Type_TYPE_GIVE_WAY)
-        yielding_lanes_.push_back(junction_path);
-      else
-        priority_lanes_.push_back(junction_path);
+        osi3::TrafficSign_MainSign_Classification_Type_TYPE_RIGHT_OF_WAY_BEGIN)
+        junction_path.type = 1;
+
+      // mark as give way path
+      if (sign.main_sign().classification().type() ==
+        osi3::TrafficSign_MainSign_Classification_Type_TYPE_STOP ||
+          sign.main_sign().classification().type() ==
+        osi3::TrafficSign_MainSign_Classification_Type_TYPE_GIVE_WAY )
+        junction_path.type = 2;
+      
+      // push junction path to global junction_paths_
+      junction_paths_.push_back(junction_path);
     }
   }
 
   // flip global lanes and add points of centerlines
-  for (auto &yl : yielding_lanes_) {
+  for (auto &yl : junction_paths_) {
     std::reverse(yl.lane_ids.begin(), yl.lane_ids.end());
     for (auto &l : yl.lane_ids) getXY(findLane(l, ground_truth), yl.pts);
   }
-  for (auto &pl : priority_lanes_) {
-    std::reverse(pl.lane_ids.begin(), pl.lane_ids.end());
-    for (auto &l : pl.lane_ids) getXY(findLane(l, ground_truth), pl.pts);
-  }
 
-  // set interesection lanes
+  // set intersection lanes
   for (int i = 0; i < ground_truth->lane_size(); i++) {
     osi3::Lane lane = ground_truth->lane(i);
     if (ground_truth->lane(i).classification().type() ==
