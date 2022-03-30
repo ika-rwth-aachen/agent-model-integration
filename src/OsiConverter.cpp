@@ -104,7 +104,7 @@ void OsiConverter::trafficCommandToLanes(osi3::SensorView &sensor_view,
   osi3::GroundTruth *ground_truth = sensor_view.mutable_global_ground_truth();
 
   // find starting_lane_idx
-  int starting_lane_idx = findLaneId(ground_truth, ego_lane_id_);
+  int starting_lane_idx = findLaneIdx(ground_truth, ego_lane_id_);
 
   // iterate over all traffic commands
   for (int i = 0; i < traffic_command.action_size(); i++) {
@@ -954,7 +954,7 @@ void OsiConverter::fillLanes(osi3::SensorView &sensor_view,
   // initialize parameters
   auto it = lanes_.end();
   double distance_to_end = 0;
-  Point2D current_end_point = ego_lane_points.back();
+  /*Point2D current_end_point = ego_lane_points.back();
 
   // iterate backwards over path and increase distance_to_end over all lanes
   while (it != lanes_.begin()) {
@@ -971,13 +971,13 @@ void OsiConverter::fillLanes(osi3::SensorView &sensor_view,
 
     // update current_end_point
     current_end_point = tmp_lane_points.front();
-  }
+  }*/
 
   // get remaining distance on ego lane
-  double dist = xy2s(ego_centerline_point_, current_end_point, ego_lane_points);
+  double dist = xy2s(ego_centerline_point_, dest_point_, path_centerline_);
 
   // set road end in input struct
-  input.lanes[lane].closed = dist + distance_to_end;
+  input.lanes[lane].closed = dist;// + distance_to_end;
   input.lanes[lane].route = input.lanes[lane].closed;
   lane++;
 
