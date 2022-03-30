@@ -213,6 +213,11 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view,
 
   int gap_idx = 0;  // idx in path_centerline_ for free boundary lane points
 
+  // clear path variable when new path is generated
+  path_centerline_.clear();
+  path_kappa_.clear();
+  path_psi_.clear();
+  path_s_.clear();
   // get all relevant path points from lanes_
   for (auto &l : lanes_) {
     osi3::Lane *tmp_lane = findLane(l, ground_truth);
@@ -240,7 +245,7 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view,
 
   // remove duplicates (if ds is very small)
   removeDuplicates(path_centerline_);
-
+  
   // calculate s, psi, kappa from centerline
   xy2Curv(path_centerline_, path_s_, path_psi_, path_kappa_);
 
