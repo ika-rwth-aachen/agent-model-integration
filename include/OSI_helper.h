@@ -507,7 +507,7 @@ osi3::Lane* findLane(int id, osi3::GroundTruth* ground_truth) {
  * @param ground_truth
  * @param ID
  */
-int findLaneId(osi3::GroundTruth* ground_truth, int id) {
+int findLaneIdx(osi3::GroundTruth* ground_truth, int id) {
   for (int i = 0; i < ground_truth->lane_size(); i++) {
     if (ground_truth->lane(i).id().value() == id) return i;
   }
@@ -593,7 +593,7 @@ void mapLanes(osi3::GroundTruth* ground_truth,
 void createGraph(osi3::GroundTruth* ground_truth, std::vector<int> adj[]) {
 
   for (int i = 0; i < ground_truth->lane_size(); i++) {
-
+    
     for (int j = 0;
          j < ground_truth->lane(i).classification().lane_pairing_size(); j++) {
       
@@ -608,11 +608,13 @@ void createGraph(osi3::GroundTruth* ground_truth, std::vector<int> adj[]) {
                                                       .value();
 
       if (ground_truth->lane(i).classification().centerline_is_driving_direction()) {
-        if (suc_id == -1) continue;
-        adj[i].push_back(findLaneId(ground_truth, suc_id));
+        if (suc_id == -1 | suc_id == 0) continue;
+        int idx = findLaneIdx(ground_truth, suc_id);
+        if (idx >= 0) adj[i].push_back(idx);
       } else {
-        if (ant_id == -1) continue;
-        adj[i].push_back(findLaneId(ground_truth, ant_id));
+        if (ant_id == -1 | ant_id == 0) continue;
+        int idx = findLaneIdx(ground_truth, ant_id);
+        if (idx >= 0) adj[i].push_back(idx);
       }
     }
   }
@@ -815,7 +817,7 @@ void futureLanes(osi3::GroundTruth* ground_truth, const int& start_idx,
 
   //std::cout << "destination :" << destination.x << "," << destination.y << "\n";
   int dest_id = closestLane(ground_truth, destination);
-  dest_idx = findLaneId(ground_truth, dest_id);
+  dest_idx = findLaneIdx(ground_truth, dest_id);
   //std::cout << " on lane " << dest_id << std::endl;
   // Graph setup
   // create adjacency list for graph representing lane connections
