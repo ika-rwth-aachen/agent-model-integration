@@ -243,16 +243,12 @@ int calcXYGap(std::vector<Point2D> p1_p2, std::vector<Point2D>& pos, int idx) {
   // x(0) = x1, x(dx) = x2, x'(0) = cos(ang1), x'(dx) = cos(ang2)
   // y similar but with sin()
   // Remark: Those calculation are the solution to an ODE of the form A \ b = c
-  double ca_x = (-2 / pow(dx, 3)) * (dx - dx * cos(ang1)) +
-                (1 / pow(dx, 2)) * (cos(ang2) - cos(ang1));
-  double cb_x = (3 / pow(dx, 2)) * (dx - dx * cos(ang1)) +
-                (-1 / dx) * (cos(ang2) - cos(ang1));
+  double ca_x = (cos(ang1)*dx + 2*x1 - 2*x2 + dx*cos(ang2)) / pow(dx, 3);
+  double cb_x = (-2*cos(ang1)*dx - 3*x1 + 3*x2 - dx*cos(ang2)) / pow(dx, 2);
   double cc_x = cos(ang1);
   double cd_x = x1;
-  double ca_y = (-2 / pow(dy, 3)) * (dy - dy * sin(ang1)) +
-                (1 / pow(dy, 2)) * (sin(ang2) - sin(ang1));
-  double cb_y = (3 / pow(dy, 2)) * (dy - dy * sin(ang1)) +
-                (-1 / dy) * (sin(ang2) - sin(ang1));
+  double ca_y = (sin(ang1)*dy + 2*y1 - 2*y2 + dy*sin(ang2)) / pow(dy, 3);
+  double cb_y = (-2*sin(ang1)*dy - 3*y1 + 3*y2 - dy*sin(ang2)) / pow(dy, 2);
   double cc_y = sin(ang1);
   double cd_y = y1;
 
@@ -274,7 +270,7 @@ int calcXYGap(std::vector<Point2D> p1_p2, std::vector<Point2D>& pos, int idx) {
     gapXY.push_back(tmp);
   }
 
-  pos.insert(pos.begin() + idx, gapXY.begin(), gapXY.end());
+  pos.insert(pos.begin() + idx + 1, gapXY.begin(), gapXY.end());
 
   return 0;
 }
