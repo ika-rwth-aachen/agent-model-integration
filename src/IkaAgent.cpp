@@ -126,13 +126,15 @@ int IkaAgent::step(double time, double step_size, osi3::SensorView &sensor_view,
 
   std::cout << "---------- time: " << time << " ---------- id: " << id << " ----------" << std::endl;
 
+  // in the first step, the desired curvature should be zero
+  bool firstStep = false;
   // initialize agent
   if (!initialized_) {
     osi3::BaseMoving host = sensor_view.host_vehicle_data().location();
     
     IkaAgent::init(host);
     logger.init(id);
-
+    firstStep = true;
     initialized_ = true;
   }
 
@@ -142,6 +144,7 @@ int IkaAgent::step(double time, double step_size, osi3::SensorView &sensor_view,
   // ika agent model step
   this->AgentModel::step(time);
 
+  if (firstStep) driver_state_->subconscious.kappa = 0;
   // controller translates acc. and curv. to pedal and steering
   pedal_controller_.step(step_size);
   steering_controller_.step(step_size);
