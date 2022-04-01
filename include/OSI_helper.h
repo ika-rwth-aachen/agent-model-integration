@@ -746,6 +746,60 @@ int closestLane(osi3::GroundTruth* ground_truth, const Point2D& point) {
 }
 
 /**
+ * @brief determines junction path starting from lane with id lane_id
+ *
+ *
+ * @param ground_truth  OSI ground truth 
+ * @param lane_id       index of starting lane
+ * @param junction_path result
+ */
+JunctionPath calcJunctionPath(osi3::GroundTruth* ground_truth, int lane_id)
+{
+
+  // create junction_path
+  JunctionPath junction_path;
+  junction_path.lane_ids.push_back(lane_id);
+
+  // create path until no next lane is found
+  bool found_next_lane = true;
+  while (found_next_lane) {
+    auto *lane = findLane(lane_id, ground_truth);
+    found_next_lane = false;
+
+    // iterate over all lane pairings
+    for (auto &l_pairs : lane->classification().lane_pairing()) 
+    {
+      int next_id, from_id;
+
+      // set next_id of lane in front of signal as well as from_id
+      if (lane->classification().centerline_is_driving_direction()) {
+        // only continue when antecessor exists
+        if (!l_pairs.has_antecessor_lane_id()) break;
+        next_id = l_pairs.antecessor_lane_id().value();
+      } else {
+        // only continue when successor exists
+        if (!l_pairs.has_successor_lane_id()) break;
+        next_id = l_pairs.successor_lane_id().value();
+      }
+
+      // break if road end is reached
+      if (next_id == -1) break;
+
+      // break if another intersection is reached
+      if (findLane(next_id, ground_truth)->classification().type() == osi3::Lane_Classification_Type_TYPE_INTERSECTION) break;
+
+      // add new lane to junction path
+      found_next_lane = true;
+      junction_path.lane_ids.push_back(next_id);
+      lane_id = next_id;
+      break;
+    }
+  }
+
+  return junction_path; 
+}
+
+/**
  * @brief determines lanes along Trajectory from the lane with start_idx to the
  * (x,y) point destination.
  *
