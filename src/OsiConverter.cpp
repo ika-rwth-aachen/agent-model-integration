@@ -218,13 +218,12 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view,
     osi3::Lane *tmp_lane = findLane(l, ground_truth);
     bool is_free_boundary_lane = false;
 
-    // determine lane typeif lane normal
+    // determine lane type if lane normal
     if (tmp_lane->classification().free_lane_boundary_id_size() > 0 &&
         tmp_lane->classification().type() ==
           osi3::Lane_Classification_Type_TYPE_INTERSECTION) {
       is_free_boundary_lane = true;
     }
-
 
     if (!is_free_boundary_lane)
       getXY(tmp_lane, path_centerline_);
@@ -252,52 +251,19 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view,
     // create path from assigned lane of light backwards
     for (auto &assigned_lane : light.classification().assigned_lane_id()) {
 
-      // every lane can be starting point for only ONE signal
       int lane_id = assigned_lane.value();
+
+      // check if lane_id already contained in start_lane_ids
       if (std::find(start_lane_ids.begin(), start_lane_ids.end(), lane_id) !=
           start_lane_ids.end())
         continue;
       start_lane_ids.push_back(lane_id);
 
-      // create junction_path
-      JunctionPath junction_path;
+      // calculate path backwards
+      JunctionPath junction_path = calcJunctionPath(ground_truth, lane_id);
+
+      // add signal_id
       junction_path.signal_id = light.id().value();
-      junction_path.lane_ids.push_back(lane_id);
-
-      // create path until no next lane is found
-      bool found_next_lane = true;
-      while (found_next_lane) {
-        auto *lane = findLane(lane_id, ground_truth);
-        found_next_lane = false;
-
-        // iterate over all lane pairings
-        for (auto &l_pairs : lane->classification().lane_pairing()) {
-          int next_id, from_id;
-
-          // set next_id of lane in front of signal as well as from_id
-          if (lane->classification().centerline_is_driving_direction()) {
-            // only continue when antecessor exists
-            if (!l_pairs.has_antecessor_lane_id()) break;
-            next_id = l_pairs.antecessor_lane_id().value();
-          } else {
-            // only continue when successor exists
-            if (!l_pairs.has_successor_lane_id()) break;
-            next_id = l_pairs.successor_lane_id().value();
-          }
-
-          // break if road end is reached
-          if (next_id == -1) break;
-
-          // break if another intersection is reached
-          if (findLane(next_id, ground_truth)->classification().type() == osi3::Lane_Classification_Type_TYPE_INTERSECTION) break;
-
-          // add new lane to junction path
-          found_next_lane = true;
-          junction_path.lane_ids.push_back(next_id);
-          lane_id = next_id;
-          break;
-        }
-      }
 
       // mark as dynamic type
       junction_path.type = 0; 
@@ -324,52 +290,19 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view,
     for (auto &assigned_lane :
          sign.main_sign().classification().assigned_lane_id()) {
 
-      // every lane can be starting point for only ONE signal
       int lane_id = assigned_lane.value();
+
+      // check if lane_id already contained in start_lane_ids
       if (std::find(start_lane_ids.begin(), start_lane_ids.end(), lane_id) !=
           start_lane_ids.end())
         continue;
       start_lane_ids.push_back(lane_id);
 
-      // create junction_path
-      JunctionPath junction_path;
+      // calculate path backwards
+      JunctionPath junction_path = calcJunctionPath(ground_truth, lane_id);
+
+      // add signal_id
       junction_path.signal_id = sign.id().value();
-      junction_path.lane_ids.push_back(lane_id);
-
-      // create path until no next lane is found
-      bool found_next_lane = true;
-      while (found_next_lane) {
-        auto *lane = findLane(lane_id, ground_truth);
-        found_next_lane = false;
-
-        // iterate over all lane pairings
-        for (auto &l_pairs : lane->classification().lane_pairing()) {
-          int next_id, from_id;
-
-          // set next_id of lane in front of signal as well as from_id
-          if (lane->classification().centerline_is_driving_direction()) {
-            // only continue when antecessor exists
-            if (!l_pairs.has_antecessor_lane_id()) break;
-            next_id = l_pairs.antecessor_lane_id().value();
-          } else {
-            // only continue when successor exists
-            if (!l_pairs.has_successor_lane_id()) break;
-            next_id = l_pairs.successor_lane_id().value();
-          }
-
-          // break if road end is reached
-          if (next_id == -1) break;
-
-          // break if another intersection is reached
-          if (findLane(next_id, ground_truth)->classification().type() == osi3::Lane_Classification_Type_TYPE_INTERSECTION) break;
-
-          // add new lane to junction path
-          found_next_lane = true;
-          junction_path.lane_ids.push_back(next_id);
-          lane_id = next_id;
-          break;
-        }
-      }
 
       // mark as priority path
       if (sign.main_sign().classification().type() ==
@@ -385,6 +318,59 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view,
       
       // push junction path to global junction_paths_
       junction_paths_.push_back(junction_path);
+    }
+  }
+
+  // if no signals available - check for roads with type intersection 
+  // assumption: only one intersection is supported
+  if (junction_paths_.size() == 0)
+  {
+    for (int i = 0; i < ground_truth->lane_size(); i++)
+    {
+      int lane_id = ground_truth->lane(i).id().value();
+      auto* lane = findLane(lane_id, ground_truth);
+
+      // check for intersection lane
+      if (lane->classification().type() !=
+            osi3::Lane_Classification_Type_TYPE_INTERSECTION) continue;
+
+      // iterate over all lane pairings to find starting lanes
+      for (auto &l_pairs : lane->classification().lane_pairing()) 
+      {
+        if (lane->classification().centerline_is_driving_direction()) {
+          // only continue when antecessor exists
+          if (!l_pairs.has_antecessor_lane_id()) break;
+          lane_id = l_pairs.antecessor_lane_id().value();
+        } else {
+          // only continue when successor exists
+          if (!l_pairs.has_successor_lane_id()) break;
+          lane_id = l_pairs.successor_lane_id().value();
+        }
+         
+        auto* next_lane = findLane(lane_id, ground_truth);
+
+        // if next_lane is not intersection lane anymore
+        if (next_lane->classification().type() !=
+          osi3::Lane_Classification_Type_TYPE_INTERSECTION)
+        {
+          // check if lane_id already contained in start_lane_ids
+          if (std::find(start_lane_ids.begin(), start_lane_ids.end(), lane_id) != start_lane_ids.end())
+            continue;
+          start_lane_ids.push_back(lane_id);
+
+          // calculate path backwards
+          JunctionPath junction_path = calcJunctionPath(ground_truth, lane_id);
+
+          // add signal_id
+          junction_path.signal_id = -1;
+
+          // mark as dynamic type
+          junction_path.type = -1; 
+          
+          // push junction path to global junction_paths_
+          junction_paths_.push_back(junction_path);
+        }
+      }
     }
   }
 
@@ -488,6 +474,21 @@ void OsiConverter::fillVehicle(osi3::SensorView &sensor_view,
   // set dummy values
   input.vehicle.pedal = 0;
   input.vehicle.steering = 0;
+  input.vehicle.dsIntersection = INFINITY;
+
+  // if ego is approaching junction set dsIntersection
+  for (auto &junction_path : junction_paths_) 
+  {
+    if (find(junction_path.lane_ids.begin(), junction_path.lane_ids.end(),
+      ego_lane_id_) != junction_path.lane_ids.end()) 
+    {
+      double ds_intersection = xy2s(Point2D(ego_base_.position().x(), ego_base_.position().y()), junction_path.pts.back(), junction_path.pts);
+
+      input.vehicle.dsIntersection = ds_intersection;
+
+      break;
+    }
+  }
 }
 
 void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
@@ -814,10 +815,10 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
 
       // set assigned lane id
       input.targets[target].lane = assigned_lane_idx;
-      input.targets[target].position = agent_model::TARGET_NOT_RELEVANT; // TODO: maybe specify this? 
+      input.targets[target].position = agent_model::TARGET_ON_PATH;
     } 
     
-    // compute if target (not on path and interesection) approaches intersection
+    // compute if target (not on path and intersection) approaches intersection
     if (!assigned && input.targets[target].priority != agent_model::TARGET_ON_INTERSECTION) {
       
       // iterate over assigned lanes
@@ -847,12 +848,13 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
         // calculate distance to intersection if approaching intersection
         if (approaching_junction)
         {
-          double dsIntersection = xy2s(Point2D(target_base.position().x(), target_base.position().y()), path_points.back(), path_points);
+          double ds_intersection = xy2s(Point2D(target_base.position().x(), target_base.position().y()), path_points.back(), path_points);
 
-          input.targets[target].dsIntersection = dsIntersection;  
+          input.targets[target].dsIntersection = ds_intersection;  
 
-          // compute position if cose enough
-          if (dsIntersection <= input.targets[target].v * param.stop.TMax)
+          // compute target position if close enough (always if closer than 10m)
+          double ds_thres = std::max(10.0, input.targets[target].v * param.stop.TMax);
+          if (ds_intersection <= ds_thres)
           {
             double tol = M_PI/8;
             double psi = input.targets[target].psi;
