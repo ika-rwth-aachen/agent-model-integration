@@ -122,14 +122,16 @@ int IkaAgent::step(double time, double step_size, osi3::SensorView &sensor_view,
                    osi3::TrafficCommand &traffic_command,
                    osi3::TrafficUpdate &traffic_update,
                    setlevel4to5::DynamicsRequest &dynamic_request) {
-  std::cout << "---------- time: " << time << " ---------- id: " << sensor_view.host_vehicle_id().value() << " ----------" << std::endl;
+  int id = sensor_view.host_vehicle_id().value();
+
+  std::cout << "---------- time: " << time << " ---------- id: " << id << " ----------" << std::endl;
 
   // initialize agent
   if (!initialized_) {
     osi3::BaseMoving host = sensor_view.host_vehicle_data().location();
     
     IkaAgent::init(host);
-    logger.init(sensor_view.host_vehicle_id().value());
+    logger.init(id);
 
     initialized_ = true;
   }
