@@ -61,13 +61,13 @@ void IkaAgent::init(osi3::BaseMoving &host) {
 
   // steering components
   driver_param->steering.thw[0] = 0.5;
-  driver_param->steering.thw[1] = 3.0;
+  driver_param->steering.thw[1] = 2.0;
   driver_param->steering.dsMin[0] = 1.0;
-  driver_param->steering.dsMin[1] = 10.0;
-  driver_param->steering.P[0] = 2.5 * wheel_base;
-  driver_param->steering.P[1] = 0.0 * wheel_base;
+  driver_param->steering.dsMin[1] = 7.0;
+  driver_param->steering.P[0] = 1.5 * wheel_base;
+  driver_param->steering.P[1] = 0.0 * wheel_base; // S&G paper says zero
   driver_param->steering.D[0] = 10.0;
-  driver_param->steering.D[1] = 25.00;
+  driver_param->steering.D[1] = 30.00;
 
   AgentModel::init();
 
