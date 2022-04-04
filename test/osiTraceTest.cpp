@@ -87,23 +87,28 @@ int main(int argc, char *argv[])
              + double(sv.timestamp().nanos())/1000000000;
     
     // Loop over the sensor view buffer as long as a sensor is found
+    int sv_count = 0;
     while (found_sv)
     {
-        // Check if new traffic command was found. 
-        if (found_tc)
-            std::cout << "new traffic command with dest.: " 
-                << tc.action(0).acquire_global_position_action().position().x()
-                << ","
-                << tc.action(0).acquire_global_position_action().position().y()
-                << "\n";
+        std::cout << "Senvor view count (including empty): " << sv_count++ << "\n";
         // Perform open loop step of the driver model
-        test_agent.step(t, dt, sv, tc, up, dr);     
-        std::cout << "new traffic update: " 
-                  << up.update(0).base().position().x() << "," 
-                  << up.update(0).base().position().y() << "\n";
+        if (sv.has_global_ground_truth())
+        {
+            // Check if new traffic command was found. 
+            if (found_tc && tc.action_size()>0)
+                std::cout << "new traffic command with dest.: " 
+                    << tc.action(0).acquire_global_position_action().position().x()
+                    << ","
+                    << tc.action(0).acquire_global_position_action().position().y()
+                    << "\n";
 
-        last_t = t; // shift processed time stamp for delta t calculation
-        
+            test_agent.step(t, dt, sv, tc, up, dr);     
+            std::cout << "new traffic update: " 
+                    << up.update(0).base().position().x() << "," 
+                    << up.update(0).base().position().y() << "\n";
+
+            last_t = t; // shift processed time stamp for delta t calculation
+        }
         // When another sensor view was found, make sure the loop continues
         // and calculate the delta t between new and old sensor view.
         found_sv = nextOsiMsg(buffer_sv, sv);
