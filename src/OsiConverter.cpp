@@ -664,7 +664,6 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
       
       // calculate and set paired_signal_id
       int paired_signal_id = traffic_light_ids[known_position - traffic_light_positions.begin()];
-      input.signals[signal].pairedSignalID[count] = paired_signal_id;
 
       // calculate if all signals out of service
       if (!ground_truth->traffic_light(paired_signal_id).classification().        is_out_of_service()) all_out_of_service = false;
