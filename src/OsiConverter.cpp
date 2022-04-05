@@ -605,7 +605,7 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
   // iterate over all traffic signs
   for (int i = 0; i < ground_truth->traffic_sign_size(); i++) {
 
-    // only consider NOTL signals
+    // only consider NOS signals
     if (signal >= agent_model::NOS-1) break;
 
     osi3::TrafficSign sign = ground_truth->traffic_sign(i);
@@ -722,15 +722,8 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
   }
 
   // convention: Last signal is simulation destination.
-  // Set id = NOS
-  signal = agent_model::NOS-1;
-  input.signals[signal].id = agent_model::NOS;
-  input.signals[signal].ds = xy2SSng(ego_centerline_point_, dest_point_, 
+  input.horizon.destinationPoint = xy2SSng(ego_centerline_point_, dest_point_, 
                           path_centerline_, ego_base_.orientation().yaw());
-  input.signals[signal].type = agent_model::SIGNAL_STOP;
-  input.signals[signal].value = 0;
-  input.signals[signal].subsignal = false;
-  input.signals[signal].sign_is_in_use = true;
 }
 
 void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
