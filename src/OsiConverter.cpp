@@ -774,8 +774,7 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
       // check if assigned to intersection
       if (std::find(intersection_lanes_.begin(), intersection_lanes_.end(),
                   tar.assigned_lane_id(j).value()) != intersection_lanes_.end()){
-        input.targets[target].priority = agent_model::TARGET_ON_INTERSECTION;
-        input.targets[target].position = agent_model::TARGET_ON_JUNCTION;
+        input.targets[target].position = agent_model::TARGET_ON_INTERSECTION;
       }
 
       // check if target on route
@@ -819,7 +818,7 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
     } 
     
     // compute if target (not on path and intersection) approaches intersection
-    if (!assigned && input.targets[target].priority != agent_model::TARGET_ON_INTERSECTION) {
+    if (!assigned && input.targets[target].position != agent_model::TARGET_ON_INTERSECTION) {
       
       // iterate over assigned lanes
       for (auto &assigned_lane : tar.assigned_lane_id()) {
