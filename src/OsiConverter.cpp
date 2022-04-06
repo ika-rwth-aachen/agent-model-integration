@@ -21,7 +21,7 @@ void OsiConverter::convert(osi3::SensorView &sensor_view,
 
   fillVehicle(sensor_view, input);
   fillSignals(sensor_view, input);
-  fillTargets(sensor_view, input);
+  fillTargets(sensor_view, input, param);
   fillHorizon(sensor_view, input);
   fillLanes(sensor_view, input);
 }
@@ -218,13 +218,12 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view,
     osi3::Lane *tmp_lane = findLane(l, ground_truth);
     bool is_free_boundary_lane = false;
 
-    // determine lane typeif lane normal
+    // determine lane type if lane normal
     if (tmp_lane->classification().free_lane_boundary_id_size() > 0 &&
         tmp_lane->classification().type() ==
           osi3::Lane_Classification_Type_TYPE_INTERSECTION) {
       is_free_boundary_lane = true;
     }
-
 
     if (!is_free_boundary_lane)
       getXY(tmp_lane, path_centerline_);
@@ -245,89 +244,143 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view,
   // calculate s, psi, kappa from centerline
   xy2Curv(path_centerline_, path_s_, path_psi_, path_kappa_);
 
-  // generate junction paths for traffic signs
+  // generate junction paths for traffic lights
   std::vector<int> start_lane_ids;
+  for (auto &light : *ground_truth->mutable_traffic_light()) {
+
+    // create path from assigned lane of light backwards
+    for (auto &assigned_lane : light.classification().assigned_lane_id()) {
+
+      int lane_id = assigned_lane.value();
+
+      // check if lane_id already contained in start_lane_ids
+      if (std::find(start_lane_ids.begin(), start_lane_ids.end(), lane_id) !=
+          start_lane_ids.end())
+        continue;
+      start_lane_ids.push_back(lane_id);
+
+      // calculate path backwards
+      JunctionPath junction_path = calcJunctionPath(ground_truth, lane_id);
+
+      // add signal_id
+      junction_path.signal_id = light.id().value();
+
+      // mark as dynamic type
+      junction_path.type = 0; 
+      
+      // push junction path to global junction_paths_
+      junction_paths_.push_back(junction_path);
+    }
+  }
+
+  // generate junction paths for traffic signs 
+  // assumption: sign starts always on same lane as the parent traffic light
   for (auto &sign : *ground_truth->mutable_traffic_sign()) {
 
-    // only RIGHT_OF_WAY and GIVE_WAY is supported
+    // only RIGHT_OF_WAY, GIVE_WAY and STOP are supported
     if (sign.main_sign().classification().type() !=
-          osi3::
-            TrafficSign_MainSign_Classification_Type_TYPE_RIGHT_OF_WAY_BEGIN &&
+      osi3::TrafficSign_MainSign_Classification_Type_TYPE_RIGHT_OF_WAY_BEGIN && 
         sign.main_sign().classification().type() !=
-          osi3::TrafficSign_MainSign_Classification_Type_TYPE_GIVE_WAY)
+          osi3::TrafficSign_MainSign_Classification_Type_TYPE_GIVE_WAY &&
+        sign.main_sign().classification().type() !=
+          osi3::TrafficSign_MainSign_Classification_Type_TYPE_STOP)
       continue;
 
     // create path from assigned lane of sign backwards
     for (auto &assigned_lane :
          sign.main_sign().classification().assigned_lane_id()) {
 
-      // every lane can be starting point for only ONE sign
       int lane_id = assigned_lane.value();
+
+      // check if lane_id already contained in start_lane_ids
       if (std::find(start_lane_ids.begin(), start_lane_ids.end(), lane_id) !=
           start_lane_ids.end())
         continue;
       start_lane_ids.push_back(lane_id);
 
-      // create junction_path
-      JunctionPath junction_path;
+      // calculate path backwards
+      JunctionPath junction_path = calcJunctionPath(ground_truth, lane_id);
+
+      // add signal_id
       junction_path.signal_id = sign.id().value();
-      junction_path.lane_ids.push_back(lane_id);
 
-      // create path until no next lane is found
-      bool found_next_lane = true;
-      while (found_next_lane) {
-        auto *lane = findLane(lane_id, ground_truth);
-        found_next_lane = false;
+      // mark as priority path
+      if (sign.main_sign().classification().type() ==
+        osi3::TrafficSign_MainSign_Classification_Type_TYPE_RIGHT_OF_WAY_BEGIN)
+        junction_path.type = 1;
 
-        // iterate over all lane pairings
-        for (auto &l_pairs : lane->classification().lane_pairing()) {
-          int next_id;
+      // mark as give way path
+      if (sign.main_sign().classification().type() ==
+        osi3::TrafficSign_MainSign_Classification_Type_TYPE_STOP ||
+          sign.main_sign().classification().type() ==
+        osi3::TrafficSign_MainSign_Classification_Type_TYPE_GIVE_WAY )
+        junction_path.type = 2;
+      
+      // push junction path to global junction_paths_
+      junction_paths_.push_back(junction_path);
+    }
+  }
 
-          // set next_id of lane in front of signal as well as from_id
-          if (lane->classification().centerline_is_driving_direction()) {
-            // only continue when antecessor exists
-            if (!l_pairs.has_antecessor_lane_id()) break;
-            next_id = l_pairs.antecessor_lane_id().value();
-          } else {
-            // only continue when successor exists
-            if (!l_pairs.has_successor_lane_id()) break;
-            next_id = l_pairs.successor_lane_id().value();
-          }
+  // if no signals available - check for roads with type intersection 
+  // assumption: only one intersection is supported
+  if (junction_paths_.size() == 0)
+  {
+    for (int i = 0; i < ground_truth->lane_size(); i++)
+    {
+      int lane_id = ground_truth->lane(i).id().value();
+      auto* lane = findLane(lane_id, ground_truth);
 
-          // break if road end is reached
-          if (next_id == -1) break;
+      // check for intersection lane
+      if (lane->classification().type() !=
+            osi3::Lane_Classification_Type_TYPE_INTERSECTION) continue;
 
-          // break if another intersection is reached
-          if (findLane(next_id, ground_truth)->classification().type() == osi3::Lane_Classification_Type_TYPE_INTERSECTION) break;
+      // iterate over all lane pairings to find starting lanes
+      for (auto &l_pairs : lane->classification().lane_pairing()) 
+      {
+        if (lane->classification().centerline_is_driving_direction()) {
+          // only continue when antecessor exists
+          if (!l_pairs.has_antecessor_lane_id()) break;
+          lane_id = l_pairs.antecessor_lane_id().value();
+        } else {
+          // only continue when successor exists
+          if (!l_pairs.has_successor_lane_id()) break;
+          lane_id = l_pairs.successor_lane_id().value();
+        }
+         
+        auto* next_lane = findLane(lane_id, ground_truth);
 
-          // add new lane to junction path
-          found_next_lane = true;
-          junction_path.lane_ids.push_back(next_id);
-          lane_id = next_id;
-          break;
+        // if next_lane is not intersection lane anymore
+        if (next_lane->classification().type() !=
+          osi3::Lane_Classification_Type_TYPE_INTERSECTION)
+        {
+          // check if lane_id already contained in start_lane_ids
+          if (std::find(start_lane_ids.begin(), start_lane_ids.end(), lane_id) != start_lane_ids.end())
+            continue;
+          start_lane_ids.push_back(lane_id);
+
+          // calculate path backwards
+          JunctionPath junction_path = calcJunctionPath(ground_truth, lane_id);
+
+          // add signal_id
+          junction_path.signal_id = -1;
+
+          // mark as dynamic type
+          junction_path.type = -1; 
+          
+          // push junction path to global junction_paths_
+          junction_paths_.push_back(junction_path);
         }
       }
-
-      // push junction path to global lanes
-      if (sign.main_sign().classification().type() ==
-          osi3::TrafficSign_MainSign_Classification_Type_TYPE_GIVE_WAY)
-        yielding_lanes_.push_back(junction_path);
-      else
-        priority_lanes_.push_back(junction_path);
     }
   }
 
   // flip global lanes and add points of centerlines
-  for (auto &yl : yielding_lanes_) {
+  for (auto &yl : junction_paths_) {
     std::reverse(yl.lane_ids.begin(), yl.lane_ids.end());
     for (auto &l : yl.lane_ids) getXY(findLane(l, ground_truth), yl.pts);
   }
-  for (auto &pl : priority_lanes_) {
-    std::reverse(pl.lane_ids.begin(), pl.lane_ids.end());
-    for (auto &l : pl.lane_ids) getXY(findLane(l, ground_truth), pl.pts);
-  }
 
-  // set interesection lanes
+  // set intersection lanes
   for (int i = 0; i < ground_truth->lane_size(); i++) {
     osi3::Lane lane = ground_truth->lane(i);
     if (ground_truth->lane(i).classification().type() ==
@@ -421,6 +474,21 @@ void OsiConverter::fillVehicle(osi3::SensorView &sensor_view,
   // set dummy values
   input.vehicle.pedal = 0;
   input.vehicle.steering = 0;
+  input.vehicle.dsIntersection = INFINITY;
+
+  // if ego is approaching junction set dsIntersection
+  for (auto &junction_path : junction_paths_) 
+  {
+    if (find(junction_path.lane_ids.begin(), junction_path.lane_ids.end(),
+      ego_lane_id_) != junction_path.lane_ids.end()) 
+    {
+      double ds_intersection = xy2s(Point2D(ego_base_.position().x(), ego_base_.position().y()), junction_path.pts.back(), junction_path.pts);
+
+      input.vehicle.dsIntersection = ds_intersection;
+
+      break;
+    }
+  }
 }
 
 void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
@@ -537,7 +605,7 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
   // iterate over all traffic signs
   for (int i = 0; i < ground_truth->traffic_sign_size(); i++) {
 
-    // only consider NOTL signals
+    // only consider NOS signals
     if (signal >= agent_model::NOS-1) break;
 
     osi3::TrafficSign sign = ground_truth->traffic_sign(i);
@@ -596,7 +664,6 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
       
       // calculate and set paired_signal_id
       int paired_signal_id = traffic_light_ids[known_position - traffic_light_positions.begin()];
-      input.signals[signal].pairedSignalID[count] = paired_signal_id;
 
       // calculate if all signals out of service
       if (!ground_truth->traffic_light(paired_signal_id).classification().        is_out_of_service()) all_out_of_service = false;
@@ -652,19 +719,11 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
     input.signals[i].type = agent_model::SIGNAL_NOT_SET;
     input.signals[i].value = 0;
   }
-
-  // convention: Last signal is simulation destination.
-  // Set id = NOS
-  signal = agent_model::NOS-1;
-  input.signals[signal].id = agent_model::NOS;
-  input.signals[signal].ds = xy2SSng(ego_centerline_point_, dest_point_, 
-                          path_centerline_, ego_base_.orientation().yaw());
-  input.signals[signal].type = agent_model::SIGNAL_STOP;
-  input.signals[signal].value = 0;
 }
 
 void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
-                               agent_model::Input &input) {
+                               agent_model::Input &input,
+                               agent_model::Parameters &param) {
   osi3::GroundTruth *ground_truth = sensor_view.mutable_global_ground_truth();
 
   // iterate over all targets
@@ -679,6 +738,7 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
     // set general properties
     input.targets[target].id = target + 1;
     input.targets[target].priority = agent_model::TARGET_PRIORITY_NOT_SET;
+    input.targets[target].position = agent_model::TARGET_NOT_RELEVANT;
     input.targets[target].dsIntersection = 0;    
     input.targets[target].ds = INFINITY;
     input.targets[target].d = 0;
@@ -702,7 +762,7 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
       // check if assigned to intersection
       if (std::find(intersection_lanes_.begin(), intersection_lanes_.end(),
                   tar.assigned_lane_id(j).value()) != intersection_lanes_.end()){
-        input.targets[target].priority = agent_model::TARGET_ON_INTERSECTION;
+        input.targets[target].position = agent_model::TARGET_ON_INTERSECTION;
       }
 
       // check if target on route
@@ -742,10 +802,11 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
 
       // set assigned lane id
       input.targets[target].lane = assigned_lane_idx;
+      input.targets[target].position = agent_model::TARGET_ON_PATH;
     } 
     
-    // compute if target (not on path and interesection) approaches intersection
-    if (!assigned && input.targets[target].priority != agent_model::TARGET_ON_INTERSECTION) {
+    // compute if target (not on path and intersection) approaches intersection
+    if (!assigned && input.targets[target].position != agent_model::TARGET_ON_INTERSECTION) {
       
       // iterate over assigned lanes
       for (auto &assigned_lane : tar.assigned_lane_id()) {
@@ -754,33 +815,50 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
         bool approaching_junction = false;
 
         // target is on a yield lane to the heading to the junction
-        for (auto &yield_lane : yielding_lanes_) {
-          if (find(yield_lane.lane_ids.begin(), yield_lane.lane_ids.end(),
-                    assigned_lane.value()) != yield_lane.lane_ids.end()) {
-            input.targets[target].priority = agent_model::TARGET_ON_GIVE_WAY_LANE;
-            path_points = yield_lane.pts;
+        for (auto &junction_path : junction_paths_) {
+          if (find(junction_path.lane_ids.begin(), junction_path.lane_ids.end(),
+                    assigned_lane.value()) != junction_path.lane_ids.end()) {
+
+            if (junction_path.type == 1)
+              input.targets[target].priority = agent_model::TARGET_ON_PRIORITY_LANE;
+            else if (junction_path.type == 2)
+              input.targets[target].priority = agent_model::TARGET_ON_GIVE_WAY_LANE;
+            else
+              input.targets[target].priority = agent_model::TARGET_PRIORITY_NOT_SET;
+
+            path_points = junction_path.pts;
             approaching_junction = true;
             break;
           }
         }
         
-        // target is on a priority lane to the heading to the junction
-        for (auto &prioL : priority_lanes_) {
-          if (find(prioL.lane_ids.begin(), prioL.lane_ids.end(),
-                    assigned_lane.value()) != prioL.lane_ids.end()) {
-            input.targets[target].priority =
-              agent_model::TARGET_ON_PRIORITY_LANE;
-            path_points = prioL.pts;
-            approaching_junction = true;
-            break;
-          }
-        }
-
         // calculate distance to intersection if approaching intersection
         if (approaching_junction)
         {
-          input.targets[target].dsIntersection =
-            xy2s(Point2D(target_base.position().x(), target_base.position().y()), path_points.back(), path_points);  
+          double ds_intersection = xy2s(Point2D(target_base.position().x(), target_base.position().y()), path_points.back(), path_points);
+
+          input.targets[target].dsIntersection = ds_intersection;  
+
+          // compute target position if close enough (always if closer than 10m)
+          double ds_thres = std::max(10.0, input.targets[target].v * param.stop.TMax);
+          if (ds_intersection <= ds_thres)
+          {
+            double tol = M_PI/8;
+            double psi = input.targets[target].psi;
+
+            if (abs(wrapAngle(M_PI/2 - psi)) < tol)
+            {
+              input.targets[target].position = agent_model::TARGET_ON_RIGHT;
+            }
+            if (abs(wrapAngle(M_PI - psi)) < tol)
+            {
+              input.targets[target].position = agent_model::TARGET_ON_OPPOSITE;
+            }
+            if (abs(wrapAngle(-M_PI/2 - psi)) < tol)
+            {
+              input.targets[target].position = agent_model::TARGET_ON_LEFT;
+            }
+          }
           break;
         }
       }
@@ -802,6 +880,7 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
     input.targets[i].size.width = 0;
     input.targets[i].size.length = 0;
     input.targets[i].dsIntersection = 0;
+    input.targets[i].position = agent_model::TARGET_NOT_RELEVANT;
     input.targets[i].priority = agent_model::TARGET_PRIORITY_NOT_SET;
   }
 }
@@ -880,6 +959,10 @@ void OsiConverter::fillHorizon(osi3::SensorView &sensor_view,
     input.horizon.leftLaneWidth[i] = 0;
     input.horizon.rightLaneWidth[i] = 0;
   }
+  
+  // add destination point to horizon
+  input.horizon.destinationPoint = xy2SSng(ego_centerline_point_, dest_point_, 
+                          path_centerline_, ego_base_.orientation().yaw());
 }
 
 void OsiConverter::fillLanes(osi3::SensorView &sensor_view,

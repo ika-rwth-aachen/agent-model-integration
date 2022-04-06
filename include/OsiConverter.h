@@ -24,6 +24,7 @@ struct JunctionPath {
   std::vector<int> lane_ids;
   std::vector<Point2D> pts;
   int signal_id;
+  int type; // -1 unknown, 0 changing, 1 priority, 2 give way
 };
 
 class OsiConverter {
@@ -48,8 +49,7 @@ class OsiConverter {
   // global lanes
   std::vector<int> lanes_;
   std::vector<int> intersection_lanes_;
-  std::vector<JunctionPath> priority_lanes_;
-  std::vector<JunctionPath> yielding_lanes_;
+  std::vector<JunctionPath> junction_paths_;
   std::unordered_map<int, int> lane_mapping_;
 
   // last action id's
@@ -90,7 +90,7 @@ class OsiConverter {
   // filling functions
   void fillVehicle(osi3::SensorView &sensor_view, agent_model::Input &input);
   void fillSignals(osi3::SensorView &sensor_view, agent_model::Input &input);
-  void fillTargets(osi3::SensorView &sensor_view, agent_model::Input &input);
+  void fillTargets(osi3::SensorView &sensor_view, agent_model::Input &input, agent_model::Parameters &param);
   void fillHorizon(osi3::SensorView &sensor_view, agent_model::Input &input);
   void fillLanes(osi3::SensorView &sensor_view, agent_model::Input &input);
 };
