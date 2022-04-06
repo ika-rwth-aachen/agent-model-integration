@@ -248,9 +248,10 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view,
   
   // calculate s, psi, kappa from centerline
   xy2Curv(path_centerline_, path_s_, path_psi_, path_kappa_);
+  
+  std::vector<int> start_lane_ids;
 
   // generate junction paths for traffic lights
-  std::vector<int> start_lane_ids;
   for (auto &light : *ground_truth->mutable_traffic_light()) {
 
     // create path from assigned lane of light backwards
@@ -342,39 +343,47 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view,
       // iterate over all lane pairings to find starting lanes
       for (auto &l_pairs : lane->classification().lane_pairing()) 
       {
-        if (lane->classification().centerline_is_driving_direction()) {
-          // only continue when antecessor exists
+        // always take antecessor if free lane boundary intersection
+        if (lane->classification().free_lane_boundary_id_size() > 0)
+        {
           if (!l_pairs.has_antecessor_lane_id()) break;
           lane_id = l_pairs.antecessor_lane_id().value();
-        } else {
-          // only continue when successor exists
-          if (!l_pairs.has_successor_lane_id()) break;
-          lane_id = l_pairs.successor_lane_id().value();
+        }
+        // if openPASS intersection "hack"
+        else {
+          if (lane->classification().centerline_is_driving_direction()) {
+            if (!l_pairs.has_antecessor_lane_id()) break;
+            lane_id = l_pairs.antecessor_lane_id().value();
+          } else {
+            if (!l_pairs.has_successor_lane_id()) break;
+            lane_id = l_pairs.successor_lane_id().value();
+          }
         }
          
+        // get next_lane if exist
         auto* next_lane = findLane(lane_id, ground_truth);
+        if (next_lane == nullptr) continue;
 
-        // if next_lane is not intersection lane anymore
+        // check if next_lane is of type driving
         if (next_lane->classification().type() !=
-          osi3::Lane_Classification_Type_TYPE_INTERSECTION)
-        {
-          // check if lane_id already contained in start_lane_ids
-          if (std::find(start_lane_ids.begin(), start_lane_ids.end(), lane_id) != start_lane_ids.end())
-            continue;
-          start_lane_ids.push_back(lane_id);
+          osi3::Lane_Classification_Type_TYPE_DRIVING) continue;
+        
+        // check if lane_id already contained in start_lane_ids
+        if (std::find(start_lane_ids.begin(), start_lane_ids.end(), lane_id) != start_lane_ids.end())
+          continue;
+        start_lane_ids.push_back(lane_id);
 
-          // calculate path backwards
-          JunctionPath junction_path = calcJunctionPath(ground_truth, lane_id);
+        // calculate path backwards
+        JunctionPath junction_path = calcJunctionPath(ground_truth, lane_id);
 
-          // add signal_id
-          junction_path.signal_id = -1;
+        // add signal_id
+        junction_path.signal_id = -1;
 
-          // mark as dynamic type
-          junction_path.type = -1; 
-          
-          // push junction path to global junction_paths_
-          junction_paths_.push_back(junction_path);
-        }
+        // mark as dynamic type
+        junction_path.type = -1; 
+        
+        // push junction path to global junction_paths_
+        junction_paths_.push_back(junction_path);
       }
     }
   }
