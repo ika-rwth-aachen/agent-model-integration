@@ -719,10 +719,6 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
     input.signals[i].type = agent_model::SIGNAL_NOT_SET;
     input.signals[i].value = 0;
   }
-
-  // convention: Last signal is simulation destination.
-  input.horizon.destinationPoint = xy2SSng(ego_centerline_point_, dest_point_, 
-                          path_centerline_, ego_base_.orientation().yaw());
 }
 
 void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
@@ -963,6 +959,10 @@ void OsiConverter::fillHorizon(osi3::SensorView &sensor_view,
     input.horizon.leftLaneWidth[i] = 0;
     input.horizon.rightLaneWidth[i] = 0;
   }
+  
+  // add destination point to horizon
+  input.horizon.destinationPoint = xy2SSng(ego_centerline_point_, dest_point_, 
+                          path_centerline_, ego_base_.orientation().yaw());
 }
 
 void OsiConverter::fillLanes(osi3::SensorView &sensor_view,
