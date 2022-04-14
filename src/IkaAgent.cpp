@@ -61,13 +61,13 @@ void IkaAgent::init(osi3::BaseMoving &host) {
 
   // steering components
   driver_param->steering.thw[0] = 0.5;
-  driver_param->steering.thw[1] = 2.0;
-  driver_param->steering.dsMin[0] = 1.0;
-  driver_param->steering.dsMin[1] = 7.0;
-  driver_param->steering.P[0] = 1.5 * wheel_base;
-  driver_param->steering.P[1] = 0.0 * wheel_base; // S&G paper says zero
-  driver_param->steering.D[0] = 10.0;
-  driver_param->steering.D[1] = 30.00;
+  driver_param->steering.thw[1] = 3.0;
+  driver_param->steering.dsMin[0] = 0.5;
+  driver_param->steering.dsMin[1] = 8.0;
+  driver_param->steering.P[0] = 6.0; // * wheel_base;
+  driver_param->steering.P[1] = 0.0; // * wheel_base; // S&G paper says zero
+  driver_param->steering.D[0] = 0.5;
+  driver_param->steering.D[1] = 0.1;
 
   AgentModel::init();
 
@@ -98,7 +98,7 @@ void IkaAgent::init(osi3::BaseMoving &host) {
   vehicle_state_->v = v_init_;
 
   // set controller parameters (lateral motion control)
-  steering_controller_.setParameters(10.0 * wheel_base, 0.1 * wheel_base, 0.0,
+  steering_controller_.setParameters(10.0 * wheel_base, 0.1 * wheel_base, 0.2,
                                      1.0);
   steering_controller_.setRange(-1.0, 1.0, INFINITY);
 
