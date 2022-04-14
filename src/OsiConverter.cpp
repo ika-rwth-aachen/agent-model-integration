@@ -9,7 +9,7 @@
  */
 #include "OsiConverter.h"
 
-#include "OSI_helper.h" 
+#include "OSI_helper.h"
 
 void OsiConverter::convert(osi3::SensorView &sensor_view,
                            osi3::TrafficCommand &traffic_command,
@@ -47,17 +47,23 @@ void OsiConverter::extractEgoInformation(osi3::SensorView &sensor_view,
   if (ego_.assigned_lane_id_size() == 1) {
     ego_lane_id_ = ego_.assigned_lane_id(0).value();
   }
-  // multiple assigned lanes, only possible after lanes_ was created
-  // e.g. on intersection: iterate over lanes_ in reverse order, (take last)
-  else if (ego_.assigned_lane_id_size() > 1 && lanes_.size() > 0) {
-    for (int j = lanes_.size() - 1; j >= 0; j--) {
-      for (int i = 0; i < ego_.assigned_lane_id_size(); i++) {
-        if (find(lanes_.begin(), lanes_.end(),
-                 ego_.assigned_lane_id(i).value()) != lanes_.end()) {
-          ego_lane_id_ = ego_.assigned_lane_id(i).value();
-          break;
+  // multiple assigned lanes
+  else if (ego_.assigned_lane_id_size() > 1) {
+    //after lanes_ was created:
+    // e.g. on intersection: iterate over lanes_ in reverse order, (take last)
+    if (lanes_.size() > 0) {
+      for (int j = lanes_.size() - 1; j >= 0; j--) {
+        for (int i = 0; i < ego_.assigned_lane_id_size(); i++) {
+          if (find(lanes_.begin(), lanes_.end(),
+                  ego_.assigned_lane_id(i).value()) != lanes_.end()) {
+            ego_lane_id_ = ego_.assigned_lane_id(i).value();
+            break;
+          }
         }
       }
+    } else {
+      // take last entry
+      ego_lane_id_ = ego_.assigned_lane_id(ego_.assigned_lane_id_size()-1).value();
     }
   }
   // no lane assignment possible, take closest lane
