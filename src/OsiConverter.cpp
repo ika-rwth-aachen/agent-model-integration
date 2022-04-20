@@ -521,6 +521,7 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
     bool assigned = false;
 
     // iterate over all assigned lanes
+    int assigned_lane_id;
     for (int j = 0; j < cls.assigned_lane_id_size(); j++) {
 
       // skip if lane already has a valid signal 
@@ -536,6 +537,7 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
       auto signal_lane = find(lanes_.begin(), lanes_.end(), cls.assigned_lane_id(j).value());
       if (signal_lane != lanes_.end()) {
         assigned = true;
+        assigned_lane_id = *signal_lane;
       }
     }
 
@@ -554,6 +556,10 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
     input.signals[signal].id = signal + 1;
 
     // ds along centerline to reach signal 
+    double ds2 = calcDsSignal(*ground_truth, path_centerline_, signal_point, 
+                              ego_centerline_point_, assigned_lane_id,
+                              ego_base_.orientation().yaw(), ds_gap);
+
     double ds = xy2SSng(ego_centerline_point_, centerline_point, path_centerline_, ego_base_.orientation().yaw());
     input.signals[signal].ds = ds - ds_gap;
     
@@ -616,6 +622,7 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
     bool assigned = false;
 
     // iterate over all assigned lanes
+    int assigned_lane_id;
     for (int j = 0; j < cls.assigned_lane_id_size(); j++) {
 
       // add lane to signal_lanes
@@ -628,6 +635,7 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
       auto signal_lane = find(lanes_.begin(), lanes_.end(), cls.assigned_lane_id(j).value());
       if (signal_lane != lanes_.end()) {
         assigned = true;
+        assigned_lane_id = *signal_lane;
         break;
       }
     }
@@ -645,6 +653,10 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
     input.signals[signal].id = signal + 1; 
 
     // ds along centerline to reach signal 
+    double ds2 = calcDsSignal(*ground_truth, path_centerline_, signal_point, 
+                              ego_centerline_point_, assigned_lane_id,
+                              ego_base_.orientation().yaw(), ds_gap);
+
     double ds = xy2SSng(ego_centerline_point_, centerline_point, path_centerline_, ego_base_.orientation().yaw());
     input.signals[signal].ds = ds - ds_gap;
 

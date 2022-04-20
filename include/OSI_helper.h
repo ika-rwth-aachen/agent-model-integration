@@ -1035,3 +1035,35 @@ double computeDistanceInRefAngleSystem(Point2D ego, Point2D centerline, double r
   
   return d_sig * d;
 }
+
+double calcDsSignal(osi3::GroundTruth &gt, std::vector<Point2D> &cl, 
+                    Point2D signal_point, Point2D ego_cl_point, int lane_id,
+                    double angle, double ds_gap) {
+  bool found_road_marking = false;
+  double ds = 0;
+  Point2D centerline_point;
+  osi3::RoadMarking rm;
+  
+  for (auto &cur_rm : gt.road_marking()) {
+    for (auto &as_lid : cur_rm.classification().assigned_lane_id())
+      if (as_lid.value() == lane_id) {
+        rm.CopyFrom(cur_rm);
+        found_road_marking = true;
+        //std::cout << "dist with road marking.\n";
+      }
+  }
+
+  if (found_road_marking) {
+    // set centerline point w.r.t. road marking position.
+    // Assumption: Road marking is perpendicular to lanes(s).
+    Point2D rm_position(rm.base().position().x(), rm.base().position().y());
+    closestCenterlinePoint(rm_position, cl, centerline_point);
+  } else {
+    // set centerline point w.r.t. signal position
+    closestCenterlinePoint(signal_point, cl, centerline_point);
+    ds = -ds_gap; // when no road marking was found apply ds_gap
+  }
+
+  ds += xy2SSng(ego_cl_point, centerline_point, cl, angle);
+  return ds;
+}
