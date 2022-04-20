@@ -145,7 +145,7 @@
       <Boolean start="false"/>
     </ScalarVariable>
     <ScalarVariable name="debug" valueReference="1" causality="parameter" variability="discrete" initial="exact">
-      <Boolean start="false"/>
+      <Boolean start="true"/>
     </ScalarVariable>
   </ModelVariables>
   <ModelStructure>

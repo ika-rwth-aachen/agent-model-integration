@@ -101,7 +101,8 @@ int main(int argc, char *argv[])
                     << ","
                     << tc.action(0).acquire_global_position_action().position().y()
                     << "\n";
-
+            t = double(sv.timestamp().seconds())
+              + double(sv.timestamp().nanos())/1000000000;
             test_agent.step(t, dt, sv, tc, up, dr);     
             std::cout << "new traffic update: " 
                     << up.update(0).base().position().x() << "," 
