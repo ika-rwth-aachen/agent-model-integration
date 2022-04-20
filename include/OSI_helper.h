@@ -537,7 +537,7 @@ void mapLanes(osi3::GroundTruth* ground_truth,
       findLane(ego_lane_ptr->classification().right_adjacent_lane_id(0).value(),
                ground_truth);
 
-  while (current != nullptr) {
+  while (current != nullptr && right_lane_count > -5) {
 
     mapping[current->id().value()] = --right_lane_count;
 
@@ -556,7 +556,7 @@ void mapLanes(osi3::GroundTruth* ground_truth,
       findLane(ego_lane_ptr->classification().left_adjacent_lane_id(0).value(),
                ground_truth);
 
-  while (current != nullptr) {
+  while (current != nullptr && left_lane_count < 5) {
     mapping[current->id().value()] = ++left_lane_count;
 
     if (current->classification().left_adjacent_lane_id_size() > 0) {
