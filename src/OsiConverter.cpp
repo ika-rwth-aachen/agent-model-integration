@@ -556,12 +556,10 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
     input.signals[signal].id = signal + 1;
 
     // ds along centerline to reach signal 
-    double ds2 = calcDsSignal(*ground_truth, path_centerline_, signal_point, 
+    double ds = calcDsSignal(*ground_truth, path_centerline_, signal_point, 
                               ego_centerline_point_, assigned_lane_id,
                               ego_base_.orientation().yaw(), ds_gap);
-
-    double ds = xy2SSng(ego_centerline_point_, centerline_point, path_centerline_, ego_base_.orientation().yaw()) - ds_gap;
-    input.signals[signal].ds = ds2;
+    input.signals[signal].ds = ds;
     
     // set defaults
     input.signals[signal].type = agent_model::SignalType::SIGNAL_TLS;
@@ -653,12 +651,10 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
     input.signals[signal].id = signal + 1; 
 
     // ds along centerline to reach signal 
-    double ds2 = calcDsSignal(*ground_truth, path_centerline_, signal_point, 
+    double ds = calcDsSignal(*ground_truth, path_centerline_, signal_point, 
                               ego_centerline_point_, assigned_lane_id,
                               ego_base_.orientation().yaw(), ds_gap);
-
-    double ds = xy2SSng(ego_centerline_point_, centerline_point, path_centerline_, ego_base_.orientation().yaw()) - ds_gap;
-    input.signals[signal].ds = ds2;
+    input.signals[signal].ds = ds;
 
     // set defaults
     input.signals[signal].type = agent_model::SignalType::SIGNAL_TLS;
