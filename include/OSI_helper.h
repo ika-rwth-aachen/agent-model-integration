@@ -1045,12 +1045,20 @@ double calcDsSignal(osi3::GroundTruth &gt, std::vector<Point2D> &cl,
   osi3::RoadMarking rm;
   
   for (auto &cur_rm : gt.road_marking()) {
-    for (auto &as_lid : cur_rm.classification().assigned_lane_id())
-      if (as_lid.value() == lane_id) {
-        rm.CopyFrom(cur_rm);
-        found_road_marking = true;
-        //std::cout << "dist with road marking.\n";
-      }
+    if (!found_road_marking)
+    {
+      for (auto &as_lid : cur_rm.classification().assigned_lane_id())
+        if (as_lid.value() == lane_id) {
+          if (cur_rm.classification().type() 
+              == osi3::RoadMarking::Classification::TYPE_SYMBOLIC_TRAFFIC_SIGN
+              && cur_rm.classification().traffic_main_sign_type()
+              == osi3::TrafficSign::MainSign::Classification::TYPE_STOP)
+          {
+            rm = cur_rm;
+            found_road_marking = true;
+          }
+        }
+    }
   }
 
   if (found_road_marking) {
