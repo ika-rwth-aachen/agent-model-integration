@@ -997,13 +997,12 @@ double getNorm(osi3::Vector3d v) {
 /**
  * @brief get wrapped angle to [-pi,pi]
  *
- * @param v vector
- * @return euclidean norm
+ * @param psi input angle
+ * @return wrapped angle
  */
 double wrapAngle(double psi) {
   return std::atan2(std::sin(psi), std::cos(psi));
 }
-
 
 void removeDuplicates(std::vector<Point2D> &v) {
   if (v.size() == 0) return;
@@ -1084,4 +1083,39 @@ double calcDsSignal(osi3::GroundTruth &ground_truth, std::vector<Point2D> &cente
 
   ds += xy2SSng(ego_cl_point, centerline_point, center_line, angle);
   return ds;
+}
+
+/**
+ * @brief Check if a signal is assigned to a lane along the path.
+ *
+ * @param cls[in] either the classification of a traffic sign or a traffic light
+ * @param signal_lanes[in] either the classification of a traffic sign or a traffic light
+ * @param lanes either[in] the classification of a traffic sign or a traffic light
+ * @param assigned_lane_id out[out] the lane id which the signal is assinged to
+ * @return Boolean value that states if the signal is assinged to lane on the path
+ */
+template<class T>
+bool isSigAssigned(T &cls, std::vector<int> &signal_lanes, std::vector<int> &lanes, int &assigned_lane_id)
+{
+  bool assigned = false;
+
+    // iterate over all assigned lanes
+    for (int j = 0; j < cls.assigned_lane_id_size(); j++) {
+
+      // add lane to signal_lanes
+      if (find(signal_lanes.begin(), signal_lanes.end(),
+               cls.assigned_lane_id(j).value()) == signal_lanes.end()) {
+        signal_lanes.push_back(cls.assigned_lane_id(j).value());
+      }
+
+      // check if lane on route
+      auto signal_lane = find(lanes.begin(), lanes.end(), cls.assigned_lane_id(j).value());
+      if (signal_lane != lanes.end()) {
+        assigned = true;
+        assigned_lane_id = *signal_lane;
+        break;
+      }
+    }
+
+    return assigned;
 }
