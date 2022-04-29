@@ -1036,15 +1036,18 @@ double computeDistanceInRefAngleSystem(Point2D ego, Point2D centerline, double r
   return d_sig * d;
 }
 
-double calcDsSignal(osi3::GroundTruth &gt, std::vector<Point2D> &cl, 
+double calcDsSignal(osi3::GroundTruth &ground_truth, std::vector<Point2D> &center_line, 
                     Point2D signal_point, Point2D ego_cl_point, int lane_id,
                     double angle, double ds_gap) {
+  // distance in meters that the road marking's origin may be away
+  // from the signal to make sure it is not across the map
+  double dist_tol = 25; 
   bool found_road_marking = false;
   double ds = 0;
   Point2D centerline_point;
   osi3::RoadMarking rm;
   
-  for (auto &cur_rm : gt.road_marking()) {
+  for (auto &cur_rm : ground_truth.road_marking()) {
     if (!found_road_marking)
     {
       for (auto &as_lid : cur_rm.classification().assigned_lane_id())
@@ -1054,8 +1057,15 @@ double calcDsSignal(osi3::GroundTruth &gt, std::vector<Point2D> &cl,
               && cur_rm.classification().traffic_main_sign_type()
               == osi3::TrafficSign::MainSign::Classification::TYPE_STOP)
           {
-            rm = cur_rm;
-            found_road_marking = true;
+            // check if road marking origin is in reasonable distance to signal
+            double dist_sig = sqrt(
+                      pow( cur_rm.base().position().x() - signal_point.x , 2)
+                    + pow( cur_rm.base().position().y() - signal_point.y , 2));
+            if (dist_sig < dist_tol)
+            {
+              rm = cur_rm;
+              found_road_marking = true;
+            }
           }
         }
     }
@@ -1065,13 +1075,13 @@ double calcDsSignal(osi3::GroundTruth &gt, std::vector<Point2D> &cl,
     // set centerline point w.r.t. road marking position.
     // Assumption: Road marking is perpendicular to lanes(s).
     Point2D rm_position(rm.base().position().x(), rm.base().position().y());
-    closestCenterlinePoint(rm_position, cl, centerline_point);
+    closestCenterlinePoint(rm_position, center_line, centerline_point);
   } else {
     // set centerline point w.r.t. signal position
-    closestCenterlinePoint(signal_point, cl, centerline_point);
+    closestCenterlinePoint(signal_point, center_line, centerline_point);
     ds = -ds_gap; // when no road marking was found apply ds_gap
   }
 
-  ds += xy2SSng(ego_cl_point, centerline_point, cl, angle);
+  ds += xy2SSng(ego_cl_point, centerline_point, center_line, angle);
   return ds;
 }
