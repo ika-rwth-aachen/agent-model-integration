@@ -997,13 +997,12 @@ double getNorm(osi3::Vector3d v) {
 /**
  * @brief get wrapped angle to [-pi,pi]
  *
- * @param v vector
- * @return euclidean norm
+ * @param psi input angle
+ * @return wrapped angle
  */
 double wrapAngle(double psi) {
   return std::atan2(std::sin(psi), std::cos(psi));
 }
-
 
 void removeDuplicates(std::vector<Point2D> &v) {
   if (v.size() == 0) return;
@@ -1034,4 +1033,89 @@ double computeDistanceInRefAngleSystem(Point2D ego, Point2D centerline, double r
                        pow(ego.y - centerline.y, 2));
   
   return d_sig * d;
+}
+
+double calcDsSignal(osi3::GroundTruth &ground_truth, std::vector<Point2D> &center_line, 
+                    Point2D signal_point, Point2D ego_cl_point, int lane_id,
+                    double angle, double ds_gap) {
+  // distance in meters that the road marking's origin may be away
+  // from the signal to make sure it is not across the map
+  double dist_tol = 25; 
+  bool found_road_marking = false;
+  double ds = 0;
+  Point2D centerline_point;
+  osi3::RoadMarking rm;
+  
+  for (auto &cur_rm : ground_truth.road_marking()) {
+    if (!found_road_marking)
+    {
+      for (auto &as_lid : cur_rm.classification().assigned_lane_id())
+        if (as_lid.value() == lane_id) {
+          if (cur_rm.classification().type() 
+              == osi3::RoadMarking::Classification::TYPE_SYMBOLIC_TRAFFIC_SIGN
+              && cur_rm.classification().traffic_main_sign_type()
+              == osi3::TrafficSign::MainSign::Classification::TYPE_STOP)
+          {
+            // check if road marking origin is in reasonable distance to signal
+            double dist_sig = sqrt(
+                      pow( cur_rm.base().position().x() - signal_point.x , 2)
+                    + pow( cur_rm.base().position().y() - signal_point.y , 2));
+            if (dist_sig < dist_tol)
+            {
+              rm = cur_rm;
+              found_road_marking = true;
+            }
+          }
+        }
+    }
+  }
+
+  if (found_road_marking) {
+    // set centerline point w.r.t. road marking position.
+    // Assumption: Road marking is perpendicular to lanes(s).
+    Point2D rm_position(rm.base().position().x(), rm.base().position().y());
+    closestCenterlinePoint(rm_position, center_line, centerline_point);
+  } else {
+    // set centerline point w.r.t. signal position
+    closestCenterlinePoint(signal_point, center_line, centerline_point);
+    ds = -ds_gap; // when no road marking was found apply ds_gap
+  }
+
+  ds += xy2SSng(ego_cl_point, centerline_point, center_line, angle);
+  return ds;
+}
+
+/**
+ * @brief Check if a signal is assigned to a lane along the path.
+ *
+ * @param cls[in] either the classification of a traffic sign or a traffic light
+ * @param signal_lanes[in] either the classification of a traffic sign or a traffic light
+ * @param lanes either[in] the classification of a traffic sign or a traffic light
+ * @param assigned_lane_id [out] the lane id which the signal is assinged to
+ * @return Boolean value that states if the signal is assinged to lane on the path
+ */
+template<class T>
+bool isSigAssigned(T &cls, std::vector<int> &signal_lanes, std::vector<int> &lanes, int &assigned_lane_id)
+{
+  bool assigned = false;
+
+    // iterate over all assigned lanes
+    for (int j = 0; j < cls.assigned_lane_id_size(); j++) {
+
+      // add lane to signal_lanes
+      if (find(signal_lanes.begin(), signal_lanes.end(),
+               cls.assigned_lane_id(j).value()) == signal_lanes.end()) {
+        signal_lanes.push_back(cls.assigned_lane_id(j).value());
+      }
+
+      // check if lane on route
+      auto signal_lane = find(lanes.begin(), lanes.end(), cls.assigned_lane_id(j).value());
+      if (signal_lane != lanes.end()) {
+        assigned = true;
+        assigned_lane_id = *signal_lane;
+        break;
+      }
+    }
+
+    return assigned;
 }

@@ -518,26 +518,8 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
       continue;
 
     // check if traffic light is assigned along the route
-    bool assigned = false;
-
-    // iterate over all assigned lanes
-    for (int j = 0; j < cls.assigned_lane_id_size(); j++) {
-
-      // skip if lane already has a valid signal 
-      if (find(signal_lanes.begin(), signal_lanes.end(),
-               cls.assigned_lane_id(j).value()) != signal_lanes.end()) {
-        continue;
-      }
-      else {
-        signal_lanes.push_back(cls.assigned_lane_id(j).value());
-      }
-
-      // check if lane on route
-      auto signal_lane = find(lanes_.begin(), lanes_.end(), cls.assigned_lane_id(j).value());
-      if (signal_lane != lanes_.end()) {
-        assigned = true;
-      }
-    }
+    int assigned_lane_id;
+    bool assigned = isSigAssigned(cls, signal_lanes, lanes_, assigned_lane_id);
 
     // continue if not assigned to route
     if (!assigned) continue;
@@ -554,8 +536,10 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
     input.signals[signal].id = signal + 1;
 
     // ds along centerline to reach signal 
-    double ds = xy2SSng(ego_centerline_point_, centerline_point, path_centerline_, ego_base_.orientation().yaw());
-    input.signals[signal].ds = ds - ds_gap;
+    double ds = calcDsSignal(*ground_truth, path_centerline_, signal_point, 
+                              ego_centerline_point_, assigned_lane_id,
+                              ego_base_.orientation().yaw(), ds_gap);
+    input.signals[signal].ds = ds;
     
     // set defaults
     input.signals[signal].type = agent_model::SignalType::SIGNAL_TLS;
@@ -612,25 +596,9 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
     osi3::TrafficSign_MainSign_Classification cls =
       sign.main_sign().classification();
 
-    // check if sign is assigned along the route
-    bool assigned = false;
-
-    // iterate over all assigned lanes
-    for (int j = 0; j < cls.assigned_lane_id_size(); j++) {
-
-      // add lane to signal_lanes
-      if (find(signal_lanes.begin(), signal_lanes.end(),
-               cls.assigned_lane_id(j).value()) == signal_lanes.end()) {
-        signal_lanes.push_back(cls.assigned_lane_id(j).value());
-      }
-
-      // check if lane on route
-      auto signal_lane = find(lanes_.begin(), lanes_.end(), cls.assigned_lane_id(j).value());
-      if (signal_lane != lanes_.end()) {
-        assigned = true;
-        break;
-      }
-    }
+    // check if traffic light is assigned along the route
+    int assigned_lane_id;
+    bool assigned = isSigAssigned(cls, signal_lanes, lanes_, assigned_lane_id);
 
     // skip a non-assigned signal    
     if (!assigned) continue;
@@ -645,8 +613,10 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
     input.signals[signal].id = signal + 1; 
 
     // ds along centerline to reach signal 
-    double ds = xy2SSng(ego_centerline_point_, centerline_point, path_centerline_, ego_base_.orientation().yaw());
-    input.signals[signal].ds = ds - ds_gap;
+    double ds = calcDsSignal(*ground_truth, path_centerline_, signal_point, 
+                              ego_centerline_point_, assigned_lane_id,
+                              ego_base_.orientation().yaw(), ds_gap);
+    input.signals[signal].ds = ds;
 
     // set defaults
     input.signals[signal].type = agent_model::SignalType::SIGNAL_TLS;
