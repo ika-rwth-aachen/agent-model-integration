@@ -1091,7 +1091,7 @@ double calcDsSignal(osi3::GroundTruth &ground_truth, std::vector<Point2D> &cente
  * @param cls[in] either the classification of a traffic sign or a traffic light
  * @param signal_lanes[in] either the classification of a traffic sign or a traffic light
  * @param lanes either[in] the classification of a traffic sign or a traffic light
- * @param assigned_lane_id out[out] the lane id which the signal is assinged to
+ * @param assigned_lane_id [out] the lane id which the signal is assinged to
  * @return Boolean value that states if the signal is assinged to lane on the path
  */
 template<class T>
