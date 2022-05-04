@@ -514,26 +514,22 @@ void mapLanes(osi3::GroundTruth* ground_truth,
  */
 void createGraph(osi3::GroundTruth* ground_truth, std::vector<int> adj[]) {
 
-  for (int i = 0; i < ground_truth->lane_size(); i++) {
-    
-    for (int j = 0;
-         j < ground_truth->lane(i).classification().lane_pairing_size(); j++) {
+  for (int i = 0; i < ground_truth->lane_size(); i++) 
+  {
+    osi3::Lane lane = ground_truth->lane(i);
+
+    for (int j = 0; j < lane.classification().lane_pairing_size(); j++) 
+    {
       
-      int ant_id = ground_truth->lane(i).classification()
-                                                      .lane_pairing(j)
-                                                      .antecessor_lane_id()
-                                                      .value();
+      int ant_id = lane.classification().lane_pairing(j).antecessor_lane_id().value();
+      int suc_id = lane.classification().lane_pairing(j).successor_lane_id().value();
 
-      int suc_id = ground_truth->lane(i).classification()
-                                                      .lane_pairing(j)
-                                                      .successor_lane_id()
-                                                      .value();
-
-      if (ground_truth->lane(i).classification().centerline_is_driving_direction()) {
+      if (lane.classification().centerline_is_driving_direction()) {
         if (suc_id == -1 | suc_id == 0) continue;
         int idx = findLaneIdx(ground_truth, suc_id);
         if (idx >= 0) adj[i].push_back(idx);
-      } else {
+      } 
+      else {
         if (ant_id == -1 | ant_id == 0) continue;
         int idx = findLaneIdx(ground_truth, ant_id);
         if (idx >= 0) adj[i].push_back(idx);
@@ -730,6 +726,104 @@ JunctionPath calcJunctionPath(osi3::GroundTruth* ground_truth, int lane_id)
   return junction_path; 
 }
 
+std::vector<int> getAdjacentLanes(osi3::GroundTruth* ground_truth, int lane_idx, char mode)
+{
+  std::vector<int> lanes; 
+
+  osi3::Lane lane = ground_truth->lane(lane_idx);
+  bool is_driving_direction = lane.classification().centerline_is_driving_direction();
+
+  if (mode == 'S')
+  {
+    for (int j = 0; j < lane.classification().lane_pairing_size(); j++) 
+    {
+      int adjacent_id;
+      if (is_driving_direction) 
+      {
+        adjacent_id = lane.classification().lane_pairing(j).successor_lane_id().value();
+      } else 
+      {
+        adjacent_id = lane.classification().lane_pairing(j).antecessor_lane_id().value();
+      }
+
+      if (adjacent_id == -1) continue;
+      if (findLane(adjacent_id, ground_truth)->classification().type() != osi3::Lane_Classification_Type_TYPE_DRIVING && findLane(adjacent_id, ground_truth)->classification().type() != osi3::Lane_Classification_Type_TYPE_INTERSECTION) continue;
+
+      lanes.push_back(findLaneId(ground_truth, adjacent_id));
+    }
+  }
+
+  if (mode == 'L' || mode == 'R')
+  {
+    if (lane.classification().type() != osi3::Lane_Classification_Type_TYPE_DRIVING) return lanes;
+
+    // check for left neighbouring lanes
+    if ((mode == 'L' && is_driving_direction) || (mode == 'R' && !is_driving_direction))
+    {
+      for (int i = 0; i < lane.classification().left_adjacent_lane_id_size() > 0; i++)
+      {
+        int adjacent_id = lane.classification().left_adjacent_lane_id(i).value();
+
+        if (findLane(adjacent_id, ground_truth)->classification().type() != osi3::Lane_Classification_Type_TYPE_DRIVING) continue;
+
+        // skip if opposite driving direction (assumption: same reference line)
+        if (findLane(adjacent_id, ground_truth)->classification().centerline_is_driving_direction() != is_driving_direction) continue;
+        
+        lanes.push_back(findLaneId(ground_truth, adjacent_id));
+      }
+    }
+
+    // check for right neighbouring lanes
+    if ((mode == 'R' && is_driving_direction) || (mode == 'L' && !is_driving_direction))
+    {
+      for (int i = 0; i < lane.classification().right_adjacent_lane_id_size() > 0; i++)
+      {
+        int adjacent_id = lane.classification().right_adjacent_lane_id(i).value();
+
+        if (findLane(adjacent_id, ground_truth)->classification().type() != osi3::Lane_Classification_Type_TYPE_DRIVING) continue;
+
+        // skip if opposite driving direction (assumption: same reference line)
+        if (findLane(adjacent_id, ground_truth)->classification().centerline_is_driving_direction() != is_driving_direction) continue;
+        
+        lanes.push_back(findLaneId(ground_truth, adjacent_id));
+      }
+    }
+  }
+  
+  return lanes;
+}
+
+std::vector<int> calculateRoute(int cur_idx, int dest_idx, std::string mode, osi3::GroundTruth* ground_truth)
+{
+  std::vector<int> route;
+
+  // return lane_idx if reached destination
+  if (cur_idx == dest_idx)
+  {
+    route.push_back(cur_idx);
+    return route;
+  }
+
+  for (int i = 0; i < mode.length(); i++)
+  {
+    std::vector<int> adjacent_lanes = getAdjacentLanes(ground_truth, cur_idx, mode.at(i));
+
+    for (int j = 0; j < adjacent_lanes.size(); j++) 
+    {
+      route = calculateRoute(adjacent_lanes[j], dest_idx, mode, ground_truth);
+      
+      if (route.size() > 0)  
+      {
+        route.push_back(cur_idx);
+        return route;
+      }
+    }
+  }
+
+  // if no adjacent lane with potential to reach the detination
+  return route;
+}
+
 /**
  * @brief determines lanes along Trajectory from the lane with start_idx to the
  * (x,y) point destination.
@@ -743,13 +837,12 @@ JunctionPath calcJunctionPath(osi3::GroundTruth* ground_truth, int lane_id)
 void futureLanes(osi3::GroundTruth* ground_truth, const int& start_idx,
                   const Point2D& destination, std::vector<int>& future_lanes) {
 
-  // destination INDEX
+  // destination index
   int dest_idx;
 
-  //std::cout << "destination :" << destination.x << "," << destination.y << "\n";
   int dest_id = closestLane(ground_truth, destination);
   dest_idx = findLaneIdx(ground_truth, dest_id);
-  //std::cout << " on lane " << dest_id << std::endl;
+
   // Graph setup
   // create adjacency list for graph representing lane connections
   std::vector<int> adj[ground_truth->lane_size()];
@@ -763,29 +856,56 @@ void futureLanes(osi3::GroundTruth* ground_truth, const int& start_idx,
   int pred[ground_truth->lane_size()];
 
   if (BFS(adj, start_idx, dest_idx, ground_truth->lane_size(), pred) == false) {
-    // add starting lane into future_lanes if it is not already contained
-    if (future_lanes.empty() ||
-        (!future_lanes.empty() &&
-         future_lanes.back() != ground_truth->lane(start_idx).id().value()))
-      future_lanes.push_back(ground_truth->lane(start_idx).id().value());
-    return;
+
+    // check for lane change and determine direction
+    // TODO
+    direction = 1;
+  }
+  else
+  {
+    direction = 0;
   }
 
-  // vector path stores the shortest path
+
+  // identify apriori if a lane change is needed in left or right direction
+  // -> identify normal search and determine if detination is 
+  //      left or right or on target
   std::vector<int> path;
-  int crawl = dest_idx;
-  path.push_back(crawl);
-  while (pred[crawl] != -1) {
-    path.push_back(pred[crawl]);
-    crawl = pred[crawl];
+  std::vector<int> early_path;
+  std::vector<int> late_path;
+
+  if (direction == 0)
+  {
+    path = calculateRoute(start_idx, dest_idx, "S", ground_truth);
   }
 
+  // left lane change
+  if (direction == 1)
+  {
+    early_path = calculateRoute(start_idx, dest_idx, "LS", ground_truth); 
+    late_path = calculateRoute(start_idx, dest_idx, "SL", ground_truth); 
+  }
+
+  // right lane change
+  if (direction == -1)
+  {
+    early_path = calculateRoute(start_idx, dest_idx, "RS", ground_truth); 
+    late_path = calculateRoute(start_idx, dest_idx, "SR", ground_truth); 
+  }
+  
+  // build future_lanes from path
   for (int i = path.size() - 1; i >= 0; i--) {
     if (!future_lanes.empty() &&
         future_lanes.back() == ground_truth->lane(path[i]).id().value())
       continue;
     future_lanes.push_back(ground_truth->lane(path[i]).id().value());
   }
+
+  // add starting lane into future_lanes if it is not already contained
+  if (future_lanes.empty() ||
+      (!future_lanes.empty() &&
+        future_lanes.back() != ground_truth->lane(start_idx).id().value()))
+    future_lanes.push_back(ground_truth->lane(start_idx).id().value());
 }
 
 /**
