@@ -235,8 +235,7 @@ void OsiConverter::newLanes(osi3::SensorView &sensor_view) {
   mapLanes(ground_truth, lane_mapping_, ego_lane_ptr_, lanes_);
 
   // print lanes
-  std::cout << "Destination at: " 
-    <<  dest_point_.x << "," << dest_point_.y << "\n";
+  std::cout << "Destination at: " << dest_point_.x <<","<< dest_point_.y <<"\n";
   std::cout << "With lanes to pass: ";
   for (auto &lane : lanes_) std::cout << lane << " ";
   std::cout << std::endl;
@@ -515,7 +514,7 @@ void OsiConverter::fillVehicle(osi3::SensorView &sensor_view,
   ego_position_.x = ego_base_.position().x();
   ego_position_.y = ego_base_.position().y();
 
-  // projection of ego coordiantes on centerline
+  // projection of ego coordinates on centerline
   closestCenterlinePoint(ego_position_, path_centerline_, ego_centerline_point_);
 
   // calculate s, psi, k of ego lane
@@ -974,7 +973,7 @@ void OsiConverter::fillHorizon(osi3::SensorView &sensor_view,
 
       input.horizon.ds[i] = ds[i];
     }
-    // take last values if end of path reached
+    // take last values if end of path reached (no extrapolation)
     else {
       horizon_knot.x = path_centerline_.back().x;
       horizon_knot.y = path_centerline_.back().y;
