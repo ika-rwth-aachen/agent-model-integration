@@ -436,6 +436,15 @@ int findLaneIdx(osi3::GroundTruth* ground_truth, int id) {
   return -1;
 }
 
+LaneGroup findLaneGroup(std::vector<LaneGroup> lane_groups, int id) {
+  LaneGroup tmp;
+
+  for (int i = 0; i < lane_groups.size(); i++) {
+    if (lane_groups[i].id == id) return lane_groups[i];
+  }
+  return tmp;
+}
+
 /**
  * @brief map OSI lane IDs to corresponding agent_model lane IDs
  *
@@ -793,7 +802,7 @@ std::vector<int> getAdjacentLanes(osi3::GroundTruth* ground_truth, int lane_idx,
   return lanes;
 }
 
-std::vector<int> calculateRoute(int cur_idx, int dest_idx, std::string mode, osi3::GroundTruth* ground_truth)
+std::vector<int> calculateRoute(int cur_idx, int dest_idx, osi3::GroundTruth* ground_truth)
 {
   std::vector<int> route;
 
@@ -804,19 +813,16 @@ std::vector<int> calculateRoute(int cur_idx, int dest_idx, std::string mode, osi
     return route;
   }
 
-  for (int i = 0; i < mode.length(); i++)
-  {
-    std::vector<int> adjacent_lanes = getAdjacentLanes(ground_truth, cur_idx, mode.at(i));
+  std::vector<int> adjacent_lanes = getAdjacentLanes(ground_truth, cur_idx, 'S');
 
-    for (int j = 0; j < adjacent_lanes.size(); j++) 
+  for (int j = 0; j < adjacent_lanes.size(); j++) 
+  {
+    route = calculateRoute(adjacent_lanes[j], dest_idx, ground_truth);
+    
+    if (route.size() > 0)  
     {
-      route = calculateRoute(adjacent_lanes[j], dest_idx, mode, ground_truth);
-      
-      if (route.size() > 0)  
-      {
-        route.push_back(cur_idx);
-        return route;
-      }
+      route.push_back(cur_idx);
+      return route;
     }
   }
 
@@ -824,6 +830,97 @@ std::vector<int> calculateRoute(int cur_idx, int dest_idx, std::string mode, osi
   return route;
 }
 
+
+std::vector<LaneGroup> checkLaneGroup(int base_idx, int dest_idx, osi3::GroundTruth* ground_truth, std::string mode)
+{
+  std::vector<LaneGroup> groups;
+  LaneGroup group; 
+
+  // check if destination lane can be reached from current lane without lc
+  std::vector<int> route = calculateRoute(base_idx, dest_idx, ground_truth);
+
+  // if destination can be reached from current lane 
+  if (route.size() > 0) 
+  {
+    for (int i = route.size() - 1; i >= 0; i--) 
+    {
+      group.lane_ids.push_back(ground_truth->lane(route[i]).id().value());
+    }
+    group.id = 0;
+    group.lane_changes_to_destination = 0;
+
+    groups.push_back(group);
+    return groups;
+  }
+
+  for(int k = 0; k < mode.length(); k++)
+  {
+    char m = mode.at(k);
+
+    int cur_idx = base_idx;
+    int cur_id = ground_truth->lane(cur_idx).id().value();
+      
+    // if not reachable directly adjacent lanes to the left/right are checked
+    bool reachable = false; // not yet clear if destination could be reached
+    bool end_of_lane = false; // not yet clear if destination could be reached
+
+    // iterate over successor lanes and check adjacent lanes for reachability
+    while(!end_of_lane)
+    {
+      group.lane_ids.push_back(cur_id);
+
+      std::vector<int> adj_lanes = getAdjacentLanes(ground_truth, cur_idx, m);
+      for (int i = 0; i < adj_lanes.size(); i++)
+      {
+        std::vector<LaneGroup> tmp_groups;
+        tmp_groups = checkLaneGroup(adj_lanes[i], dest_idx, ground_truth, std::string(1,m)); 
+
+        // if lane change can be performed at current lane
+        if (tmp_groups.size() > 0)
+        {
+          // mark first reachable lane
+          if (!reachable)
+          {
+            reachable = true;
+            groups = tmp_groups;
+          }
+
+          group.lane_ids_to_change.push_back(cur_id);
+          break;
+        }
+      }
+      
+      std::vector<int> next_lanes = getAdjacentLanes(ground_truth, cur_idx,'S');
+      if (next_lanes.size() > 0) 
+      {
+        cur_idx = next_lanes[0]; // TODO only one lane supported
+        cur_id = ground_truth->lane(cur_idx).id().value();
+      }
+      else
+      {
+        end_of_lane = true;
+      }
+    }
+    
+    // add properties to group
+    if (reachable)
+    {
+      int dir = 0;
+      if (m == 'L') dir = 1;
+      if (m == 'R') dir = -1;
+      
+      group.id = groups.back().id - dir;
+      group.lane_changes_to_destination = groups.back().lane_changes_to_destination + dir;
+
+      groups.push_back(group);
+
+      //break loop over modes
+      break;
+    }
+  } 
+
+  return groups;
+}
 /**
  * @brief determines lanes along Trajectory from the lane with start_idx to the
  * (x,y) point destination.
@@ -835,77 +932,33 @@ std::vector<int> calculateRoute(int cur_idx, int dest_idx, std::string mode, osi
  * @param future_lanes result
  */
 void futureLanes(osi3::GroundTruth* ground_truth, const int& start_idx,
-                  const Point2D& destination, std::vector<int>& future_lanes) {
-
+                  const Point2D& destination, std::vector<LaneGroup>& lane_groups) 
+{
   // destination index
   int dest_idx;
 
   int dest_id = closestLane(ground_truth, destination);
-  dest_idx = findLaneIdx(ground_truth, dest_id);
+  dest_idx = findLaneId(ground_truth, dest_id);
 
-  // Graph setup
-  // create adjacency list for graph representing lane connections
-  std::vector<int> adj[ground_truth->lane_size()];
-  createGraph(ground_truth, adj);
-  // remove possible dublicates in adj[i]
-  for (int i = 0; i < ground_truth->lane_size(); i++) {
-    std::sort(adj[i].begin(), adj[i].end());
-    adj[i].erase(unique(adj[i].begin(), adj[i].end()), adj[i].end());
-  }
+  // calculate lane groups
+  lane_groups = checkLaneGroup(start_idx, dest_idx, ground_truth, "LR");
 
-  int pred[ground_truth->lane_size()];
-
-  if (BFS(adj, start_idx, dest_idx, ground_truth->lane_size(), pred) == false) {
-
-    // check for lane change and determine direction
-    // TODO
-    direction = 1;
-  }
-  else
+  // shift ids so that ego lane group has id 0
+  for (int i = 0; i < lane_groups.size(); i++)
   {
-    direction = 0;
+    lane_groups[i].id -= lane_groups.back().id;
   }
 
-
-  // identify apriori if a lane change is needed in left or right direction
-  // -> identify normal search and determine if detination is 
-  //      left or right or on target
-  std::vector<int> path;
-  std::vector<int> early_path;
-  std::vector<int> late_path;
-
-  if (direction == 0)
+  // add starting lane if no route could be found
+  if (lane_groups.size() == 0)
   {
-    path = calculateRoute(start_idx, dest_idx, "S", ground_truth);
-  }
+    LaneGroup group;
+    group.id = 0;
+    group.lane_changes_to_destination = 0;
+    group.lane_ids.push_back(ground_truth->lane(start_idx).id().value());
 
-  // left lane change
-  if (direction == 1)
-  {
-    early_path = calculateRoute(start_idx, dest_idx, "LS", ground_truth); 
-    late_path = calculateRoute(start_idx, dest_idx, "SL", ground_truth); 
+    lane_groups.push_back(group);
   }
-
-  // right lane change
-  if (direction == -1)
-  {
-    early_path = calculateRoute(start_idx, dest_idx, "RS", ground_truth); 
-    late_path = calculateRoute(start_idx, dest_idx, "SR", ground_truth); 
-  }
-  
-  // build future_lanes from path
-  for (int i = path.size() - 1; i >= 0; i--) {
-    if (!future_lanes.empty() &&
-        future_lanes.back() == ground_truth->lane(path[i]).id().value())
-      continue;
-    future_lanes.push_back(ground_truth->lane(path[i]).id().value());
-  }
-
-  // add starting lane into future_lanes if it is not already contained
-  if (future_lanes.empty() ||
-      (!future_lanes.empty() &&
-        future_lanes.back() != ground_truth->lane(start_idx).id().value()))
-    future_lanes.push_back(ground_truth->lane(start_idx).id().value());
 }
 
 /**

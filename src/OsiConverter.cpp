@@ -227,10 +227,12 @@ void OsiConverter::newLanes(osi3::SensorView &sensor_view) {
               ego_lane_ptr_->classification().centerline(pos).y());
   }
 
-  // find lanes to reach dest_point_
-  lanes_.clear();
-  futureLanes(ground_truth, starting_lane_idx, dest_point_, lanes_);
+  lane_groups_.clear();
+  futureLanes(ground_truth, starting_lane_idx, dest_point_, lane_groups_);
 
+  // get old lanes_ struct
+  lanes_ = findLaneGroup(lane_groups_, 0).lane_ids;
+  
   // fill lane_mapping_
   mapLanes(ground_truth, lane_mapping_, ego_lane_ptr_, lanes_);
 
