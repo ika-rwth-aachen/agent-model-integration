@@ -270,7 +270,7 @@ int calcXYGap(std::vector<Point2D> p1_p2, std::vector<Point2D>& pos, int idx) {
     gapXY.push_back(tmp);
   }
 
-  pos.insert(pos.begin() + idx + 1, gapXY.begin(), gapXY.end());
+  pos.insert(pos.begin() + idx, gapXY.begin(), gapXY.end());
 
   return 0;
 }

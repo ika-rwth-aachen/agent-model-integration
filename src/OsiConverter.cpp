@@ -239,13 +239,13 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view,
     if (!is_free_boundary_lane)
       getXY(tmp_lane, path_centerline_);
     else
-      gap_idx = path_centerline_.size() - 1;
+      gap_idx = path_centerline_.size();
   }
 
   // fill gap with interpolation based on two points at each end
   if (gap_idx > 0) {
-    std::vector<Point2D> gap_points(&path_centerline_[gap_idx - 1],
-                                    &path_centerline_[gap_idx + 3]);
+    std::vector<Point2D> gap_points(&path_centerline_[gap_idx - 2],
+                                    &path_centerline_[gap_idx + 2]);
     calcXYGap(gap_points, path_centerline_, gap_idx);
   }
 
