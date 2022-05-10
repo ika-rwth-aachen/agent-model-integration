@@ -94,7 +94,7 @@ void OsiConverter::preprocess(osi3::SensorView &sensor_view,
   if (lanes_.size() > 0 && traffic_command.action_size() == 0) return;
 
   // analyize traffic commands
-  parseTrafficCommand(sensor_view, traffic_command, param);
+  processTrafficCommand(sensor_view, traffic_command, param);
 
   // generate paths
   generatePath(sensor_view, input);
@@ -103,7 +103,7 @@ void OsiConverter::preprocess(osi3::SensorView &sensor_view,
   classifyManeuver(sensor_view, input);
 }
 
-void OsiConverter::parseTrafficCommand(osi3::SensorView &sensor_view,
+void OsiConverter::processTrafficCommand(osi3::SensorView &sensor_view,
                                          osi3::TrafficCommand &traffic_command,
                                          agent_model::Parameters &param) {
 
@@ -116,12 +116,17 @@ void OsiConverter::parseTrafficCommand(osi3::SensorView &sensor_view,
   for (int i = 0; i < traffic_command.action_size(); i++) {
 
     // take global position for lane calculation
-    if (traffic_command.action(i).has_acquire_global_position_action()) {
+    if (traffic_command.action(i).has_acquire_global_position_action() &&
+        traffic_command.action(i)
+          .acquire_global_position_action()
+          .action_header()
+          .action_id()
+          .value() != glob_pos_action_id_) {
       osi3::TrafficAction_AcquireGlobalPositionAction position =
         traffic_command.action(i).acquire_global_position_action();
+      glob_pos_action_id_ = position.action_header().action_id().value();
 
       dest_point_ = Point2D(position.position().x(), position.position().y());
-
       lanes_.clear();
       futureLanes(ground_truth, starting_lane_idx, dest_point_, lanes_);
     }
