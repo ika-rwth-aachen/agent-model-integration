@@ -95,12 +95,20 @@ int main(int argc, char *argv[])
         if (sv.has_global_ground_truth())
         {
             // Check if new traffic command was found. 
-            if (found_tc && tc.action_size()>0)
-                std::cout << "new traffic command with dest.: " 
+            if (found_tc) {
+                while (tc.action_size()==0) {
+                    bool found_tc = nextOsiMsg(buffer_tc, tc);
+                }
+                if (found_tc)
+                {
+                    std::cout << "new traffic command with dest.: " 
                     << tc.action(0).acquire_global_position_action().position().x()
                     << ","
                     << tc.action(0).acquire_global_position_action().position().y()
                     << "\n";
+                }
+            }
+            
             t = double(sv.timestamp().seconds())
               + double(sv.timestamp().nanos())/1000000000;
             test_agent.step(t, dt, sv, tc, up, dr);     
