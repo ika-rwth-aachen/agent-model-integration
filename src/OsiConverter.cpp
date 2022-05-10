@@ -94,7 +94,7 @@ void OsiConverter::preprocess(osi3::SensorView &sensor_view,
   if (lanes_.size() > 0 && traffic_command.action_size() == 0) return;
 
   // analyize traffic commands
-  trafficCommandToLanes(sensor_view, traffic_command, param);
+  parseTrafficCommand(sensor_view, traffic_command, param);
 
   // generate paths
   generatePath(sensor_view, input);
@@ -103,7 +103,7 @@ void OsiConverter::preprocess(osi3::SensorView &sensor_view,
   classifyManeuver(sensor_view, input);
 }
 
-void OsiConverter::trafficCommandToLanes(osi3::SensorView &sensor_view,
+void OsiConverter::parseTrafficCommand(osi3::SensorView &sensor_view,
                                          osi3::TrafficCommand &traffic_command,
                                          agent_model::Parameters &param) {
 

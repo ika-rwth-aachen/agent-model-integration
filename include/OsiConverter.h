@@ -76,7 +76,7 @@ class OsiConverter {
                              agent_model::Input &input,
                              agent_model::Parameters &param);
 
-  void trafficCommandToLanes(osi3::SensorView &sensor_view,
+  void parseTrafficCommand(osi3::SensorView &sensor_view,
                             osi3::TrafficCommand &traffic_command, 
                             agent_model::Parameters &param);
 
