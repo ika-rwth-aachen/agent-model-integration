@@ -62,12 +62,12 @@ void IkaAgent::init(osi3::BaseMoving &host) {
   // steering components
   driver_param->steering.thw[0] = 0.5;
   driver_param->steering.thw[1] = 3.0;
-  driver_param->steering.dsMin[0] = 1.0;
-  driver_param->steering.dsMin[1] = 10.0;
-  driver_param->steering.P[0] = 0.075 * wheel_base;
-  driver_param->steering.P[1] = 0.03 * wheel_base;
-  driver_param->steering.D[0] = 0.25;
-  driver_param->steering.D[1] = 0.25;
+  driver_param->steering.dsMin[0] = 0.5;
+  driver_param->steering.dsMin[1] = 8.0;
+  driver_param->steering.P[0] = 6.0; // * wheel_base;
+  driver_param->steering.P[1] = 0.0; // * wheel_base; // S&G paper says zero
+  driver_param->steering.D[0] = 0.5;
+  driver_param->steering.D[1] = 0.1;
 
   AgentModel::init();
 
@@ -98,7 +98,7 @@ void IkaAgent::init(osi3::BaseMoving &host) {
   vehicle_state_->v = v_init_;
 
   // set controller parameters (lateral motion control)
-  steering_controller_.setParameters(10.0 * wheel_base, 0.1 * wheel_base, 0.0,
+  steering_controller_.setParameters(10.0 * wheel_base, 0.1 * wheel_base, 0.2,
                                      1.0);
   steering_controller_.setRange(-1.0, 1.0, INFINITY);
 
@@ -126,13 +126,15 @@ int IkaAgent::step(double time, double step_size, osi3::SensorView &sensor_view,
 
   std::cout << "---------- time: " << time << " ---------- id: " << id << " ----------" << std::endl;
 
+  // in the first step, the desired curvature should be zero
+  bool firstStep = false;
   // initialize agent
   if (!initialized_) {
     osi3::BaseMoving host = sensor_view.host_vehicle_data().location();
     
     IkaAgent::init(host);
     logger.init(id);
-
+    firstStep = true;
     initialized_ = true;
   }
 
@@ -142,6 +144,7 @@ int IkaAgent::step(double time, double step_size, osi3::SensorView &sensor_view,
   // ika agent model step
   this->AgentModel::step(time);
 
+  if (firstStep) driver_state_->subconscious.kappa = 0;
   // controller translates acc. and curv. to pedal and steering
   pedal_controller_.step(step_size);
   steering_controller_.step(step_size);

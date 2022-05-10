@@ -243,16 +243,12 @@ int calcXYGap(std::vector<Point2D> p1_p2, std::vector<Point2D>& pos, int idx) {
   // x(0) = x1, x(dx) = x2, x'(0) = cos(ang1), x'(dx) = cos(ang2)
   // y similar but with sin()
   // Remark: Those calculation are the solution to an ODE of the form A \ b = c
-  double ca_x = (-2 / pow(dx, 3)) * (dx - dx * cos(ang1)) +
-                (1 / pow(dx, 2)) * (cos(ang2) - cos(ang1));
-  double cb_x = (3 / pow(dx, 2)) * (dx - dx * cos(ang1)) +
-                (-1 / dx) * (cos(ang2) - cos(ang1));
+  double ca_x = (cos(ang1)*dx + 2*x1 - 2*x2 + dx*cos(ang2)) / pow(dx, 3);
+  double cb_x = (-2*cos(ang1)*dx - 3*x1 + 3*x2 - dx*cos(ang2)) / pow(dx, 2);
   double cc_x = cos(ang1);
   double cd_x = x1;
-  double ca_y = (-2 / pow(dy, 3)) * (dy - dy * sin(ang1)) +
-                (1 / pow(dy, 2)) * (sin(ang2) - sin(ang1));
-  double cb_y = (3 / pow(dy, 2)) * (dy - dy * sin(ang1)) +
-                (-1 / dy) * (sin(ang2) - sin(ang1));
+  double ca_y = (sin(ang1)*dy + 2*y1 - 2*y2 + dy*sin(ang2)) / pow(dy, 3);
+  double cb_y = (-2*sin(ang1)*dy - 3*y1 + 3*y2 - dy*sin(ang2)) / pow(dy, 2);
   double cc_y = sin(ang1);
   double cd_y = y1;
 
@@ -507,7 +503,7 @@ osi3::Lane* findLane(int id, osi3::GroundTruth* ground_truth) {
  * @param ground_truth
  * @param ID
  */
-int findLaneId(osi3::GroundTruth* ground_truth, int id) {
+int findLaneIdx(osi3::GroundTruth* ground_truth, int id) {
   for (int i = 0; i < ground_truth->lane_size(); i++) {
     if (ground_truth->lane(i).id().value() == id) return i;
   }
@@ -541,7 +537,7 @@ void mapLanes(osi3::GroundTruth* ground_truth,
       findLane(ego_lane_ptr->classification().right_adjacent_lane_id(0).value(),
                ground_truth);
 
-  while (current != nullptr) {
+  while (current != nullptr && right_lane_count > -5) {
 
     mapping[current->id().value()] = --right_lane_count;
 
@@ -560,7 +556,7 @@ void mapLanes(osi3::GroundTruth* ground_truth,
       findLane(ego_lane_ptr->classification().left_adjacent_lane_id(0).value(),
                ground_truth);
 
-  while (current != nullptr) {
+  while (current != nullptr && left_lane_count < 5) {
     mapping[current->id().value()] = ++left_lane_count;
 
     if (current->classification().left_adjacent_lane_id_size() > 0) {
@@ -593,7 +589,7 @@ void mapLanes(osi3::GroundTruth* ground_truth,
 void createGraph(osi3::GroundTruth* ground_truth, std::vector<int> adj[]) {
 
   for (int i = 0; i < ground_truth->lane_size(); i++) {
-
+    
     for (int j = 0;
          j < ground_truth->lane(i).classification().lane_pairing_size(); j++) {
       
@@ -608,11 +604,13 @@ void createGraph(osi3::GroundTruth* ground_truth, std::vector<int> adj[]) {
                                                       .value();
 
       if (ground_truth->lane(i).classification().centerline_is_driving_direction()) {
-        if (suc_id == -1) continue;
-        adj[i].push_back(findLaneId(ground_truth, suc_id));
+        if (suc_id == -1 | suc_id == 0) continue;
+        int idx = findLaneIdx(ground_truth, suc_id);
+        if (idx >= 0) adj[i].push_back(idx);
       } else {
-        if (ant_id == -1) continue;
-        adj[i].push_back(findLaneId(ground_truth, ant_id));
+        if (ant_id == -1 | ant_id == 0) continue;
+        int idx = findLaneIdx(ground_truth, ant_id);
+        if (idx >= 0) adj[i].push_back(idx);
       }
     }
   }
@@ -815,7 +813,7 @@ void futureLanes(osi3::GroundTruth* ground_truth, const int& start_idx,
 
   //std::cout << "destination :" << destination.x << "," << destination.y << "\n";
   int dest_id = closestLane(ground_truth, destination);
-  dest_idx = findLaneId(ground_truth, dest_id);
+  dest_idx = findLaneIdx(ground_truth, dest_id);
   //std::cout << " on lane " << dest_id << std::endl;
   // Graph setup
   // create adjacency list for graph representing lane connections
