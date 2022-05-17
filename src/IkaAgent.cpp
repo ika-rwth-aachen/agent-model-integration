@@ -139,7 +139,7 @@ int IkaAgent::step(double time, double step_size, osi3::SensorView &sensor_view,
   }
 
   // converter converts from osi to agent_model::input
-  converter_.convert(sensor_view, traffic_command, _input, _param);
+  converter_.convert(sensor_view, traffic_command, _input, _param, _memory);
 
   // ika agent model step
   this->AgentModel::step(time);

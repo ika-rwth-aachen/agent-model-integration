@@ -32,12 +32,6 @@ struct LaneGroup {
   int lane_changes_to_destination;    // lane change amount to left(+)/right(-)
   std::vector<int> lane_ids;          // lane ids of lane group
   std::vector<int> lane_ids_to_change;// lane ids where change is allowed
-
-  std::vector<Point2D> path_centerline;
-  std::vector<double> path_kappa;
-  std::vector<double> path_s;
-  std::vector<double> path_psi;
-  std::vector<double> path_s_to_change; // positions where change is allowed
 };
 
 class OsiConverter {
@@ -46,8 +40,10 @@ class OsiConverter {
   ~OsiConverter(){};
 
   void convert(osi3::SensorView &sensor_view,
-               osi3::TrafficCommand &traffic_command, agent_model::Input &input,
-               agent_model::Parameters &param);
+               osi3::TrafficCommand &traffic_command, 
+               agent_model::Input &input,
+               agent_model::Parameters &param,
+               agent_model::Memory &memory);
 
  private:
 
@@ -56,19 +52,16 @@ class OsiConverter {
   bool calculate_lanes_ = false;
   bool ignore_all_targets_ = false; // use global flag for now - TODO: store ids
   
-  // global path vectors 
-  // TODO delete this group
+  std::vector<int> lanes_;
+  std::vector<int> lanes_to_change_;
   std::vector<Point2D> path_centerline_;
   std::vector<double> path_kappa_;
   std::vector<double> path_s_;
   std::vector<double> path_psi_;
-  std::vector<int> lanes_;
-  // TODO delete this group
 
   // global lanes
   std::vector<LaneGroup> lane_groups_;
   int current_lane_group_;
-
 
   std::unordered_map<int, int> lane_mapping_;
   std::vector<int> intersection_lanes_;
@@ -98,7 +91,8 @@ class OsiConverter {
   void preprocess(osi3::SensorView &sensor_view,
                              osi3::TrafficCommand &traffic_command,
                              agent_model::Input &input,
-                             agent_model::Parameters &param);
+                             agent_model::Parameters &param,
+                             agent_model::Memory &memory);
 
   void processTrafficCommand(osi3::TrafficCommand &traffic_command, 
                             agent_model::Parameters &param);
@@ -106,7 +100,8 @@ class OsiConverter {
 
   void classifyManeuver(osi3::SensorView &sensor_view,
                         agent_model::Input &input);
-  void generatePath(osi3::SensorView &sensor_view, agent_model::Input &input);
+  void generatePath(osi3::SensorView &sensor_view);
+  void generateJunctionPaths(osi3::SensorView &sensor_view);
 
   void extractEgoInformation(osi3::SensorView &sensor_view,
                                          agent_model::Input &input);
