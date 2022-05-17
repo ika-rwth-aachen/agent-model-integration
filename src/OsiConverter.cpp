@@ -219,6 +219,14 @@ void OsiConverter::processTrafficCommand(osi3::TrafficCommand &traffic_command,
 
 void OsiConverter::newLanes(osi3::SensorView &sensor_view) {
 
+  lanes_.clear();
+  lanes_changeable_.clear();
+
+  path_centerline_.clear();
+  path_kappa_.clear();
+  path_s_.clear();
+  path_psi_.clear();
+
   osi3::GroundTruth *ground_truth = sensor_view.mutable_global_ground_truth();
 
   // find starting_lane_idx
@@ -452,8 +460,8 @@ void OsiConverter::generateJunctionPaths(osi3::SensorView &sensor_view) {
 
   // flip global lanes and add points of centerlines
   for (auto &yl : junction_paths_) {
-    std::reverse(yl.lane_ids.begin(), yl.lane_ids.end());
-    for (auto &l : yl.lane_ids) getXY(findLane(l, ground_truth), yl.pts);
+    std::reverse(yl.lanes.begin(), yl.lanes.end());
+    for (auto &l : yl.lanes) getXY(findLane(l, ground_truth), yl.pts);
   }
 
   // set intersection lanes
@@ -556,8 +564,8 @@ void OsiConverter::fillVehicle(osi3::SensorView &sensor_view,
   // if ego is approaching junction set dsIntersection
   for (auto &junction_path : junction_paths_) 
   {
-    if (find(junction_path.lane_ids.begin(), junction_path.lane_ids.end(),
-      ego_lane_id_) != junction_path.lane_ids.end()) 
+    if (find(junction_path.lanes.begin(), junction_path.lanes.end(),
+      ego_lane_id_) != junction_path.lanes.end()) 
     {
       double ds_intersection = abs(xy2s(ego_position_, junction_path.pts.back(), junction_path.pts, ego_base_.orientation().yaw()));
 
@@ -1010,8 +1018,8 @@ void OsiConverter::fillHorizon(osi3::SensorView &sensor_view,
 
     // set lane widths
     input.horizon.egoLaneWidth[i] = 3.75;
-    input.horizon.leftLaneWidth[i] = 0;
-    input.horizon.rightLaneWidth[i] = 0;
+    input.horizon.leftLaneWidth[i] = 3.75;
+    input.horizon.rightLaneWidth[i] = 3.75;
   }
   
   // add destination point to horizon
@@ -1031,7 +1039,9 @@ void OsiConverter::fillLanes(osi3::SensorView &sensor_view,
   getXY(ego_lane_ptr_, ego_lane_points);
 
   // check if lane change is possible from current ego lane
-  bool lane_change_possible = (find(lanes_to_change_.begin(), lanes_to_change_.end(), ego_lane_id_) != lanes_to_change_.end());
+  bool lane_change_possible = (find(lanes_changeable_.begin(), lanes_changeable_.end(), ego_lane_id_) != lanes_changeable_.end());
+
+  std::vector<int> processed_lanes;
 
   // loop over all lane groups
   for (auto lane_group : lane_groups_)
@@ -1057,22 +1067,23 @@ void OsiConverter::fillLanes(osi3::SensorView &sensor_view,
       if (!lane_change_possible) continue;
 
       // get adjacent lanes and try to find start_lane on lane_group
-      std::vector<int> adj;
+      std::vector<int> adj_idx;
       if (lane_id == 1){
-        adj = getAdjacentLanes(ground_truth, ego_lane_idx,'L');
+        adj_idx = getAdjacentLanes(ground_truth, ego_lane_idx,'L');
         width = input.horizon.leftLaneWidth[0];
       }
       if (lane_id == -1) {
-        adj = getAdjacentLanes(ground_truth, ego_lane_idx,'R');
+        adj_idx = getAdjacentLanes(ground_truth, ego_lane_idx,'R');
         width = input.horizon.rightLaneWidth[0];
       }
 
       bool found = false;
-      for (auto a: adj)
+      for (auto a_idx: adj_idx)
       {
-        if (find(lane_group.lane_ids.begin(), lane_group.lane_ids.end(), a) != lane_group.lane_ids.end()) 
+        int a_id = ground_truth->lane(a_idx).id().value();
+        if (find(lane_group.lanes.begin(), lane_group.lanes.end(), a_id) != lane_group.lanes.end()) 
         {
-          start_lane = a;
+          start_lane = a_id;
           found = true;
           break;
         }
@@ -1088,11 +1099,11 @@ void OsiConverter::fillLanes(osi3::SensorView &sensor_view,
     }
 
     // compute start and end points
-    end_lane = lane_group.lane_ids.back();
+    end_lane = lane_group.lanes.back();
 
-    end_of_route = (lane_group.lane_changes_to_destination == 0)? end_lane : lane_group.lane_ids_to_change.back();
+    end_of_route = (lane_group.lane_changes == 0)? end_lane : lane_group.lanes_changeable.back();
 
-    lane_change = (lane_change_possible && lane_group.lane_changes_to_destination != 0) ? true : false;
+    lane_change = (lane_change_possible && lane_group.lane_changes != 0) ? true : false;
   
 
     // fill general information
@@ -1108,14 +1119,17 @@ void OsiConverter::fillLanes(osi3::SensorView &sensor_view,
     bool on_route = false;
     Point2D current_end_point = ego_lane_points.back();
 
-    // iterate backwards over lane_ids and compute ds
-    for (int i = lane_group.lane_ids.size()-1; i >= 0; i--){
+    // iterate backwards over lanes and compute ds
+    for (int i = lane_group.lanes.size()-1; i >= 0; i--){
 
-      int cur_lane_id = lane_group.lane_ids[i];
+      int cur_lane_id = lane_group.lanes[i];
+
+      // add current lane to processed_lanes
+      processed_lanes.push_back(cur_lane_id);
 
       // check if now on route on_route
       if (!on_route && cur_lane_id == end_of_route) {
-        on_route == true;
+        on_route = true;
       }
 
       // break if ego_lane reached
@@ -1148,8 +1162,8 @@ void OsiConverter::fillLanes(osi3::SensorView &sensor_view,
   for (int i=0; i < ground_truth->lane_size() && lane < agent_model::NOL; i++) {
     osi3::Lane tmp_lane = ground_truth->lane(i);
 
-    // skip if tmp_lane on host path, already considered before
-    if (find(lanes_.begin(), lanes_.end(), tmp_lane.id().value()) != lanes_.end()) {
+    // skip if tmp_lane on host path, already processed before
+    if (find(processed_lanes.begin(), processed_lanes.end(), tmp_lane.id().value()) != processed_lanes.end()) {
       continue;
     }
 
@@ -1180,8 +1194,8 @@ void OsiConverter::fillLanes(osi3::SensorView &sensor_view,
     // save average of width
     input.lanes[lane].width = input.horizon.egoLaneWidth[0];
 
-    input.lanes[lane].closed = 0;
-    input.lanes[lane].route = 0;
+    input.lanes[lane].closed = -1;
+    input.lanes[lane].route = -1;
 
     lane++;
   }

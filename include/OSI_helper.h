@@ -458,23 +458,25 @@ void mapLanes(osi3::GroundTruth* ground_truth,
               std::unordered_map<int, int>& mapping, osi3::Lane* ego_lane_ptr,
               std::vector<int> future_lanes) {
 
-  // assigns all lanes along the ego lane
+  // assign over all lanes along the path
   for (int i = 0; i < future_lanes.size(); i++)
   {
+    osi3::Lane* current = findLane(future_lanes[i], ground_truth);
+    
+    // assign ego lane
     mapping[future_lanes[i]] = 0;
 
-    osi3::Lane* current = findLane(future_lanes[i], ground_truth);
-
-    // assign first right adjacent lane
+    // assign left adjacent lane: 2 (1 is reserved for neighbouring group)
     if (current->classification().left_adjacent_lane_id_size() > 0)
     {
       int lane_id = current->classification().left_adjacent_lane_id(0).value();
-      mapping[lane_id] = 1;
+      mapping[lane_id] = 2;
     }
+    // assign right adjacent lane: -2 (-1 is reserved for neighbouring group)
     if (current->classification().right_adjacent_lane_id_size() > 0)
     {
       int lane_id =current->classification().right_adjacent_lane_id(0).value();
-      mapping[lane_id] = -1;
+      mapping[lane_id] = -2;
     }
   }
 
@@ -665,7 +667,7 @@ JunctionPath calcJunctionPath(osi3::GroundTruth* ground_truth, int lane_id)
 
   // create junction_path
   JunctionPath junction_path;
-  junction_path.lane_ids.push_back(lane_id);
+  junction_path.lanes.push_back(lane_id);
 
   // create path until no next lane is found
   bool found_next_lane = true;
@@ -697,7 +699,7 @@ JunctionPath calcJunctionPath(osi3::GroundTruth* ground_truth, int lane_id)
 
       // add new lane to junction path
       found_next_lane = true;
-      junction_path.lane_ids.push_back(next_id);
+      junction_path.lanes.push_back(next_id);
       lane_id = next_id;
       break;
     }
@@ -815,10 +817,10 @@ std::vector<LaneGroup> calculateLaneGroups(int base_idx, int dest_idx, osi3::Gro
   {
     for (int i = route.size() - 1; i >= 0; i--) 
     {
-      group.lane_ids.push_back(ground_truth->lane(route[i]).id().value());
+      group.lanes.push_back(ground_truth->lane(route[i]).id().value());
     }
     group.id = 0;
-    group.lane_changes_to_destination = 0;
+    group.lane_changes = 0;
 
     groups.push_back(group);
     return groups;
@@ -838,7 +840,7 @@ std::vector<LaneGroup> calculateLaneGroups(int base_idx, int dest_idx, osi3::Gro
     // iterate over successor lanes and check adjacent lanes for reachability
     while(!end_of_lane)
     {
-      group.lane_ids.push_back(cur_id);
+      group.lanes.push_back(cur_id);
 
       std::vector<int> adj_lanes = getAdjacentLanes(ground_truth, cur_idx, m);
       for (int i = 0; i < adj_lanes.size(); i++)
@@ -856,7 +858,7 @@ std::vector<LaneGroup> calculateLaneGroups(int base_idx, int dest_idx, osi3::Gro
             groups = tmp_groups;
           }
 
-          group.lane_ids_to_change.push_back(cur_id);
+          group.lanes_changeable.push_back(cur_id);
           break;
         }
       }
@@ -881,7 +883,7 @@ std::vector<LaneGroup> calculateLaneGroups(int base_idx, int dest_idx, osi3::Gro
       if (m == 'R') dir = -1;
       
       group.id = groups.back().id - dir;
-      group.lane_changes_to_destination = groups.back().lane_changes_to_destination + dir;
+      group.lane_changes = groups.back().lane_changes + dir;
 
       groups.push_back(group);
 
@@ -926,8 +928,8 @@ void futureLanes(osi3::GroundTruth* ground_truth, const int& start_idx,
   {
     LaneGroup group;
     group.id = 0;
-    group.lane_changes_to_destination = 0;
-    group.lane_ids.push_back(ground_truth->lane(start_idx).id().value());
+    group.lane_changes = 0;
+    group.lanes.push_back(ground_truth->lane(start_idx).id().value());
 
     lane_groups.push_back(group);
   }

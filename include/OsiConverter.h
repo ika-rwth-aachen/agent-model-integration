@@ -21,17 +21,17 @@
 using Point2D = agent_model::Position;
 
 struct JunctionPath {
-  std::vector<int> lane_ids;
+  std::vector<int> lanes;
   std::vector<Point2D> pts;
   int signal_id;
   int type; // -1 unknown, 0 changing, 1 priority, 2 give way
 };
 
 struct LaneGroup {
-  int id;                             // id of lane group
-  int lane_changes_to_destination;    // lane change amount to left(+)/right(-)
-  std::vector<int> lane_ids;          // lane ids of lane group
-  std::vector<int> lane_ids_to_change;// lane ids where change is allowed
+int id;                             // id of lane group
+  int lane_changes;                 // lane change amount to left(+)/right(-)
+  std::vector<int> lanes;           // lane ids of lane group
+  std::vector<int> lanes_changeable;// lane ids where change is allowed
 };
 
 class OsiConverter {
@@ -53,7 +53,8 @@ class OsiConverter {
   bool ignore_all_targets_ = false; // use global flag for now - TODO: store ids
   
   std::vector<int> lanes_;
-  std::vector<int> lanes_to_change_;
+  std::vector<int> lanes_changeable_;
+
   std::vector<Point2D> path_centerline_;
   std::vector<double> path_kappa_;
   std::vector<double> path_s_;
