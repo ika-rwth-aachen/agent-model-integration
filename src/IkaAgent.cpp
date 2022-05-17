@@ -69,6 +69,9 @@ void IkaAgent::init(osi3::BaseMoving &host) {
   driver_param->steering.D[0] = 0.5;
   driver_param->steering.D[1] = 0.1;
 
+  // lane change parameters
+  driver_param->laneChange.time = 3;
+
   AgentModel::init();
 
   // set vehicle parameters
