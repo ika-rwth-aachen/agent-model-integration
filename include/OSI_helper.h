@@ -911,7 +911,6 @@ void futureLanes(osi3::GroundTruth* ground_truth, const int& start_idx,
   int dest_idx;
 
   int dest_id = closestLane(ground_truth, destination);
-  dest_id = 2000082; // TODO CGE remove
   dest_idx = findLaneIdx(ground_truth, dest_id);
 
   // calculate lane groups

@@ -631,7 +631,7 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
     input.signals[signal].subsignal = false;
     input.signals[signal].sign_is_in_use = true;
 
-    // set Color and type/icon
+    // set color and type/icon
     if (cls.color() == osi3::TrafficLight_Classification_Color_COLOR_RED) {
       input.signals[signal].color = agent_model::COLOR_RED;
 
@@ -764,8 +764,6 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
     }
     signal++;
   }
-
-  // TODO search for potential road markings and match them to modify ds
 
   // fill all but last remaining signals with default values
   for (int i = signal; i < agent_model::NOS-1; i++) {
@@ -1210,3 +1208,4 @@ void OsiConverter::fillLanes(osi3::SensorView &sensor_view,
     input.lanes[i].dir = agent_model::DD_NOT_SET;
   }
 }
+
