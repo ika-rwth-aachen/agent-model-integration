@@ -393,13 +393,13 @@ double xy2SSng(const Point2D start, const Point2D end,
 
         s += sqrt(dx * dx + dy * dy);
       }
-      s += sqrt(pow(start.x - cl[start_idx].x, 2) +
-                pow(start.y - cl[start_idx].y, 2));
-      s -= sqrt(pow(end.x - cl[end_idx].x, 2) + pow(end.y - cl[end_idx].y, 2));
+      s += sqrt(pow(start_centerline.x - cl[start_idx].x, 2) +
+                pow(start_centerline.y - cl[start_idx].y, 2));
+      s -= sqrt(pow(end_centerline.x - cl[end_idx].x, 2) + pow(end_centerline.y - cl[end_idx].y, 2));
       return s;
     } else if (start_idx == end_idx) {
       // unsure about sign...
-      return sqrt(pow(start.x - end.x, 2) + pow(start.y - end.y, 2));
+      return sqrt(pow(start_centerline.x - end_centerline.x, 2) + pow(start_centerline.y - end_centerline.y, 2));
     } else {
       for (int i = end_idx + 1; i <= start_idx; i++) {
         double dx = cl[i].x - cl[i - 1].x;
@@ -407,9 +407,9 @@ double xy2SSng(const Point2D start, const Point2D end,
 
         s -= sqrt(dx * dx + dy * dy);
       }
-      s += sqrt(pow(start.x - cl[start_idx].x, 2) +
-                pow(start.y - cl[start_idx].y, 2));
-      s -= sqrt(pow(end.x - cl[end_idx].x, 2) + pow(end.y - cl[end_idx].y, 2));
+      s += sqrt(pow(start_centerline.x - cl[start_idx].x, 2) +
+                pow(start_centerline.y - cl[start_idx].y, 2));
+      s -= sqrt(pow(end_centerline.x - cl[end_idx].x, 2) + pow(end_centerline.y - cl[end_idx].y, 2));
       return s;
     }
   }

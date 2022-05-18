@@ -994,7 +994,7 @@ void OsiConverter::fillLanes(osi3::SensorView &sensor_view,
   }*/
 
   // get remaining distance on ego lane
-  double dist = xy2s(ego_centerline_point_, dest_point_, path_centerline_);
+  double dist = xy2SSng(ego_centerline_point_, dest_point_, path_centerline_, ego_base_.orientation().yaw());
 
   // set road end in input struct
   input.lanes[lane].closed = dist;// + distance_to_end;
