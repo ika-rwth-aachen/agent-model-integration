@@ -652,6 +652,10 @@ int closestLane(osi3::GroundTruth* ground_truth, const Point2D point) {
   std::vector<Point2D> centerline;
   double distance = INFINITY;
   double distance_valid_idx = INFINITY;
+
+  // lanes with valid idx have only priority if closer `max_distance_valid_idx`
+  double max_distance_valid_idx = 5;        
+
   int dest_id = -1;
   int dest_id_valid_idx = -1;
 
@@ -666,7 +670,7 @@ int closestLane(osi3::GroundTruth* ground_truth, const Point2D point) {
     double d = (closest.x - point.x) * (closest.x - point.x) +
                (closest.y - point.y) * (closest.y - point.y);
 
-    if (idx > 0 && idx < centerline.size() && d < distance_valid_idx) {
+    if (idx > 0 && idx < centerline.size() && d < distance_valid_idx && d < max_distance_valid_idx) {
       distance_valid_idx = d;
       dest_id_valid_idx = cur_lane.id().value();
     }
