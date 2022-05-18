@@ -489,7 +489,8 @@ void OsiConverter::fillVehicle(osi3::SensorView &sensor_view,
   input.vehicle.dPsi = ego_base_.orientation_rate().yaw();
 
   // compute distance between ego and centerline
-  input.vehicle.d = computeDistanceInRefAngleSystem(ego_position_, ego_centerline_point_, ego_base_.orientation().yaw());
+  input.vehicle.d = computeDistanceInRefAngleSystem(ego_position_, 
+                        ego_centerline_point_, ego_base_.orientation().yaw());
 
   // set dummy values
   input.vehicle.pedal = 0;
@@ -994,7 +995,8 @@ void OsiConverter::fillLanes(osi3::SensorView &sensor_view,
   }*/
 
   // get remaining distance on ego lane
-  double dist = xy2s(ego_centerline_point_, dest_point_, path_centerline_);
+  double dist = xy2SSng(ego_centerline_point_, dest_point_, 
+                        path_centerline_, ego_base_.orientation().yaw());
 
   // set road end in input struct
   input.lanes[lane].closed = dist;// + distance_to_end;
