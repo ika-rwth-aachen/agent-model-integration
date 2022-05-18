@@ -893,8 +893,8 @@ void OsiConverter::fillHorizon(osi3::SensorView &sensor_view,
   int hor_idx = closestCenterlinePoint(ego_position_, path_centerline_, ego_position_cl);
   
   // crop idx to boundaries
-  if (hor_idx < 1) hor_idx = 1;
-  if (hor_idx > path_centerline_.size()-1) hor_idx = path_centerline_.size()-1;
+  if (hor_idx == 0) hor_idx = 1;
+  if (hor_idx == path_centerline_.size()) hor_idx = path_centerline_.size();
 
   double ego_s = path_s_[hor_idx - 1] + sqrt(
               pow(ego_position_cl.x - path_centerline_[hor_idx - 1].x,2) + 

@@ -597,8 +597,8 @@ int interpolateXY2Value(std::vector<double> y, std::vector<Point2D> xy,
   int i = closestCenterlinePoint(pos, xy, dummy);
 
   // crop idx to boundaries
-  if (i < 1) i = 1;
-  if (i > xy.size()-1) i = xy.size()-1;
+  if (i == 0) i = 1;
+  if (i == xy.size()) i = xy.size()-1;
 
   double x1 = xy[i - 1].x;
   double x2 = xy[i].x;
@@ -612,30 +612,6 @@ int interpolateXY2Value(std::vector<double> y, std::vector<Point2D> xy,
   double t = dot / l2;
 
   return y[i - 1] + t * (y[i] - y[i - 1]);
-  /*
-
-          for (i = 1; i < elPoints.size(), !set; i++) {
-                  double x1 = elPoints[i - 1].x;
-                  double x2 = elPoints[i].x;
-                  double y1 = elPoints[i - 1].y;
-                  double y2 = elPoints[i].y;
-
-                  //compute orthogonal projection of (x,y) onto the
-     parameterized line connecting (x1,y1) and (x2,y2) double l2 = (x2 - x1) *
-     (x2 - x1) + (y2 - y1) * (y2 - y1); double dot = (egoClPoint.x - x1) * (x2 -
-     x1) + (egoClPoint.y - y1) * (y2 - y1); double t = dot / l2;
-
-                  if (t >= 0 && t <= 1) { //correct points (x1,y1)(x2,y2) were
-     found (egoClPoint is in segment)
-                          // global psi of ego minus psi of lane at current
-     location (interpolated) input.vehicle.psi = egoPsi - (psi[i - 1] + t *
-     (psi[i] - psi[i - 1]));
-                          //std::cout << "vehicle psi " << input.vehicle.psi *
-     180 / 3.14159 << "=" << egoBase.orientation().yaw() * 180 / 3.14159 <<
-     "-"<< (psi[i - 1] + t * (psi[i] - psi[i - 1])) * 180 / 3.14159 <<
-     std::endl; set = true;
-                  }
-          }*/
 }
 
 /**
