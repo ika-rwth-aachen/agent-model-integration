@@ -652,8 +652,8 @@ int closestLane(osi3::GroundTruth* ground_truth, const Point2D point) {
   std::vector<Point2D> centerline;
   double distance = INFINITY;
   double distance_valid_idx = INFINITY;
-  int dest_id = 127;
-  int dest_id_valid_idx = 127;
+  int dest_id = -1;
+  int dest_id_valid_idx = -1;
 
   for (int i = 0; i < ground_truth->lane_size(); i++) {
     centerline.clear();
@@ -677,7 +677,7 @@ int closestLane(osi3::GroundTruth* ground_truth, const Point2D point) {
     }
   }
 
-  if (dest_id_valid_idx != 127) {
+  if (dest_id_valid_idx != -1) {
     return dest_id_valid_idx;
   }
   else {
