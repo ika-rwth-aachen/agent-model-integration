@@ -667,12 +667,23 @@ int closestLane(osi3::GroundTruth* ground_truth, const Point2D point) {
 
     Point2D closest;
     int idx = closestCenterlinePoint(point, centerline, closest);
+
+    // update closest if before centerline  
+    if (idx == 0) {
+      closest = centerline[0];
+    }
+    // update closest if after centerline  
+    if (idx == centerline.size()) {
+      closest = centerline[centerline.size()-1];
+    }
+    
+    // compute distance 
     double d = (closest.x - point.x) * (closest.x - point.x) +
                (closest.y - point.y) * (closest.y - point.y);
 
     if (idx > 0 && idx < centerline.size() && d < distance_valid_idx && d < max_distance_valid_idx) {
-      distance_valid_idx = d;
-      dest_id_valid_idx = cur_lane.id().value();
+        distance_valid_idx = d;
+        dest_id_valid_idx = cur_lane.id().value();
     }
 
     if (d < distance) {
