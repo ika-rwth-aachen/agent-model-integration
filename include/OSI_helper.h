@@ -354,7 +354,7 @@ double calcWidth(const Point2D point, osi3::Lane* lane,
  * @param cl centerline
  * @return resulting distance
  */
-double xy2SSng(const Point2D start, const Point2D end,
+double xy2s(const Point2D start, const Point2D end,
                const std::vector<Point2D>& cl, double start_psi) {
   double s = 0;
 
@@ -1009,7 +1009,7 @@ double calcDsSignal(osi3::GroundTruth &ground_truth, std::vector<Point2D> &cente
     ds = -ds_gap; // when no road marking was found apply ds_gap
   }
 
-  ds += xy2SSng(ego_cl_point, centerline_point, center_line, angle);
+  ds += xy2s(ego_cl_point, centerline_point, center_line, angle);
   return ds;
 }
 

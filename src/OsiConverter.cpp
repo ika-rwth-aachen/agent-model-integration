@@ -503,7 +503,7 @@ void OsiConverter::fillVehicle(osi3::SensorView &sensor_view,
     if (find(junction_path.lane_ids.begin(), junction_path.lane_ids.end(),
       ego_lane_id_) != junction_path.lane_ids.end()) 
     {
-      double ds_intersection = abs(xy2SSng(ego_position_, junction_path.pts.back(), junction_path.pts, ego_base_.orientation().yaw()));
+      double ds_intersection = abs(xy2s(ego_position_, junction_path.pts.back(), junction_path.pts, ego_base_.orientation().yaw()));
 
       input.vehicle.dsIntersection = ds_intersection;
 
@@ -774,7 +774,7 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
       closestCenterlinePoint(target_point, path_centerline_, centerline_point);
 
       // ds along centerline to reach target 
-      double ds_target = xy2SSng(ego_centerline_point_, target_point,  
+      double ds_target = xy2s(ego_centerline_point_, target_point,  
                          path_centerline_, ego_base_.orientation().yaw());
 
       double ds_correction = 0.5 * (ego_base_.dimension().length() + target_base.dimension().length());
@@ -826,7 +826,7 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
         // calculate distance to intersection if approaching intersection
         if (approaching_junction)
         {
-          double ds_intersection = abs(xy2SSng(Point2D(target_base.position().x(), target_base.position().y()), path_points.back(), path_points, target_base.orientation().yaw()));
+          double ds_intersection = abs(xy2s(Point2D(target_base.position().x(), target_base.position().y()), path_points.back(), path_points, target_base.orientation().yaw()));
 
           input.targets[target].dsIntersection = ds_intersection;  
 
@@ -957,7 +957,7 @@ void OsiConverter::fillHorizon(osi3::SensorView &sensor_view,
   }
   
   // add destination point to horizon
-  input.horizon.destinationPoint = xy2SSng(ego_centerline_point_, dest_point_, 
+  input.horizon.destinationPoint = xy2s(ego_centerline_point_, dest_point_, 
                           path_centerline_, ego_base_.orientation().yaw());
 }
 
@@ -1000,7 +1000,7 @@ void OsiConverter::fillLanes(osi3::SensorView &sensor_view,
   }*/
 
   // get remaining distance on ego lane
-  double dist = xy2SSng(ego_centerline_point_, dest_point_, 
+  double dist = xy2s(ego_centerline_point_, dest_point_, 
                         path_centerline_, ego_base_.orientation().yaw());
 
   // set road end in input struct
