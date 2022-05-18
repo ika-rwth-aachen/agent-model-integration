@@ -131,77 +131,61 @@ int closestCenterlinePoint(const Point2D point, const std::vector<Point2D>& cl,
     double l2 = (x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1);
     double dot = (point.x - x1) * (x2 - x1) + (point.y - y1) * (y2 - y1);
     double t = dot / l2;
-    if (t >= 0 && t <= 1) {  // correct points (x1,y1)(x2,y2) were found
-                             // (projection is in segment)
+
+    // check if projection is in segment
+    if (t >= 0 && t <= 1) { 
       tmp.x = x1 + t * (x2 - x1);
       tmp.y = y1 + t * (y2 - y1);
+
       double dist = pow(tmp.x - point.x, 2) + pow(tmp.y - point.y, 2);
+      
+      // update minimal distance
       if (dist < min_dist) {
         min_dist = dist;
         closest = tmp;
         min_i = i;
       }
-    } else {
-      double distI = pow(x2 - point.x, 2) + pow(y2 - point.y, 2);
-      if (distI < min_dist) {
-        closest = cl[i];
-        min_dist = distI;
-        min_i = i;
-      }
     }
   }
 
+  // check for distances to start/end point
   double distEnd =
     pow(point.x - cl.back().x, 2) + pow(point.y - cl.back().y, 2);
   double distStart =
     pow(point.x - cl.front().x, 2) + pow(point.y - cl.front().y, 2);
-  if (min_i > 0 && (min_dist < distEnd || min_dist < distStart)) return min_i;
 
-  // x,y beyond scope of cl
+  if (distStart < min_dist || distEnd < min_dist) {
 
-  /*
-    comment DBE:
-    The remainder is very strange... check what this is for!
-    Makes no sense from the "cloest CL" point of view...
-    * Why not take front or back?
-    * For ne the hotfix cl.size() <= 2 instead of cl.size() < 2 works 
-       --> but not a sufficient solition
-  */
-  if (distEnd < distStart) {
-
-    if (cl.size() <= 2) {
-      closest = cl.back();
-      return cl.size()-1;
-    } else {
-      double l2 = (cl.back().x - cl[cl.size() - 2].x) *
-                    (cl.back().x - cl[cl.size() - 2].x) +
-                  (cl.back().y - cl[cl.size() - 2].y) *
-                    (cl.back().y - cl[cl.size() - 2].y);
-      double dot =
-        (point.x - cl.back().x) * (cl.back().x - cl[cl.size() - 2].x) +
-        (point.y - cl.back().y) * (cl.back().y - cl[cl.size() - 2].y);
-      double t = dot / l2;
-      closest.x = cl.back().x + t * (cl.back().x - cl[cl.size() - 2].x);
-      closest.y = cl.back().y + t * (cl.back().y - cl[cl.size() - 2].y);
-      return cl.size();
+    assert(cl.size() > 1);
+    assert(distEnd != distStart);
+    
+    Point2D start, end;
+    
+    if (distEnd < distStart) {
+      start = cl[cl.size() - 2];
+      end = cl.back();
+      min_i = cl.size();
     }
-  } else {
-    if (cl.size() <= 2) {
-      closest = cl.front();
-      return 0;
-    } else {
-      double l2 = (cl[0].x - cl[1].x) * (cl[0].x - cl[1].x) +
-                  (cl[0].y - cl[1].y) * (cl[0].y - cl[1].y);
-      double dot = (point.x - cl[0].x) * (cl[0].x - cl[1].x) +
-                   (point.y - cl[0].y) * (cl[0].y - cl[1].y);
-      double t = dot / l2;
-      closest.x = cl[0].x + t * (cl[0].x - cl[1].x);
-      closest.y = cl[0].y + t * (cl[0].y - cl[1].y);
-      return 0;
+
+    if (distStart < distEnd) {
+      start = cl[1];
+      end = cl[0];
+      min_i = 0;
     }
+
+    double dx = end.x - start.x;
+    double dy = end.y - start.y;
+
+    double l2 = pow(dx,2) + pow(dy,2);
+    double dot = (point.x - end.x) * dx + (point.y - end.y) * dy;
+
+    double t = dot / l2;
+
+    closest.x = end.x + t * dx;
+    closest.y = end.y + t * dy;
   }
 
-  return 0;
+  return min_i;
 }
 
 /**
@@ -373,117 +357,56 @@ double calcWidth(const Point2D point, osi3::Lane* lane,
 double xy2SSng(const Point2D start, const Point2D end,
                const std::vector<Point2D>& cl, double start_psi) {
   double s = 0;
-  Point2D start_centerline, end_centerline;
-  if (cl.size() == 2) {
-    double start_end_psi = atan2(end.y - start.y, end.x - start.x);
-    // std::cout << "target dir: " << start_end_psi-start_psi << "\n";
-    double dist = sqrt(pow(end.x - start.x, 2) + pow(end.y - start.y, 2));
-    if (abs(start_end_psi - start_psi) > 1.5)
-      return -dist;
-    else
-      return dist;
-  } else {
-    int start_idx = closestCenterlinePoint(start, cl, start_centerline);
-    int end_idx = closestCenterlinePoint(end, cl, end_centerline);
 
-    if (start_idx < end_idx) {
-      for (int i = start_idx + 1; i <= end_idx; i++) {
-        double dx = cl[i].x - cl[i - 1].x;
-        double dy = cl[i].y - cl[i - 1].y;
-
-        s += sqrt(dx * dx + dy * dy);
-      }
-      s += sqrt(pow(start_centerline.x - cl[start_idx].x, 2) 
-              + pow(start_centerline.y - cl[start_idx].y, 2));
-      s -= sqrt(pow(end_centerline.x - cl[end_idx].x, 2) 
-              + pow(end_centerline.y - cl[end_idx].y, 2));
-      return s;
-    } else if (start_idx == end_idx) {
-      // unsure about sign...
-      return sqrt(pow(start_centerline.x - end_centerline.x, 2) 
-                + pow(start_centerline.y - end_centerline.y, 2));
-    } else {
-      for (int i = end_idx + 1; i <= start_idx; i++) {
-        double dx = cl[i].x - cl[i - 1].x;
-        double dy = cl[i].y - cl[i - 1].y;
-
-        s -= sqrt(dx * dx + dy * dy);
-      }
-      s += sqrt(pow(start_centerline.x - cl[start_idx].x, 2) +
-                pow(start_centerline.y - cl[start_idx].y, 2));
-      s -= sqrt(pow(end_centerline.x - cl[end_idx].x, 2) 
-              + pow(end_centerline.y - cl[end_idx].y, 2));
-      return s;
-    }
+  // calculate distance
+  int dir = 0;
+  double start_end_psi = atan2(end.y - start.y, end.x - start.x);
+    
+  if (abs(start_end_psi - start_psi) > M_PI/2) {
+    dir = -1;
   }
-}
+  else {
+    dir = 1;
+  }
 
-/**
- * @brief ds along centerline starting at (startX,startY) and ending at
- * (endX,endY)
- *
- *
- * @param start point
- * @param end point
- * @param cl centerline
- * @return resulting distance
- */
-double xy2s(const Point2D start, const Point2D end,
-            const std::vector<Point2D>& cl) {
-  double s = 0;
   Point2D start_centerline, end_centerline;
   int start_idx = closestCenterlinePoint(start, cl, start_centerline);
   int end_idx = closestCenterlinePoint(end, cl, end_centerline);
 
-  if (start_idx == end_idx)
-    return sqrt((end_centerline.x - start_centerline.x) *
-                  (end_centerline.x - start_centerline.x) +
-                (end_centerline.y - start_centerline.y) *
-                  (end_centerline.y - start_centerline.y));
-
-  if (start_idx == 0) {
-    // starting point before scope of centerline
-    s += sqrt((cl.front().x - start_centerline.x) *
-                (cl.front().x - start_centerline.x) +
-              (cl.front().y - start_centerline.y) *
-                (cl.front().y - start_centerline.y));
-  } else if (start_idx < cl.size()) {
-    if (end_idx == 0 ||
-        start_idx >
-          end_idx)  // this means end before cl, but start within/after cl.
-      return xy2s(end, start, cl);
-    // start/end points are most likely between two centerline points. Add
-    // distance to closest centerline point for start.
-    s += sqrt((cl[start_idx].x - start_centerline.x) *
-                (cl[start_idx].x - start_centerline.x) +
-              (cl[start_idx].y - start_centerline.y) *
-                (cl[start_idx].y - start_centerline.y));
+  // if start and end in same interval 
+  if (start_idx == end_idx) {
+    return dir * sqrt(pow(start_centerline.x - end_centerline.x, 2) 
+              + pow(start_centerline.y - end_centerline.y, 2));
   }
-  if (end_idx >= cl.size()) {
-    // ending point after scope of centerline
-    s +=
-      sqrt((end_centerline.x - cl.back().x) * (end_centerline.x - cl.back().x) +
-           (end_centerline.y - cl.back().y) * (end_centerline.y - cl.back().y));
-  } else if (end_idx != 0) {
-    // start/end points are most likely between two centerline points. Add
-    // distance to closest centerline point for end.
-    if (start_idx >= cl.size() ||
-        start_idx >
-          end_idx)  // this means start after cl, but end within/before cl.
-      return xy2s(end, start, cl);
-    s += sqrt((end_centerline.x - cl[end_idx - 1].x) *
-                (end_centerline.x - cl[end_idx - 1].x) +
-              (end_centerline.y - cl[end_idx - 1].y) *
-                (end_centerline.y - cl[end_idx - 1].y));
-  }
+  else if (start_idx < end_idx) {
+    for (int i = start_idx; i < end_idx-1; i++) {
+      double dx = cl[i+1].x - cl[i].x;
+      double dy = cl[i+1].y - cl[i].y;
 
-  for (int i = start_idx + 1; i < end_idx; i++) {
-    double dx = cl[i].x - cl[i - 1].x;
-    double dy = cl[i].y - cl[i - 1].y;
-
-    s += sqrt(dx * dx + dy * dy);
+      s += sqrt(dx * dx + dy * dy);
+    }
+    s += sqrt(pow(start_centerline.x - cl[start_idx].x, 2) 
+            + pow(start_centerline.y - cl[start_idx].y, 2));
+    s += sqrt(pow(end_centerline.x - cl[end_idx-1].x, 2) 
+            + pow(end_centerline.y - cl[end_idx-1].y, 2));
+    return s;
   }
-  return s;
+  else if (start_idx > end_idx) {
+    for (int i = end_idx; i < start_idx-1; i++) {
+      double dx = cl[i+1].x - cl[i].x;
+      double dy = cl[i+1].y - cl[i].y;
+
+      s -= sqrt(dx * dx + dy * dy);
+    }
+    s -= sqrt(pow(start_centerline.x - cl[start_idx-1].x, 2) +
+              pow(start_centerline.y - cl[start_idx-1].y, 2));
+    s -= sqrt(pow(end_centerline.x - cl[end_idx].x, 2) 
+            + pow(end_centerline.y - cl[end_idx].y, 2));
+    return s;
+  }
+  else {
+    return 0;
+  }
 }
 
 /**
@@ -672,6 +595,11 @@ int interpolateXY2Value(std::vector<double> y, std::vector<Point2D> xy,
                         Point2D pos) {
   Point2D dummy;
   int i = closestCenterlinePoint(pos, xy, dummy);
+
+  // crop idx to boundaries
+  if (i < 1) i = 1;
+  if (i > xy.size()-1) i = xy.size()-1;
+
   double x1 = xy[i - 1].x;
   double x2 = xy[i].x;
   double y1 = xy[i - 1].y;
@@ -732,10 +660,9 @@ int closestLane(osi3::GroundTruth* ground_truth, const Point2D& point) {
     getXY(&cur_lane, centerline);
 
     Point2D closest;
-    int idx = closestCenterlinePoint(point, centerline, closest);
+    closestCenterlinePoint(point, centerline, closest);
     double d = (closest.x - point.x) * (closest.x - point.x) +
                (closest.y - point.y) * (closest.y - point.y);
-    //std::cout <<cur_lane.id().value() << ":\t"<< d << "\tidx:" << idx << "\n";
     if (distance > d) {
       distance = d;
       dest_id = cur_lane.id().value();

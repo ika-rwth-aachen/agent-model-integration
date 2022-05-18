@@ -503,7 +503,7 @@ void OsiConverter::fillVehicle(osi3::SensorView &sensor_view,
     if (find(junction_path.lane_ids.begin(), junction_path.lane_ids.end(),
       ego_lane_id_) != junction_path.lane_ids.end()) 
     {
-      double ds_intersection = xy2s(Point2D(ego_base_.position().x(), ego_base_.position().y()), junction_path.pts.back(), junction_path.pts);
+      double ds_intersection = abs(xy2SSng(ego_position_, junction_path.pts.back(), junction_path.pts, ego_base_.orientation().yaw()));
 
       input.vehicle.dsIntersection = ds_intersection;
 
@@ -826,7 +826,7 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
         // calculate distance to intersection if approaching intersection
         if (approaching_junction)
         {
-          double ds_intersection = xy2s(Point2D(target_base.position().x(), target_base.position().y()), path_points.back(), path_points);
+          double ds_intersection = abs(xy2SSng(Point2D(target_base.position().x(), target_base.position().y()), path_points.back(), path_points, target_base.orientation().yaw()));
 
           input.targets[target].dsIntersection = ds_intersection;  
 
@@ -891,6 +891,11 @@ void OsiConverter::fillHorizon(osi3::SensorView &sensor_view,
   // caculate current ego s
   Point2D dummy;
   int hor_idx = closestCenterlinePoint(ego_position_, path_centerline_, dummy);
+  
+  // crop idx to boundaries
+  if (hor_idx < 1) hor_idx = 1;
+  if (hor_idx > path_centerline_.size()-1) hor_idx = path_centerline_.size()-1;
+
   double ego_s = path_s_[hor_idx - 1] + sqrt(
               pow(ego_position_.x - path_centerline_[hor_idx - 1].x,2) + 
               pow(ego_position_.y - path_centerline_[hor_idx - 1].y,2));
