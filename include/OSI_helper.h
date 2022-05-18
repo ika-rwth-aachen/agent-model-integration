@@ -651,7 +651,9 @@ int interpolateXY2Value(std::vector<double> y, std::vector<Point2D> xy,
 int closestLane(osi3::GroundTruth* ground_truth, const Point2D& point) {
   std::vector<Point2D> centerline;
   double distance = INFINITY;
+  double distance_valid_idx = INFINITY;
   int dest_id = 127;
+  int dest_id_valid_idx = 127;
 
   for (int i = 0; i < ground_truth->lane_size(); i++) {
     centerline.clear();
@@ -660,15 +662,27 @@ int closestLane(osi3::GroundTruth* ground_truth, const Point2D& point) {
     getXY(&cur_lane, centerline);
 
     Point2D closest;
-    closestCenterlinePoint(point, centerline, closest);
+    int idx = closestCenterlinePoint(point, centerline, closest);
     double d = (closest.x - point.x) * (closest.x - point.x) +
                (closest.y - point.y) * (closest.y - point.y);
-    if (distance > d) {
+
+    if (idx > 0 && idx < centerline.size() && d < distance_valid_idx) {
+      distance_valid_idx = d;
+      dest_id_valid_idx = cur_lane.id().value();
+    }
+
+    if (d < distance) {
       distance = d;
       dest_id = cur_lane.id().value();
     }
   }
-  return dest_id;
+
+  if (dest_id_valid_idx != 127) {
+    return dest_id_valid_idx;
+  }
+  else {
+    return dest_id;
+  }
 }
 
 /**
