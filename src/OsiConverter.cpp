@@ -889,16 +889,16 @@ void OsiConverter::fillHorizon(osi3::SensorView &sensor_view,
   }
 
   // caculate current ego s
-  Point2D dummy;
-  int hor_idx = closestCenterlinePoint(ego_position_, path_centerline_, dummy);
+  Point2D ego_position_cl;
+  int hor_idx = closestCenterlinePoint(ego_position_, path_centerline_, ego_position_cl);
   
   // crop idx to boundaries
   if (hor_idx < 1) hor_idx = 1;
   if (hor_idx > path_centerline_.size()-1) hor_idx = path_centerline_.size()-1;
 
   double ego_s = path_s_[hor_idx - 1] + sqrt(
-              pow(ego_position_.x - path_centerline_[hor_idx - 1].x,2) + 
-              pow(ego_position_.y - path_centerline_[hor_idx - 1].y,2));
+              pow(ego_position_cl.x - path_centerline_[hor_idx - 1].x,2) + 
+              pow(ego_position_cl.y - path_centerline_[hor_idx - 1].y,2));
   double ego_psi = ego_base_.orientation().yaw();
 
   // iterate over all horizon points
