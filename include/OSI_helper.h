@@ -648,7 +648,7 @@ int interpolateXY2Value(std::vector<double> y, std::vector<Point2D> xy,
  * @param point
  * @return id of lane
  */
-int closestLane(osi3::GroundTruth* ground_truth, const Point2D& point) {
+int closestLane(osi3::GroundTruth* ground_truth, const Point2D point) {
   std::vector<Point2D> centerline;
   double distance = INFINITY;
   double distance_valid_idx = INFINITY;
