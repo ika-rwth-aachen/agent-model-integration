@@ -59,6 +59,7 @@ class OsiConverter {
   int path_action_id_ = -1;
   int glob_pos_action_id_ = -1;
   int speed_action_id_ = -1;
+  int custom_action_id_ = -1;
 
   // current ego values
   int ego_id_;

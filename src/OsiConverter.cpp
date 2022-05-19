@@ -8,8 +8,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 #include "OsiConverter.h"
-
 #include "OSI_helper.h"
+#include <nlohmann/json.hpp>
 
 void OsiConverter::convert(osi3::SensorView &sensor_view,
                            osi3::TrafficCommand &traffic_command,
@@ -114,28 +114,28 @@ void OsiConverter::processTrafficCommand(osi3::TrafficCommand &traffic_command,
   for (int i = 0; i < traffic_command.action_size(); i++) {
 
     // take global position for lane calculation
-    if (traffic_command.action(i).has_acquire_global_position_action() &&
-        traffic_command.action(i)
+    if (traffic_command.action(i).has_acquire_global_position_action()
+        && traffic_command.action(i)
           .acquire_global_position_action()
           .action_header()
           .action_id()
           .value() != glob_pos_action_id_) {
-      osi3::TrafficAction_AcquireGlobalPositionAction position =
-        traffic_command.action(i).acquire_global_position_action();      
+      osi3::TrafficAction_AcquireGlobalPositionAction position 
+        = traffic_command.action(i).acquire_global_position_action();      
       glob_pos_action_id_ = position.action_header().action_id().value();
       dest_point_ = Point2D(position.position().x(), position.position().y());
       calc_new_lanes_ = true;      
     }
 
     // take end position of trajectory for lane calculation
-    if (traffic_command.action(i).has_follow_trajectory_action() &&
-        (traffic_command.action(i)
-           .follow_trajectory_action()
-           .action_header()
-           .action_id()
-           .value() != traj_action_id_)) {
-      osi3::TrafficAction_FollowTrajectoryAction traj =
-        traffic_command.action(i).follow_trajectory_action();
+    if (traffic_command.action(i).has_follow_trajectory_action()
+        && traffic_command.action(i)
+          .follow_trajectory_action()
+          .action_header()
+          .action_id()
+          .value() != traj_action_id_) {
+      osi3::TrafficAction_FollowTrajectoryAction traj 
+        = traffic_command.action(i).follow_trajectory_action();
       traj_action_id_ = traj.action_header().action_id().value();
       dest_point_ = Point2D(
         traj.trajectory_point(traj.trajectory_point_size() - 1).position().x(),
@@ -144,14 +144,14 @@ void OsiConverter::processTrafficCommand(osi3::TrafficCommand &traffic_command,
     }
 
     // take end position of path for lane calculation
-    if (traffic_command.action(i).has_follow_path_action() &&
-        (traffic_command.action(i)
-           .follow_path_action()
-           .action_header()
-           .action_id()
-           .value() != path_action_id_)) {
-      osi3::TrafficAction_FollowPathAction path =
-        traffic_command.action(i).follow_path_action();
+    if (traffic_command.action(i).has_follow_path_action() 
+        && traffic_command.action(i)
+          .follow_path_action()
+          .action_header()
+          .action_id()
+          .value() != path_action_id_) {
+      osi3::TrafficAction_FollowPathAction path
+        = traffic_command.action(i).follow_path_action();
       path_action_id_ = path.action_header().action_id().value();
       dest_point_ =
         Point2D(path.path_point(path.path_point_size() - 1).position().x(),
@@ -159,17 +159,48 @@ void OsiConverter::processTrafficCommand(osi3::TrafficCommand &traffic_command,
       calc_new_lanes_ = true;
     }
 
-    // speed action - no lane calculation
-    if (traffic_command.action(i).has_speed_action() &&
-        (traffic_command.action(i)
-           .speed_action()
-           .action_header()
-           .action_id()
-           .value() != speed_action_id_)) {
-      osi3::TrafficAction_SpeedAction speed =
-        traffic_command.action(i).speed_action();
+    // speed action
+    if (traffic_command.action(i).has_speed_action() 
+        && traffic_command.action(i)
+          .speed_action()
+          .action_header()
+          .action_id()
+          .value() != speed_action_id_) {
+      osi3::TrafficAction_SpeedAction speed 
+        = traffic_command.action(i).speed_action();
       speed_action_id_ = speed.action_header().action_id().value();
       param.velocity.vComfort = speed.absolute_target_speed();
+    }
+
+    // custom command
+    if (traffic_command.action(i).has_custom_action()
+      && traffic_command.action(i).custom_action()
+         .action_header().action_id()
+         .value() != custom_action_id_) {
+      osi3::TrafficAction_CustomAction custom
+        = traffic_command.action(i).custom_action();
+      custom_action_id_ = custom.action_header().action_id().value();
+      std::string command = custom.command();
+      nlohmann::json custom_command;
+      custom_command = nlohmann::json::parse(command);
+
+      if (custom_command.contains("Ignore_AllTrafficParticipants")){
+        bool ignore_all_targets = custom_command["Ignore_AllTrafficParticipants"];
+          if (ignore_all_targets)
+            std::cout << "All targets will be ignored.\n";
+      }
+      if (custom_command.contains("Ignore_TrafficParticipants")){
+        std::cout << custom_command["Ignore_TrafficParticipants"] << "\n";
+        std::cout << "Todo: store targets that will be ignored.\n";
+      }
+      if (custom_command.contains("trafficRules")){
+        if (custom_command["trafficRules"].contains("IgnoreRightOfWay"))          
+        {
+          auto ignore_right_of_way = custom_command["trafficRules"]["IgnoreRightOfWay"];
+          if (ignore_right_of_way)
+            std::cout << "Right of way will be ignored.\n";
+        }
+      }
     }
   }  
 }
