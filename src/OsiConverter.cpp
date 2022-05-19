@@ -322,6 +322,8 @@ void OsiConverter::generateJunctionPaths(osi3::SensorView &sensor_view) {
   osi3::GroundTruth *ground_truth = sensor_view.mutable_global_ground_truth();
 
   // generate junction paths for traffic lights
+  std::vector<int> start_lane_ids;
+
   for (auto &light : *ground_truth->mutable_traffic_light()) {
 
     // create path from assigned lane of light backwards
@@ -1136,7 +1138,10 @@ void OsiConverter::fillLanes(osi3::SensorView &sensor_view,
       // get ds of current lane
       std::vector<Point2D> tmp_lane_points;
       getXY(findLane(cur_lane_id, ground_truth), tmp_lane_points);
-      double ds = xy2s(tmp_lane_points.front(), tmp_lane_points.back(), tmp_lane_points);
+
+      
+      double start_psi = atan2(tmp_lane_points[1].y - tmp_lane_points[0].y, tmp_lane_points[1].x - tmp_lane_points[0].x);
+      double ds = xy2s(tmp_lane_points.front(), tmp_lane_points.back(), tmp_lane_points, start_psi);
 
       // increase distance_to_end
       ds_closed += ds;
@@ -1148,7 +1153,7 @@ void OsiConverter::fillLanes(osi3::SensorView &sensor_view,
     }
 
     // get remaining distance (always on ego lane)
-    double dist = xy2s(ego_centerline_point_, current_end_point, ego_lane_points);
+    double dist = xy2s(ego_centerline_point_, current_end_point, ego_lane_points, ego_base_.orientation().yaw());
 
     // set road end in input struct
     input.lanes[lane].closed = dist + ds_closed;
