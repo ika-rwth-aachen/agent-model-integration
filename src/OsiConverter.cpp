@@ -1161,7 +1161,7 @@ void OsiConverter::fillLanes(osi3::SensorView &sensor_view,
     lane++;
   }
 
-  //iterate over all remaining lanes
+  // iterate over all remaining lanes
   for (int i=0; i < ground_truth->lane_size() && lane < agent_model::NOL; i++) {
     osi3::Lane tmp_lane = ground_truth->lane(i);
 
