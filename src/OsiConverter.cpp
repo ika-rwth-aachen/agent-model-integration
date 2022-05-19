@@ -80,7 +80,7 @@ void OsiConverter::extractEgoInformation(osi3::SensorView &sensor_view,
   {
     ego_position_.x = ego_base_.position().x();
     ego_position_.y = ego_base_.position().y();
-    calc_new_lanes_ = true;
+    calculate_lanes_ = true;
     initialized_ = true;
   }
 
@@ -94,9 +94,8 @@ void OsiConverter::preprocess(osi3::SensorView &sensor_view,
   // analyize traffic commands
   processTrafficCommand(traffic_command, param);
 
-  // skip if lanes_ already exist and no new traffic command exist
-  //if (lanes_.size() > 0 && traffic_command.action_size() == 0) return;
-  if (!calc_new_lanes_) return;
+  // skip if lanes should not be calculated
+  if (!calculate_lanes_) return;
 
   // calculate new lanes_ to reach destination
   newLanes(sensor_view);
@@ -124,7 +123,7 @@ void OsiConverter::processTrafficCommand(osi3::TrafficCommand &traffic_command,
         = traffic_command.action(i).acquire_global_position_action();      
       glob_pos_action_id_ = position.action_header().action_id().value();
       dest_point_ = Point2D(position.position().x(), position.position().y());
-      calc_new_lanes_ = true;      
+      calculate_lanes_ = true;      
     }
 
     // take end position of trajectory for lane calculation
@@ -140,7 +139,7 @@ void OsiConverter::processTrafficCommand(osi3::TrafficCommand &traffic_command,
       dest_point_ = Point2D(
         traj.trajectory_point(traj.trajectory_point_size() - 1).position().x(),
         traj.trajectory_point(traj.trajectory_point_size() - 1).position().y());
-      calc_new_lanes_ = true;
+      calculate_lanes_ = true;
     }
 
     // take end position of path for lane calculation
@@ -156,7 +155,7 @@ void OsiConverter::processTrafficCommand(osi3::TrafficCommand &traffic_command,
       dest_point_ =
         Point2D(path.path_point(path.path_point_size() - 1).position().x(),
                 path.path_point(path.path_point_size() - 1).position().y());
-      calc_new_lanes_ = true;
+      calculate_lanes_ = true;
     }
 
     // speed action
@@ -212,6 +211,7 @@ void OsiConverter::newLanes(osi3::SensorView &sensor_view) {
 
   // find starting_lane_idx
   int starting_lane_idx = findLaneIdx(ground_truth, ego_lane_id_);
+
   // check if traffic_command was sent
   if (traj_action_id_ == -1
       && path_action_id_ == -1
@@ -227,7 +227,7 @@ void OsiConverter::newLanes(osi3::SensorView &sensor_view) {
               ego_lane_ptr_->classification().centerline(pos).y());
   }
 
-  // Find lanes to reach dest_point_
+  // find lanes to reach dest_point_
   lanes_.clear();
   futureLanes(ground_truth, starting_lane_idx, dest_point_, lanes_);
 
@@ -242,7 +242,7 @@ void OsiConverter::newLanes(osi3::SensorView &sensor_view) {
   std::cout << std::endl;
 
   // unset flat
-  calc_new_lanes_ = false;
+  calculate_lanes_ = false;
 }
 
 /**

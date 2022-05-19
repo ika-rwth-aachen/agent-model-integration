@@ -38,10 +38,10 @@ class OsiConverter {
 
  private:
 
-  // Flags
+  // flags
   bool initialized_ = false;
-  bool calc_new_lanes_ = false;
-  bool ignore_all_targets_ = false; //for now use flag. Later store individual ids
+  bool calculate_lanes_ = false;
+  bool ignore_all_targets_ = false; // use global flag for now - TODO: store ids
   
   // global path vectors
   std::vector<Point2D> path_centerline_;
