@@ -38,7 +38,9 @@ class OsiConverter {
 
  private:
 
-  bool initialized = false;
+  // Flags
+  bool initialized_ = false;
+  bool calc_new_lanes_ = false;
   
   // global path vectors
   std::vector<Point2D> path_centerline_;
@@ -55,8 +57,8 @@ class OsiConverter {
   // last action id's
   int traj_action_id_ = -1;
   int path_action_id_ = -1;
-  int speed_action_id_ = -1;
   int glob_pos_action_id_ = -1;
+  int speed_action_id_ = -1;
 
   // current ego values
   int ego_id_;
@@ -77,9 +79,9 @@ class OsiConverter {
                              agent_model::Input &input,
                              agent_model::Parameters &param);
 
-  void processTrafficCommand(osi3::SensorView &sensor_view,
-                            osi3::TrafficCommand &traffic_command, 
+  void processTrafficCommand(osi3::TrafficCommand &traffic_command, 
                             agent_model::Parameters &param);
+  void newLanes(osi3::SensorView &sensor_view);
 
   void classifyManeuver(osi3::SensorView &sensor_view,
                         agent_model::Input &input);

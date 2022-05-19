@@ -76,11 +76,12 @@ void OsiConverter::extractEgoInformation(osi3::SensorView &sensor_view,
   // find lane pointer
   ego_lane_ptr_ = findLane(ego_lane_id_, ground_truth);
 
-  if (!initialized)
+  if (!initialized_)
   {
     ego_position_.x = ego_base_.position().x();
     ego_position_.y = ego_base_.position().y();
-    initialized = true;
+    calc_new_lanes_ = true;
+    initialized_ = true;
   }
 
 }
@@ -90,11 +91,15 @@ void OsiConverter::preprocess(osi3::SensorView &sensor_view,
                               agent_model::Input &input,
                               agent_model::Parameters &param) {
 
-  // skip if lanes_ already exist and no new traffic command exist
-  if (lanes_.size() > 0 && traffic_command.action_size() == 0) return;
-
   // analyize traffic commands
-  processTrafficCommand(sensor_view, traffic_command, param);
+  processTrafficCommand(traffic_command, param);
+
+  // skip if lanes_ already exist and no new traffic command exist
+  //if (lanes_.size() > 0 && traffic_command.action_size() == 0) return;
+  if (!calc_new_lanes_) return;
+
+  // calculate new lanes_ to reach destination
+  newLanes(sensor_view);
 
   // generate paths
   generatePath(sensor_view, input);
@@ -103,15 +108,8 @@ void OsiConverter::preprocess(osi3::SensorView &sensor_view,
   classifyManeuver(sensor_view, input);
 }
 
-void OsiConverter::processTrafficCommand(osi3::SensorView &sensor_view,
-                                         osi3::TrafficCommand &traffic_command,
+void OsiConverter::processTrafficCommand(osi3::TrafficCommand &traffic_command,
                                          agent_model::Parameters &param) {
-
-  osi3::GroundTruth *ground_truth = sensor_view.mutable_global_ground_truth();
-
-  // find starting_lane_idx
-  int starting_lane_idx = findLaneIdx(ground_truth, ego_lane_id_);
-
   // iterate over all traffic commands
   for (int i = 0; i < traffic_command.action_size(); i++) {
 
@@ -123,12 +121,10 @@ void OsiConverter::processTrafficCommand(osi3::SensorView &sensor_view,
           .action_id()
           .value() != glob_pos_action_id_) {
       osi3::TrafficAction_AcquireGlobalPositionAction position =
-        traffic_command.action(i).acquire_global_position_action();
+        traffic_command.action(i).acquire_global_position_action();      
       glob_pos_action_id_ = position.action_header().action_id().value();
-
       dest_point_ = Point2D(position.position().x(), position.position().y());
-      lanes_.clear();
-      futureLanes(ground_truth, starting_lane_idx, dest_point_, lanes_);
+      calc_new_lanes_ = true;      
     }
 
     // take end position of trajectory for lane calculation
@@ -141,13 +137,10 @@ void OsiConverter::processTrafficCommand(osi3::SensorView &sensor_view,
       osi3::TrafficAction_FollowTrajectoryAction traj =
         traffic_command.action(i).follow_trajectory_action();
       traj_action_id_ = traj.action_header().action_id().value();
-
       dest_point_ = Point2D(
         traj.trajectory_point(traj.trajectory_point_size() - 1).position().x(),
         traj.trajectory_point(traj.trajectory_point_size() - 1).position().y());
-
-      lanes_.clear();
-      futureLanes(ground_truth, starting_lane_idx, dest_point_, lanes_);
+      calc_new_lanes_ = true;
     }
 
     // take end position of path for lane calculation
@@ -160,13 +153,10 @@ void OsiConverter::processTrafficCommand(osi3::SensorView &sensor_view,
       osi3::TrafficAction_FollowPathAction path =
         traffic_command.action(i).follow_path_action();
       path_action_id_ = path.action_header().action_id().value();
-
       dest_point_ =
         Point2D(path.path_point(path.path_point_size() - 1).position().x(),
                 path.path_point(path.path_point_size() - 1).position().y());
-
-      lanes_.clear();
-      futureLanes(ground_truth, starting_lane_idx, dest_point_, lanes_);
+      calc_new_lanes_ = true;
     }
 
     // speed action - no lane calculation
@@ -178,14 +168,22 @@ void OsiConverter::processTrafficCommand(osi3::SensorView &sensor_view,
            .value() != speed_action_id_)) {
       osi3::TrafficAction_SpeedAction speed =
         traffic_command.action(i).speed_action();
-
       speed_action_id_ = speed.action_header().action_id().value();
       param.velocity.vComfort = speed.absolute_target_speed();
     }
-  }
+  }  
+}
 
-  // check if lanes_ still empty (e.g. when no traffic_command is available)
-  if (lanes_.size() == 0) {
+void OsiConverter::newLanes(osi3::SensorView &sensor_view) {
+
+  osi3::GroundTruth *ground_truth = sensor_view.mutable_global_ground_truth();
+
+  // find starting_lane_idx
+  int starting_lane_idx = findLaneIdx(ground_truth, ego_lane_id_);
+  // check if traffic_command was sent
+  if (traj_action_id_ == -1
+      && path_action_id_ == -1
+      && glob_pos_action_id_ == -1) {
     // set dest_point_ to end of lane
     int pos = 0;
     if (ego_lane_ptr_->classification().centerline_is_driving_direction()) {
@@ -195,10 +193,11 @@ void OsiConverter::processTrafficCommand(osi3::SensorView &sensor_view,
     dest_point_ =
       Point2D(ego_lane_ptr_->classification().centerline(pos).x(),
               ego_lane_ptr_->classification().centerline(pos).y());
-
-    lanes_.clear();
-    futureLanes(ground_truth, starting_lane_idx, dest_point_, lanes_);
   }
+
+  // Find lanes to reach dest_point_
+  lanes_.clear();
+  futureLanes(ground_truth, starting_lane_idx, dest_point_, lanes_);
 
   // fill lane_mapping_
   mapLanes(ground_truth, lane_mapping_, ego_lane_ptr_, lanes_);
@@ -209,6 +208,9 @@ void OsiConverter::processTrafficCommand(osi3::SensorView &sensor_view,
   std::cout << "With lanes to pass: ";
   for (auto &lane : lanes_) std::cout << lane << " ";
   std::cout << std::endl;
+
+  // unset flat
+  calc_new_lanes_ = false;
 }
 
 /**
