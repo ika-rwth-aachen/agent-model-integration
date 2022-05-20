@@ -212,7 +212,7 @@ void OsiConverter::newLanes(osi3::SensorView &sensor_view) {
   // find starting_lane_idx
   int starting_lane_idx = findLaneIdx(ground_truth, ego_lane_id_);
 
-  // check if traffic_command was sent
+  // check if no traffic_command was sent
   if (traj_action_id_ == -1
       && path_action_id_ == -1
       && glob_pos_action_id_ == -1) {
