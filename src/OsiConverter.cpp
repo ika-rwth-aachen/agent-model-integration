@@ -8,8 +8,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 #include "OsiConverter.h"
-
 #include "OSI_helper.h"
+#include <nlohmann/json.hpp>
 
 void OsiConverter::convert(osi3::SensorView &sensor_view,
                            osi3::TrafficCommand &traffic_command,
@@ -76,11 +76,12 @@ void OsiConverter::extractEgoInformation(osi3::SensorView &sensor_view,
   // find lane pointer
   ego_lane_ptr_ = findLane(ego_lane_id_, ground_truth);
 
-  if (!initialized)
+  if (!initialized_)
   {
     ego_position_.x = ego_base_.position().x();
     ego_position_.y = ego_base_.position().y();
-    initialized = true;
+    calculate_lanes_ = true;
+    initialized_ = true;
   }
 
 }
@@ -90,11 +91,14 @@ void OsiConverter::preprocess(osi3::SensorView &sensor_view,
                               agent_model::Input &input,
                               agent_model::Parameters &param) {
 
-  // skip if lanes_ already exist and no new traffic command exist
-  if (lanes_.size() > 0 && traffic_command.action_size() == 0) return;
-
   // analyize traffic commands
-  trafficCommandToLanes(sensor_view, traffic_command, param);
+  processTrafficCommand(traffic_command, param);
+
+  // skip if lanes should not be calculated
+  if (!calculate_lanes_) return;
+
+  // calculate new lanes_ to reach destination
+  newLanes(sensor_view);
 
   // generate paths
   generatePath(sensor_view, input);
@@ -103,84 +107,115 @@ void OsiConverter::preprocess(osi3::SensorView &sensor_view,
   classifyManeuver(sensor_view, input);
 }
 
-void OsiConverter::trafficCommandToLanes(osi3::SensorView &sensor_view,
-                                         osi3::TrafficCommand &traffic_command,
+void OsiConverter::processTrafficCommand(osi3::TrafficCommand &traffic_command,
                                          agent_model::Parameters &param) {
+  // iterate over all traffic commands
+  for (int i = 0; i < traffic_command.action_size(); i++) {
+
+    // take global position for lane calculation
+    if (traffic_command.action(i).has_acquire_global_position_action()
+        && traffic_command.action(i)
+          .acquire_global_position_action()
+          .action_header()
+          .action_id()
+          .value() != glob_pos_action_id_) {
+      osi3::TrafficAction_AcquireGlobalPositionAction position 
+        = traffic_command.action(i).acquire_global_position_action();      
+      glob_pos_action_id_ = position.action_header().action_id().value();
+      dest_point_ = Point2D(position.position().x(), position.position().y());
+      calculate_lanes_ = true;      
+    }
+
+    // take end position of trajectory for lane calculation
+    if (traffic_command.action(i).has_follow_trajectory_action()
+        && traffic_command.action(i)
+          .follow_trajectory_action()
+          .action_header()
+          .action_id()
+          .value() != traj_action_id_) {
+      osi3::TrafficAction_FollowTrajectoryAction traj 
+        = traffic_command.action(i).follow_trajectory_action();
+      traj_action_id_ = traj.action_header().action_id().value();
+      dest_point_ = Point2D(
+        traj.trajectory_point(traj.trajectory_point_size() - 1).position().x(),
+        traj.trajectory_point(traj.trajectory_point_size() - 1).position().y());
+      calculate_lanes_ = true;
+    }
+
+    // take end position of path for lane calculation
+    if (traffic_command.action(i).has_follow_path_action() 
+        && traffic_command.action(i)
+          .follow_path_action()
+          .action_header()
+          .action_id()
+          .value() != path_action_id_) {
+      osi3::TrafficAction_FollowPathAction path
+        = traffic_command.action(i).follow_path_action();
+      path_action_id_ = path.action_header().action_id().value();
+      dest_point_ =
+        Point2D(path.path_point(path.path_point_size() - 1).position().x(),
+                path.path_point(path.path_point_size() - 1).position().y());
+      calculate_lanes_ = true;
+    }
+
+    // speed action
+    if (traffic_command.action(i).has_speed_action() 
+        && traffic_command.action(i)
+          .speed_action()
+          .action_header()
+          .action_id()
+          .value() != speed_action_id_) {
+      osi3::TrafficAction_SpeedAction speed 
+        = traffic_command.action(i).speed_action();
+      speed_action_id_ = speed.action_header().action_id().value();
+      param.velocity.vComfort = speed.absolute_target_speed();
+    }
+
+    // custom command
+    if (traffic_command.action(i).has_custom_action()
+      && traffic_command.action(i).custom_action()
+         .action_header().action_id()
+         .value() != custom_action_id_) {
+      osi3::TrafficAction_CustomAction custom
+        = traffic_command.action(i).custom_action();
+      custom_action_id_ = custom.action_header().action_id().value();
+      std::string command = custom.command();
+      nlohmann::json custom_command;
+      custom_command = nlohmann::json::parse(command);
+
+      if (custom_command.contains("Ignore_AllTrafficParticipants")){
+        ignore_all_targets_ = custom_command["Ignore_AllTrafficParticipants"];
+          if (ignore_all_targets_)
+            std::cout << "All targets will be ignored.\n";
+      }
+      if (custom_command.contains("Ignore_TrafficParticipants")){
+        std::cout << "Not supported yet from sim. env. side\n";
+        std::cout << "Todo: store targets that will be ignored.\n";
+      }
+      if (custom_command.contains("trafficRules")){
+        if (custom_command["trafficRules"].contains("IgnoreRightOfWay"))          
+        {
+          bool ignore_right_of_way 
+              = custom_command["trafficRules"]["IgnoreRightOfWay"];
+          if (ignore_right_of_way)
+            std::cout << "Soon: Right of way will be ignored.\n";
+        }
+      }
+    }
+  }  
+}
+
+void OsiConverter::newLanes(osi3::SensorView &sensor_view) {
 
   osi3::GroundTruth *ground_truth = sensor_view.mutable_global_ground_truth();
 
   // find starting_lane_idx
   int starting_lane_idx = findLaneIdx(ground_truth, ego_lane_id_);
 
-  // iterate over all traffic commands
-  for (int i = 0; i < traffic_command.action_size(); i++) {
-
-    // take global position for lane calculation
-    if (traffic_command.action(i).has_acquire_global_position_action()) {
-      osi3::TrafficAction_AcquireGlobalPositionAction position =
-        traffic_command.action(i).acquire_global_position_action();
-
-      dest_point_ = Point2D(position.position().x(), position.position().y());
-
-      lanes_.clear();
-      futureLanes(ground_truth, starting_lane_idx, dest_point_, lanes_);
-    }
-
-    // take end position of trajectory for lane calculation
-    if (traffic_command.action(i).has_follow_trajectory_action() &&
-        (traffic_command.action(i)
-           .follow_trajectory_action()
-           .action_header()
-           .action_id()
-           .value() != traj_action_id_)) {
-      osi3::TrafficAction_FollowTrajectoryAction traj =
-        traffic_command.action(i).follow_trajectory_action();
-      traj_action_id_ = traj.action_header().action_id().value();
-
-      dest_point_ = Point2D(
-        traj.trajectory_point(traj.trajectory_point_size() - 1).position().x(),
-        traj.trajectory_point(traj.trajectory_point_size() - 1).position().y());
-
-      lanes_.clear();
-      futureLanes(ground_truth, starting_lane_idx, dest_point_, lanes_);
-    }
-
-    // take end position of path for lane calculation
-    if (traffic_command.action(i).has_follow_path_action() &&
-        (traffic_command.action(i)
-           .follow_path_action()
-           .action_header()
-           .action_id()
-           .value() != path_action_id_)) {
-      osi3::TrafficAction_FollowPathAction path =
-        traffic_command.action(i).follow_path_action();
-      path_action_id_ = path.action_header().action_id().value();
-
-      dest_point_ =
-        Point2D(path.path_point(path.path_point_size() - 1).position().x(),
-                path.path_point(path.path_point_size() - 1).position().y());
-
-      lanes_.clear();
-      futureLanes(ground_truth, starting_lane_idx, dest_point_, lanes_);
-    }
-
-    // speed action - no lane calculation
-    if (traffic_command.action(i).has_speed_action() &&
-        (traffic_command.action(i)
-           .speed_action()
-           .action_header()
-           .action_id()
-           .value() != speed_action_id_)) {
-      osi3::TrafficAction_SpeedAction speed =
-        traffic_command.action(i).speed_action();
-
-      speed_action_id_ = speed.action_header().action_id().value();
-      param.velocity.vComfort = speed.absolute_target_speed();
-    }
-  }
-
-  // check if lanes_ still empty (e.g. when no traffic_command is available)
-  if (lanes_.size() == 0) {
+  // check if no traffic_command was sent
+  if (traj_action_id_ == -1
+      && path_action_id_ == -1
+      && glob_pos_action_id_ == -1) {
     // set dest_point_ to end of lane
     int pos = 0;
     if (ego_lane_ptr_->classification().centerline_is_driving_direction()) {
@@ -190,10 +225,11 @@ void OsiConverter::trafficCommandToLanes(osi3::SensorView &sensor_view,
     dest_point_ =
       Point2D(ego_lane_ptr_->classification().centerline(pos).x(),
               ego_lane_ptr_->classification().centerline(pos).y());
-
-    lanes_.clear();
-    futureLanes(ground_truth, starting_lane_idx, dest_point_, lanes_);
   }
+
+  // find lanes to reach dest_point_
+  lanes_.clear();
+  futureLanes(ground_truth, starting_lane_idx, dest_point_, lanes_);
 
   // fill lane_mapping_
   mapLanes(ground_truth, lane_mapping_, ego_lane_ptr_, lanes_);
@@ -204,6 +240,9 @@ void OsiConverter::trafficCommandToLanes(osi3::SensorView &sensor_view,
   std::cout << "With lanes to pass: ";
   for (auto &lane : lanes_) std::cout << lane << " ";
   std::cout << std::endl;
+
+  // unset flat
+  calculate_lanes_ = false;
 }
 
 /**
@@ -719,142 +758,144 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
 
   // iterate over all targets
   int target = 0;
-  for (auto &tar : *ground_truth->mutable_moving_object()) {
+  if (!ignore_all_targets_) {
+    for (auto &tar : *ground_truth->mutable_moving_object()) {
 
-    // skip ego vehicle
-    if (tar.id().value() == ego_id_) continue;
+      // skip ego vehicle
+      if (tar.id().value() == ego_id_) continue;
 
-    osi3::BaseMoving target_base = tar.base();
+      osi3::BaseMoving target_base = tar.base();
 
-    // set general properties
-    input.targets[target].id = target + 1;
-    input.targets[target].priority = agent_model::TARGET_PRIORITY_NOT_SET;
-    input.targets[target].position = agent_model::TARGET_NOT_RELEVANT;
-    input.targets[target].dsIntersection = 0;    
-    input.targets[target].ds = INFINITY;
-    input.targets[target].d = 0;
-    input.targets[target].lane = 127;
+      // set general properties
+      input.targets[target].id = target + 1;
+      input.targets[target].priority = agent_model::TARGET_PRIORITY_NOT_SET;
+      input.targets[target].position = agent_model::TARGET_NOT_RELEVANT;
+      input.targets[target].dsIntersection = 0;    
+      input.targets[target].ds = INFINITY;
+      input.targets[target].d = 0;
+      input.targets[target].lane = 127;
 
-    input.targets[target].xy.x = target_base.position().x() - ego_position_.x;
-    input.targets[target].xy.y = target_base.position().y() - ego_position_.y;
+      input.targets[target].xy.x = target_base.position().x() - ego_position_.x;
+      input.targets[target].xy.y = target_base.position().y() - ego_position_.y;
 
-    input.targets[target].v = getNorm(target_base.velocity());
-    input.targets[target].a = getNorm(target_base.acceleration());
-    input.targets[target].psi = target_base.orientation().yaw() - ego_base_.orientation().yaw();
+      input.targets[target].v = getNorm(target_base.velocity());
+      input.targets[target].a = getNorm(target_base.acceleration());
+      input.targets[target].psi = target_base.orientation().yaw() - ego_base_.orientation().yaw();
 
-    input.targets[target].size.length = target_base.dimension().length();
-    input.targets[target].size.width = target_base.dimension().width();
+      input.targets[target].size.length = target_base.dimension().length();
+      input.targets[target].size.width = target_base.dimension().width();
 
-    // check if target is assigned along the route
-    bool assigned = false;
-    int assigned_lane_idx = -1;
-    for (int j = 0; j < tar.assigned_lane_id_size(); j++) {
-      
-      // check if assigned to intersection
-      if (std::find(intersection_lanes_.begin(), intersection_lanes_.end(),
-                  tar.assigned_lane_id(j).value()) != intersection_lanes_.end()){
-        input.targets[target].position = agent_model::TARGET_ON_INTERSECTION;
-      }
-
-      // check if target on route
-      auto target_lane = find(lanes_.begin(), lanes_.end(), tar.assigned_lane_id(j).value());
-      if (target_lane != lanes_.end()) {
-        assigned_lane_idx = lane_mapping_[tar.assigned_lane_id(j).value()];
-        assigned = true;
-        break;
-      }
-    }
-
-    // only fill ds, d, lane and fields when target is assigned to host's path
-    if (assigned) {
-
-      // projection of target position to centerline
-      Point2D centerline_point;
-      Point2D target_point(target_base.position().x(), target_base.position().y());
-      closestCenterlinePoint(target_point, path_centerline_, centerline_point);
-
-      // ds along centerline to reach target 
-      double ds_target = xy2s(ego_centerline_point_, target_point,  
-                         path_centerline_, ego_base_.orientation().yaw());
-
-      double ds_correction = 0.5 * (ego_base_.dimension().length() + target_base.dimension().length());
-
-      // apply length correction
-      if (ds_target > 0)
-        ds_target -= ds_correction;
-      else
-        ds_target += ds_correction;
-
-      input.targets[target].ds = ds_target;
-
-      // calculate distance to centerline point
-      Point2D target_position(target_base.position().x(), target_base.position().y());
-      input.targets[target].d = computeDistanceInRefAngleSystem(target_position, centerline_point, target_base.orientation().yaw());
-
-      // set assigned lane id
-      input.targets[target].lane = assigned_lane_idx;
-      input.targets[target].position = agent_model::TARGET_ON_PATH;
-    } 
-    
-    // compute if target (not on path and intersection) approaches intersection
-    if (!assigned && input.targets[target].position != agent_model::TARGET_ON_INTERSECTION) {
-      
-      // iterate over assigned lanes
-      for (auto &assigned_lane : tar.assigned_lane_id()) {
-
-        std::vector<Point2D> path_points;
-        bool approaching_junction = false;
-
-        // target is on a yield lane to the heading to the junction
-        for (auto &junction_path : junction_paths_) {
-          if (find(junction_path.lane_ids.begin(), junction_path.lane_ids.end(),
-                    assigned_lane.value()) != junction_path.lane_ids.end()) {
-
-            if (junction_path.type == 1)
-              input.targets[target].priority = agent_model::TARGET_ON_PRIORITY_LANE;
-            else if (junction_path.type == 2)
-              input.targets[target].priority = agent_model::TARGET_ON_GIVE_WAY_LANE;
-            else
-              input.targets[target].priority = agent_model::TARGET_PRIORITY_NOT_SET;
-
-            path_points = junction_path.pts;
-            approaching_junction = true;
-            break;
-          }
-        }
+      // check if target is assigned along the route
+      bool assigned = false;
+      int assigned_lane_idx = -1;
+      for (int j = 0; j < tar.assigned_lane_id_size(); j++) {
         
-        // calculate distance to intersection if approaching intersection
-        if (approaching_junction)
-        {
-          double ds_intersection = abs(xy2s(Point2D(target_base.position().x(), target_base.position().y()), path_points.back(), path_points, target_base.orientation().yaw()));
+        // check if assigned to intersection
+        if (std::find(intersection_lanes_.begin(), intersection_lanes_.end(),
+                    tar.assigned_lane_id(j).value()) != intersection_lanes_.end()){
+          input.targets[target].position = agent_model::TARGET_ON_INTERSECTION;
+        }
 
-          input.targets[target].dsIntersection = ds_intersection;  
-
-          // compute target position if close enough (always if closer than 10m)
-          double ds_thres = std::max(10.0, input.targets[target].v * param.stop.TMax);
-          if (ds_intersection <= ds_thres)
-          {
-            double tol = M_PI/8;
-            double psi = input.targets[target].psi;
-
-            if (abs(wrapAngle(M_PI/2 - psi)) < tol)
-            {
-              input.targets[target].position = agent_model::TARGET_ON_RIGHT;
-            }
-            if (abs(wrapAngle(M_PI - psi)) < tol)
-            {
-              input.targets[target].position = agent_model::TARGET_ON_OPPOSITE;
-            }
-            if (abs(wrapAngle(-M_PI/2 - psi)) < tol)
-            {
-              input.targets[target].position = agent_model::TARGET_ON_LEFT;
-            }
-          }
+        // check if target on route
+        auto target_lane = find(lanes_.begin(), lanes_.end(), tar.assigned_lane_id(j).value());
+        if (target_lane != lanes_.end()) {
+          assigned_lane_idx = lane_mapping_[tar.assigned_lane_id(j).value()];
+          assigned = true;
           break;
         }
       }
+
+      // only fill ds, d, lane and fields when target is assigned to host's path
+      if (assigned) {
+
+        // projection of target position to centerline
+        Point2D centerline_point;
+        Point2D target_point(target_base.position().x(), target_base.position().y());
+        closestCenterlinePoint(target_point, path_centerline_, centerline_point);
+
+        // ds along centerline to reach target 
+        double ds_target = xy2s(ego_centerline_point_, target_point,  
+                          path_centerline_, ego_base_.orientation().yaw());
+
+        double ds_correction = 0.5 * (ego_base_.dimension().length() + target_base.dimension().length());
+
+        // apply length correction
+        if (ds_target > 0)
+          ds_target -= ds_correction;
+        else
+          ds_target += ds_correction;
+
+        input.targets[target].ds = ds_target;
+
+        // calculate distance to centerline point
+        Point2D target_position(target_base.position().x(), target_base.position().y());
+        input.targets[target].d = computeDistanceInRefAngleSystem(target_position, centerline_point, target_base.orientation().yaw());
+
+        // set assigned lane id
+        input.targets[target].lane = assigned_lane_idx;
+        input.targets[target].position = agent_model::TARGET_ON_PATH;
+      } 
+      
+      // compute if target (not on path and intersection) approaches intersection
+      if (!assigned && input.targets[target].position != agent_model::TARGET_ON_INTERSECTION) {
+        
+        // iterate over assigned lanes
+        for (auto &assigned_lane : tar.assigned_lane_id()) {
+
+          std::vector<Point2D> path_points;
+          bool approaching_junction = false;
+
+          // target is on a yield lane to the heading to the junction
+          for (auto &junction_path : junction_paths_) {
+            if (find(junction_path.lane_ids.begin(), junction_path.lane_ids.end(),
+                      assigned_lane.value()) != junction_path.lane_ids.end()) {
+
+              if (junction_path.type == 1)
+                input.targets[target].priority = agent_model::TARGET_ON_PRIORITY_LANE;
+              else if (junction_path.type == 2)
+                input.targets[target].priority = agent_model::TARGET_ON_GIVE_WAY_LANE;
+              else
+                input.targets[target].priority = agent_model::TARGET_PRIORITY_NOT_SET;
+
+              path_points = junction_path.pts;
+              approaching_junction = true;
+              break;
+            }
+          }
+          
+          // calculate distance to intersection if approaching intersection
+          if (approaching_junction)
+          {
+            double ds_intersection = abs(xy2s(Point2D(target_base.position().x(), target_base.position().y()), path_points.back(), path_points, target_base.orientation().yaw()));
+
+            input.targets[target].dsIntersection = ds_intersection;  
+
+            // compute target position if close enough (always if closer than 10m)
+            double ds_thres = std::max(10.0, input.targets[target].v * param.stop.TMax);
+            if (ds_intersection <= ds_thres)
+            {
+              double tol = M_PI/8;
+              double psi = input.targets[target].psi;
+
+              if (abs(wrapAngle(M_PI/2 - psi)) < tol)
+              {
+                input.targets[target].position = agent_model::TARGET_ON_RIGHT;
+              }
+              if (abs(wrapAngle(M_PI - psi)) < tol)
+              {
+                input.targets[target].position = agent_model::TARGET_ON_OPPOSITE;
+              }
+              if (abs(wrapAngle(-M_PI/2 - psi)) < tol)
+              {
+                input.targets[target].position = agent_model::TARGET_ON_LEFT;
+              }
+            }
+            break;
+          }
+        }
+      }
+      target++;
     }
-    target++;
   }
 
   // fill remaining targets with default values
