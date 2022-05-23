@@ -105,31 +105,32 @@ ExternalProject_Get_Property(protobuf_download INSTALL_DIR)
 set(PROTOBUF ${INSTALL_DIR})
 message("Protobuf installation directory " ${PROTOBUF})
 
-# Add submodule SimDriver
-add_subdirectory(lib/SimDriver)
-
 # Includes
 set(SIMDRIVER_SRC lib/SimDriver/src)
-set(INJECTION_DIR lib/SimDriver/lib/Injection)
-SET(OSI_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/ext/protobuf_download/include)
-SET(PROTOBUF_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/ext/osi_submodule/include/osi3)
+#set(INJECTION_DIR lib/SimDriver/lib/Injection)
+SET(PROTOBUF_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/ext/protobuf_download/include)
+SET(OSI_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/ext/osi_submodule/include/osi3)
+SET(OSI_WRAPPER_DIR lib/osiWrapper/src)
 
 include_directories(
 	${SIMDRIVER_SRC} 
 	include
 	include/FMI
+	${OSI_WRAPPER_DIR}
 	${OSI_INCLUDE_DIR}
 	${PROTOBUF_INCLUDE_DIR}
-	lib/json/single_include/)
+	lib/json/single_include/
+	)
 
 # Define target library ikaDriver
 add_library(${PROJECT_NAME} SHARED 
 	src/OSMPTrafficAgent.cpp 
-	src/IkaAgent.cpp 
-	src/OsiConverter.cpp 
-	src/Logger.cpp 
-	src/VehicleModel.cpp
-	src/PrimaryController.cpp)
+	#src/IkaAgent.cpp 
+	#src/OsiConverter.cpp 
+	#src/Logger.cpp 
+	#src/VehicleModel.cpp
+	#src/PrimaryController.cpp
+	)
 
 # Build ikaDriver after protobuf and osi has been downloaded and installed
 add_dependencies(${PROJECT_NAME} protobuf_download osi_submodule)
@@ -150,30 +151,27 @@ add_dependencies(static_osi_lib osi_submodule)
 set_target_properties(static_osi_lib PROPERTIES 
 	IMPORTED_LOCATION "${OSI}/lib/osi3/libopen_simulation_interface_pic.a")
 
+# Add submodule SimDriver
+add_subdirectory(lib/SimDriver)
+
+# Add ika OSI wrapper (and agent)
+add_subdirectory(lib/osiWrapper)
 
 if(WIN32)
 	target_link_libraries(${PROJECT_NAME}
 		PUBLIC static_osi_lib
 		PUBLIC static_protobuf_lib
-		PUBLIC agent_model -static-libgcc -static-libstdc++ -static)	
+		PUBLIC osi_wrapper
+		#PUBLIC agent_model -static-libgcc -static-libstdc++ -static
+		)	
 elseif(UNIX)
 	target_link_libraries(${PROJECT_NAME}
 		PUBLIC static_osi_lib
 		PUBLIC static_protobuf_lib
-		PUBLIC agent_model)
+		#PUBLIC agent_model
+		PUBLIC osi_wrapper
+		)
 endif()
-
-add_executable(${PROJECT_NAME}_ositrace
-	src/IkaAgent.cpp
-	src/VehicleModel.cpp
-	src/OsiConverter.cpp
-	src/Logger.cpp
-	src/PrimaryController.cpp
-	test/osiTraceTest.cpp)
-target_link_libraries(${PROJECT_NAME}_ositrace
-	PUBLIC static_osi_lib
-	PUBLIC static_protobuf_lib
-	PUBLIC agent_model)
 
 #if(LINK_WITH_SHARED_OSI)
 	#target_link_libraries(${PROJECT_NAME} open_simulation_interface -lprotobuf agent_model)
