@@ -93,16 +93,17 @@ void OsiConverter::preprocess(osi3::SensorView &sensor_view,
                               agent_model::Parameters &param,
                               agent_model::Memory &memory) 
 {
-  bool compute_lane = false;
-
   // analyize traffic commands
   processTrafficCommand(traffic_command, param);
 
   // if lane changed 
   if (memory.laneChange.switchLane != 0)
   {
-    //current_lane_group_ += memory.laneChange.switchLane;
-    calculate_lanes_ = true; // compute new lane groups
+    lc_action_id_ = 1;
+    calculate_lanes_ = true;
+  }
+  else{
+    lc_action_id_ = -1;
   }
 
   // skip if lanes should not be calculated
@@ -253,8 +254,8 @@ void OsiConverter::newLanes(osi3::SensorView &sensor_view) {
   futureLanes(ground_truth, starting_lane_idx, dest_point_, lane_groups_);
 
   LaneGroup lane_group = findLaneGroup(lane_groups_, current_lane_group_);
-  lanes_ = lane_group.lane_ids;
-  lanes_to_change_ = lane_group.lane_ids_to_change;
+  lanes_ = lane_group.lanes;
+  lanes_changeable_ = lane_group.lanes_changeable;
     
   // fill lane_mapping_
   mapLanes(ground_truth, lane_mapping_, ego_lane_ptr_, lanes_);
@@ -872,8 +873,8 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
 
           // target is on a yield lane to the heading to the junction
           for (auto &junction_path : junction_paths_) {
-            if (find(junction_path.lane_ids.begin(), junction_path.lane_ids.end(),
-                      assigned_lane.value()) != junction_path.lane_ids.end()) {
+            if (find(junction_path.lanes.begin(), junction_path.lanes.end(),
+                      assigned_lane.value()) != junction_path.lanes.end()) {
 
               if (junction_path.type == 1)
                 input.targets[target].priority = agent_model::TARGET_ON_PRIORITY_LANE;

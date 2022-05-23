@@ -69,6 +69,7 @@ class OsiConverter {
   std::vector<JunctionPath> junction_paths_;
 
   // last action id's
+  int lc_action_id_ = -1;
   int traj_action_id_ = -1;
   int path_action_id_ = -1;
   int glob_pos_action_id_ = -1;
