@@ -159,15 +159,15 @@ add_subdirectory(lib/osiWrapper)
 
 if(WIN32)
 	target_link_libraries(${PROJECT_NAME}
-		PUBLIC static_osi_lib
-		PUBLIC static_protobuf_lib
-		PUBLIC osi_wrapper
-		#PUBLIC agent_model -static-libgcc -static-libstdc++ -static
+		#PUBLIC static_osi_lib
+		#PUBLIC static_protobuf_lib
+		PUBLIC osi_wrapper -static-libgcc -static-libstdc++ -static
+		#PUBLIC agent_model 
 		)	
 elseif(UNIX)
 	target_link_libraries(${PROJECT_NAME}
-		PUBLIC static_osi_lib
-		PUBLIC static_protobuf_lib
+		#PUBLIC static_osi_lib
+		#PUBLIC static_protobuf_lib
 		#PUBLIC agent_model
 		PUBLIC osi_wrapper
 		)
