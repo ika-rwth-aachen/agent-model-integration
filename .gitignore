@@ -1,8 +1,9 @@
 debug/
 build/
+test/traces/
 
 .vs/
-
-lib/*.fmu
-
 .vscode/
+
+*.fmu
+*.pyc
