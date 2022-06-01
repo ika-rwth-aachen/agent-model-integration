@@ -251,9 +251,11 @@ void OsiConverter::newLanes(osi3::SensorView &sensor_view) {
 
   // calculate future lane groups
   lane_groups_.clear();
-  futureLanes(ground_truth, starting_lane_idx, dest_point_, lane_groups_);
+  current_lane_group_ = 0;
 
+  futureLanes(ground_truth, starting_lane_idx, dest_point_, lane_groups_);
   LaneGroup lane_group = findLaneGroup(lane_groups_, current_lane_group_);
+
   lanes_ = lane_group.lanes;
   lanes_changeable_ = lane_group.lanes_changeable;
     
