@@ -1020,9 +1020,9 @@ void OsiConverter::fillHorizon(osi3::SensorView &sensor_view,
                        + std::cos(ego_psi) * (horizon_knot.y - ego_position_.y);
 
     // set lane widths
-    input.horizon.egoLaneWidth[i] = 3.75;
-    input.horizon.leftLaneWidth[i] = 3.75;
-    input.horizon.rightLaneWidth[i] = 3.75;
+    input.horizon.egoLaneWidth[i] = 3.175;
+    input.horizon.leftLaneWidth[i] = 3.175;
+    input.horizon.rightLaneWidth[i] = 3.175;
   }
   
   // add destination point to horizon
