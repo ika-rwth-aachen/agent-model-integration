@@ -321,8 +321,23 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view) {
   xy2Curv(path_centerline_, path_s_, path_psi_, path_kappa_);
 }
 
+
+void OsiConverter::generateBoundaries(osi3::SensorView &sensor_view) {
+  osi3::GroundTruth *ground_truth = sensor_view.mutable_global_ground_truth();
+  for (auto &l : lanes_) {
+    osi3::Lane *tmp_lane = findLane(l, ground_truth);
+
+
+    osi::Lane *left_lane = find(tmp_lane->)
+
+  }
+}
+
 void OsiConverter::generateJunctionPaths(osi3::SensorView &sensor_view) {
   osi3::GroundTruth *ground_truth = sensor_view.mutable_global_ground_truth();
+
+  // generate junction paths for traffic lights
+  std::vector<int> start_lane_ids;
 
   // generate junction paths for traffic lights
   std::vector<int> start_lane_ids;

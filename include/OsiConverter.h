@@ -28,10 +28,16 @@ struct JunctionPath {
 };
 
 struct LaneGroup {
-int id;                             // id of lane group
+  int id;                           // id of lane group
   int lane_changes;                 // lane change amount to left(+)/right(-)
   std::vector<int> lanes;           // lane ids of lane group
   std::vector<int> lanes_changeable;// lane ids where change is allowed
+};
+
+struct Boundary {
+  std::vector<double> s;
+  std::vector<double> x;
+  std::vector<double> y;
 };
 
 class OsiConverter {
@@ -59,6 +65,12 @@ class OsiConverter {
   std::vector<double> path_kappa_;
   std::vector<double> path_s_;
   std::vector<double> path_psi_;
+
+  // boundaries
+  Boundary left_left_boundary_;
+  Boundary left_boundary_;
+  Boundary right_boundary_;
+  Boundary right_right_boundary_;
 
   // global lanes
   std::vector<LaneGroup> lane_groups_;
