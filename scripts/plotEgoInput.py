@@ -59,9 +59,9 @@ def plotEgoInput(args):
 if __name__ == "__main__":
         
     parser = argparse.ArgumentParser()
-    parser.add_argument('-f', '--file', type=argparse.FileType('r'), help="SensorView.json input file")
+    parser.add_argument('-f', '--file', type=argparse.FileType('r'), help="vehicle_<xy>.json input file generated from ikaDriver")
     parser.add_argument('-s', '--save', action='store_true', help="if figure is saved")
-    parser.add_argument('-o', '--output', default=pathlib.Path("../../debug"), type=pathlib.Path, help="output path")
+    parser.add_argument('-o', '--output', default=pathlib.Path("debug"), type=pathlib.Path, help="output path")
 
     args = parser.parse_args()
 
