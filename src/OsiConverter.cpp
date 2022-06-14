@@ -355,7 +355,7 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view) {
           closestCenterlinePoint(position, adjacent_points, adjacent_point);
 
           // calculate euclidean distance
-          double dt = -euclideanDistance(adjacent_point, position);
+          double dt = euclideanDistance(adjacent_point, position);
 
           // update offset
           if (dt > dtoff_right) dtoff_right = dt;
@@ -365,8 +365,14 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view) {
         dtoff_left = dtoff_left == INFINITY ? 0 : dtoff_left;
         dtoff_right = dtoff_right == -INFINITY ? 0 : dtoff_right;
 
+        // modify according to driving direction
+        if (lane->classification().centerline_is_driving_direction())   
+          dtoff_left *= -1;
+        else 
+          dtoff_right *= -1;
+
         // TODO: width computation
-        double width = 0;
+        double width = 0.0;
 
         // fill path
         path_centerline_.push_back(position);
@@ -1194,7 +1200,7 @@ void OsiConverter::fillLanes(osi3::SensorView &sensor_view,
 
     // fill general information
     input.lanes[lane].id = lane_id;
-    input.lanes[lane].width = 0;
+    input.lanes[lane].width = 0.0;
     input.lanes[lane].access = agent_model::Accessibility::ACC_ACCESSIBLE;
     input.lanes[lane].dir = agent_model::DrivingDirection::DD_FORWARDS;
     input.lanes[lane].lane_change = lane_change;
@@ -1284,7 +1290,7 @@ void OsiConverter::fillLanes(osi3::SensorView &sensor_view,
     }
 
     // general information
-    input.lanes[lane].width = 0;
+    input.lanes[lane].width = 0.0;
     input.lanes[lane].closed = -1;
     input.lanes[lane].route = -1;
 
