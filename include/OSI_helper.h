@@ -203,7 +203,7 @@ int closestCenterlinePoint(const Point2D point, const std::vector<Point2D>& cl,
  * @param p1_p2 a vector of four points that describe both road ends
  * @param pos the centerline with a gap that should be filled by this function
  * @param idx index within pos where the gap is located
- *
+ * @return length of inserted gap vector
  */
 
 int calcXYGap(std::vector<Point2D> p1_p2, std::vector<Point2D>& pos, int idx) {
@@ -256,7 +256,8 @@ int calcXYGap(std::vector<Point2D> p1_p2, std::vector<Point2D>& pos, int idx) {
 
   pos.insert(pos.begin() + idx, gapXY.begin(), gapXY.end());
 
-  return 0;
+  // return size of gap
+  return gapXY.size();
 }
 
 /**
@@ -1197,4 +1198,8 @@ bool isSigAssigned(T &cls, std::vector<int> &signal_lanes, std::vector<int> &lan
     }
 
     return assigned;
+}
+
+double euclideanDistance(Point2D p, Point2D q){
+  return sqrt(pow(p.x-q.x,2) + pow(p.y-q.y,2));
 }

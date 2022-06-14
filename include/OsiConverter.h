@@ -66,11 +66,9 @@ class OsiConverter {
   std::vector<double> path_s_;
   std::vector<double> path_psi_;
 
-  // boundaries
-  Boundary left_left_boundary_;
-  Boundary left_boundary_;
-  Boundary right_boundary_;
-  Boundary right_right_boundary_;
+  std::vector<double> path_width_;
+  std::vector<double> path_toff_left_;
+  std::vector<double> path_toff_right_;
 
   // global lanes
   std::vector<LaneGroup> lane_groups_;
