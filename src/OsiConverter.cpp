@@ -290,7 +290,7 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view) {
 
   // initialize last position
   Point2D last_position(INFINITY, INFINITY);
-  
+
   // get all relevant path points from lanes_
   for (auto &l : lanes_) {
     osi3::Lane *lane = findLane(l, ground_truth);
@@ -1150,6 +1150,8 @@ void OsiConverter::fillLanes(osi3::SensorView &sensor_view,
 
   // check if lane change is possible from current ego lane
   bool lane_change_possible = (find(lanes_changeable_.begin(), lanes_changeable_.end(), ego_lane_id_) != lanes_changeable_.end());
+
+  // TODO: also consider lane width for changeable boolean
 
   std::vector<int> processed_lanes;
 
