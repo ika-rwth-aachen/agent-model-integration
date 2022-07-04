@@ -366,10 +366,14 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view) {
         dtoff_right = dtoff_right == -INFINITY ? 0 : dtoff_right;
 
         // modify according to driving direction
-        if (lane->classification().centerline_is_driving_direction())   
-          dtoff_left *= -1;
-        else 
-          dtoff_right *= -1;
+        if (lane->classification().centerline_is_driving_direction()){
+          path_toff_left_.push_back(dtoff_left);
+          path_toff_right_.push_back(-dtoff_right);
+        }
+        else { 
+          path_toff_left_.push_back(dtoff_right);
+          path_toff_right_.push_back(-dtoff_left);
+        }
 
         // TODO: width computation
         double width = 0.0;
@@ -377,8 +381,6 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view) {
         // fill path
         path_centerline_.push_back(position);
         path_width_.push_back(width);
-        path_toff_left_.push_back(dtoff_left);
-        path_toff_right_.push_back(dtoff_right);
 
         // update position
         last_position = position;

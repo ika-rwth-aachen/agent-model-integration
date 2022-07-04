@@ -70,7 +70,7 @@ void IkaAgent::init(osi3::BaseMoving &host) {
   driver_param->steering.D[1] = 0.1;
 
   // lane change parameters
-  driver_param->laneChange.time = 3;
+  driver_param->laneChange.time = 5;
 
   AgentModel::init();
 
