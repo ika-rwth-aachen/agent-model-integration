@@ -1095,8 +1095,20 @@ void OsiConverter::fillHorizon(osi3::SensorView &sensor_view,
       input.horizon.ds[i] = ds[i];
 
       input.horizon.egoLaneWidth[i] = path_width_[idx] + frac * dwidth_path;
-      input.horizon.leftLaneOffset[i] = path_toff_left_[idx] + frac * dtoff_left_path;
-      input.horizon.rightLaneOffset[i] = path_toff_right_[idx] + frac * dtoff_right_path;
+ 
+      if (path_toff_left_[idx+1] > 0 && path_toff_left_[idx] > 0) {
+        input.horizon.leftLaneOffset[i] = path_toff_left_[idx] + frac * dtoff_left_path;
+      }
+      else {
+        input.horizon.leftLaneOffset[i] = 0;
+      }
+
+      if (path_toff_right_[idx+1] > 0 && path_toff_right_[idx] > 0) {
+        input.horizon.rightLaneOffset[i] = path_toff_right_[idx] + frac * dtoff_right_path;
+      }
+      else {
+        input.horizon.rightLaneOffset[i] = 0;
+      }
     }
     // take last values if end of path reached (no extrapolation)
     else {
