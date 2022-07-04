@@ -288,6 +288,9 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view) {
   path_toff_left_.clear();
   path_toff_right_.clear();
 
+  // initialize last position
+  Point2D last_position(INFINITY, INFINITY);
+  
   // get all relevant path points from lanes_
   for (auto &l : lanes_) {
     osi3::Lane *lane = findLane(l, ground_truth);
@@ -306,8 +309,6 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view) {
       std::vector<Point2D> centerline_points;
       getXY(lane, centerline_points);
 
-      // initialize last position
-      Point2D last_position(INFINITY, INFINITY);
 
       // iterate over all centerline_points on lane;
       for (int i = 0; i < centerline_points.size(); i++)
