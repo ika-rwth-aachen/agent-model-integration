@@ -296,7 +296,7 @@ int getXY(osi3::Lane* l, std::vector<Point2D>& pos) {
 double calcWidth(const Point2D point, osi3::Lane* lane,
                  osi3::GroundTruth* ground_truth) {
 
-  std::vector<int> lb_ids, rb_ids;
+  std::vector<uint64_t> lb_ids, rb_ids;
   std::vector<Point2D> lb_points, rb_points;
 
   // std::cout << "left:"<<
@@ -415,7 +415,7 @@ double xy2s(const Point2D start, const Point2D end,
  * @param ID
  * @param ground_truth
  */
-osi3::Lane* findLane(int id, osi3::GroundTruth* ground_truth) {
+osi3::Lane* findLane(uint64_t id, osi3::GroundTruth* ground_truth) {
   for (int i = 0; i < ground_truth->lane_size(); i++) {
     if (ground_truth->lane(i).id().value() == id)
       return (ground_truth->mutable_lane(i));
@@ -429,7 +429,7 @@ osi3::Lane* findLane(int id, osi3::GroundTruth* ground_truth) {
  * @param ground_truth
  * @param ID
  */
-int findLaneIdx(osi3::GroundTruth* ground_truth, int id) {
+int findLaneIdx(osi3::GroundTruth* ground_truth, uint64_t id) {
   for (int i = 0; i < ground_truth->lane_size(); i++) {
     if (ground_truth->lane(i).id().value() == id) return i;
   }
@@ -446,8 +446,8 @@ int findLaneIdx(osi3::GroundTruth* ground_truth, int id) {
  * @param future_lanes vector of all lanes along the host's path
  */
 void mapLanes(osi3::GroundTruth* ground_truth,
-              std::unordered_map<int, int>& mapping, osi3::Lane* ego_lane_ptr,
-              std::vector<int> future_lanes) {
+              std::unordered_map<uint64_t, int>& mapping, osi3::Lane* ego_lane_ptr,
+              std::vector<uint64_t> future_lanes) {
 
   osi3::Lane* current = nullptr;
   int right_lane_count = 0;
@@ -519,12 +519,12 @@ void createGraph(osi3::GroundTruth* ground_truth, std::vector<int> adj[]) {
     for (int j = 0;
          j < ground_truth->lane(i).classification().lane_pairing_size(); j++) {
       
-      int ant_id = ground_truth->lane(i).classification()
+      uint64_t ant_id = ground_truth->lane(i).classification()
                                                       .lane_pairing(j)
                                                       .antecessor_lane_id()
                                                       .value();
 
-      int suc_id = ground_truth->lane(i).classification()
+      uint64_t suc_id = ground_truth->lane(i).classification()
                                                       .lane_pairing(j)
                                                       .successor_lane_id()
                                                       .value();
@@ -624,7 +624,7 @@ int interpolateXY2Value(std::vector<double> y, std::vector<Point2D> xy,
  * @param point
  * @return id of lane
  */
-int closestLane(osi3::GroundTruth* ground_truth, const Point2D point) {
+uint64_t closestLane(osi3::GroundTruth* ground_truth, const Point2D point) {
   std::vector<Point2D> centerline;
   double distance = INFINITY;
   double distance_valid_idx = INFINITY;
@@ -632,8 +632,8 @@ int closestLane(osi3::GroundTruth* ground_truth, const Point2D point) {
   // lanes with valid idx have only priority if closer `max_distance_valid_idx`
   double max_distance_valid_idx = 5;        
 
-  int dest_id = -1;
-  int dest_id_valid_idx = -1;
+  uint64_t dest_id = -1;
+  uint64_t dest_id_valid_idx = -1;
 
   for (int i = 0; i < ground_truth->lane_size(); i++) {
     centerline.clear();
@@ -684,7 +684,7 @@ int closestLane(osi3::GroundTruth* ground_truth, const Point2D point) {
  * @param lane_id       index of starting lane
  * @param junction_path result
  */
-JunctionPath calcJunctionPath(osi3::GroundTruth* ground_truth, int lane_id)
+JunctionPath calcJunctionPath(osi3::GroundTruth* ground_truth, uint64_t lane_id)
 {
 
   // create junction_path
@@ -700,7 +700,7 @@ JunctionPath calcJunctionPath(osi3::GroundTruth* ground_truth, int lane_id)
     // iterate over all lane pairings
     for (auto &l_pairs : lane->classification().lane_pairing()) 
     {
-      int next_id, from_id;
+      uint64_t next_id, from_id;
 
       // set next_id of lane in front of signal as well as from_id
       if (lane->classification().centerline_is_driving_direction()) {
@@ -741,13 +741,13 @@ JunctionPath calcJunctionPath(osi3::GroundTruth* ground_truth, int lane_id)
  * @param future_lanes result
  */
 void futureLanes(osi3::GroundTruth* ground_truth, const int& start_idx,
-                  const Point2D& destination, std::vector<int>& future_lanes) {
+                  const Point2D& destination, std::vector<uint64_t>& future_lanes) {
 
   // destination INDEX
   int dest_idx;
 
   //std::cout << "destination :" << destination.x << "," << destination.y << "\n";
-  int dest_id = closestLane(ground_truth, destination);
+  uint64_t dest_id = closestLane(ground_truth, destination);
   dest_idx = findLaneIdx(ground_truth, dest_id);
   //std::cout << " on lane " << dest_id << std::endl;
   // Graph setup
@@ -968,8 +968,7 @@ double computeDistanceInRefAngleSystem(Point2D ego, Point2D centerline, double r
   return d_sig * d;
 }
 
-double calcDsSignal(osi3::GroundTruth &ground_truth, std::vector<Point2D> &center_line, 
-                    Point2D signal_point, Point2D ego_cl_point, int lane_id,
+double calcDsSignal(osi3::GroundTruth &ground_truth, std::vector<Point2D> &center_line, Point2D signal_point, Point2D ego_cl_point, uint64_t lane_id,
                     double angle, double ds_gap) {
   // distance in meters that the road marking's origin may be away
   // from the signal to make sure it is not across the map
@@ -1028,7 +1027,7 @@ double calcDsSignal(osi3::GroundTruth &ground_truth, std::vector<Point2D> &cente
  * @return Boolean value that states if the signal is assinged to lane on the path
  */
 template<class T>
-bool isSigAssigned(T &cls, std::vector<int> &signal_lanes, std::vector<int> &lanes, int &assigned_lane_id)
+bool isSigAssigned(T &cls, std::vector<uint64_t> &signal_lanes, std::vector<uint64_t> &lanes, uint64_t &assigned_lane_id)
 {
   bool assigned = false;
 

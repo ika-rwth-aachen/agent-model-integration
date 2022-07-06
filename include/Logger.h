@@ -24,11 +24,11 @@ class Logger {
     Logger(){};
     ~Logger(){};
 
-    void init(int ego_id);
+    void init(uint64_t ego_id);
     void saveDebugInformation(double time, agent_model::Input input, agent_model::State *driver_state, VehicleModel::State *vehicle_state);
 
   private:
-    int ego_id_;
+    uint64_t ego_id_;
 
     json json_logger_;
     int json_counter_ = 0;

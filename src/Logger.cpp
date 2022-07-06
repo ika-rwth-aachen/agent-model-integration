@@ -9,7 +9,7 @@
  */
 #include "Logger.h"
 
-void Logger::init(int ego_id) {
+void Logger::init(uint64_t ego_id) {
 
   ego_id_ = ego_id;
   path_ = DEBUG_OUTDIR;
@@ -23,9 +23,9 @@ void Logger::init(int ego_id) {
 
 void Logger::saveDebugInformation(double time, agent_model::Input input, agent_model::State *driver_state, VehicleModel::State *vehicle_state) {
 
-  // convert time and dt_log to milliseconds (int) to allow modulo operator 
+  // convert time and dt_log to milliseconds (uint64_t) to allow modulo operator
   // add 0.5 for proper rounding
-  if (int(1000*time + 0.5) % int(1000*dt_log_ + 0.5) == 0) {
+  if (uint64_t(1000*time + 0.5) % uint64_t(1000*dt_log_ + 0.5) == 0) {
 
     json json_conscious_follow;
     json_conscious_follow["distance"] = driver_state->conscious.follow.distance;
@@ -39,7 +39,7 @@ void Logger::saveDebugInformation(double time, agent_model::Input input, agent_m
 
     
     json json_conscious_lateral;
-    for (int i=0; i < 3; i++)
+    for (int i = 0; i < 3; i++)
     {
       json_conscious_lateral[i]["factor"] = driver_state->conscious.lateral.paths[i].factor;
       json_conscious_lateral[i]["offset"] = driver_state->conscious.lateral.paths[i].offset;
@@ -110,7 +110,7 @@ void Logger::saveDebugInformation(double time, agent_model::Input input, agent_m
   }
 
   // save debug file
-  if (int(1000*time + 0.5) % int(1000*dt_save_ + 0.5) == 0) {
+  if (uint64_t(1000*time + 0.5) % uint64_t(1000*dt_save_ + 0.5) == 0) {
     std::ofstream output(path_ + "/vehicle_" + std::to_string(ego_id_) + ".json", std::ofstream::out);
     output << json_logger_.dump(4);
     output.close();

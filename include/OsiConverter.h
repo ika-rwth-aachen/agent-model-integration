@@ -21,9 +21,9 @@
 using Point2D = agent_model::Position;
 
 struct JunctionPath {
-  std::vector<int> lane_ids;
+  std::vector<uint64_t> lane_ids;
   std::vector<Point2D> pts;
-  int signal_id;
+  uint64_t signal_id;
   int type; // -1 unknown, 0 changing, 1 priority, 2 give way
 };
 
@@ -50,21 +50,21 @@ class OsiConverter {
   std::vector<double> path_psi_;
 
   // global lanes
-  std::vector<int> lanes_;
-  std::vector<int> intersection_lanes_;
+  std::vector<uint64_t> lanes_;
+  std::vector<uint64_t> intersection_lanes_;
   std::vector<JunctionPath> junction_paths_;
-  std::unordered_map<int, int> lane_mapping_;
+  std::unordered_map<uint64_t, int> lane_mapping_;
 
   // last action id's
-  int traj_action_id_ = -1;
-  int path_action_id_ = -1;
-  int glob_pos_action_id_ = -1;
-  int speed_action_id_ = -1;
-  int custom_action_id_ = -1;
+  uint64_t traj_action_id_ = -1;
+  uint64_t path_action_id_ = -1;
+  uint64_t glob_pos_action_id_ = -1;
+  uint64_t speed_action_id_ = -1;
+  uint64_t custom_action_id_ = -1;
 
   // current ego values
-  int ego_id_;
-  int ego_lane_id_;
+  uint64_t ego_id_;
+  uint64_t ego_lane_id_;
   osi3::MovingObject ego_;
   osi3::BaseMoving ego_base_;
   osi3::Lane *ego_lane_ptr_;
