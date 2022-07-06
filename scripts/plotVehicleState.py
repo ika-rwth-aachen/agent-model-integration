@@ -62,9 +62,9 @@ def plotVehicleState(args):
         if not args.output.exists():
             os.mkdir(args.output)
 
-        name = 'vehicle_states.eps'
+        name = 'vehicle_states.png'
         file_name = pathlib.PurePath(args.output, name)
-        plt.savefig(file_name, format='eps', dpi=1200)
+        plt.savefig(file_name, format='png', dpi=1200)
 
 if __name__ == "__main__":
         
