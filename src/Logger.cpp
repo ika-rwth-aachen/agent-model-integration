@@ -21,6 +21,50 @@ void Logger::init(uint64_t ego_id) {
   }
 }
 
+void Logger::saveOSI(osi3::SensorView &sensor_view,
+                   osi3::TrafficCommand &traffic_command, std::string path) {
+  
+  std::string sensor_view_string;
+  sensor_view.SerializeToString(&sensor_view_string);
+
+  std::ofstream file_sensor_view;
+  file_sensor_view.open(path + "sensor_view_carla.osi", std::ofstream::app|std::ofstream::binary);
+  file_sensor_view.imbue(std::locale::classic());
+
+  uint32_t val_sv = (uint32_t) sensor_view.ByteSizeLong();
+  file_sensor_view.write(reinterpret_cast<const char*>(&val_sv), sizeof val_sv);
+
+  file_sensor_view << sensor_view_string;
+  file_sensor_view.close();
+
+
+  std::string traffic_command_string;
+  traffic_command.SerializeToString(&traffic_command_string);
+
+  std::ofstream file_traffic_command;
+  file_traffic_command.open(path + "traffic_command_carla.osi", std::ofstream::app|std::ofstream::binary);
+  file_traffic_command.imbue(std::locale::classic());
+
+  uint32_t val_tc = (uint32_t) traffic_command.ByteSizeLong();
+  file_traffic_command.write(reinterpret_cast<const char*>(&val_tc), sizeof val_tc);
+
+  file_traffic_command << traffic_command_string;
+  file_traffic_command.close();
+
+
+  std::string debug_sensorview_string = sensor_view.DebugString();
+  std::ofstream debug_sensorview (path + "sensor_view_carla.txt",  std::ofstream::app);
+  debug_sensorview << debug_sensorview_string;
+  debug_sensorview.close();
+
+
+  std::string debug_trafficcommand_string = traffic_command.DebugString();
+  std::ofstream debug_trafficcommand (path + "traffic_command_carla.txt",  std::ofstream::app);
+  debug_trafficcommand << debug_trafficcommand_string;
+  debug_trafficcommand.close();
+}
+
+
 void Logger::saveDebugInformation(double time, agent_model::Input input, agent_model::State *driver_state, VehicleModel::State *vehicle_state) {
 
   // convert time and dt_log to milliseconds (uint64_t) to allow modulo operator

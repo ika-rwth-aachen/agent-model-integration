@@ -125,28 +125,8 @@ int IkaAgent::step(double time, double step_size, osi3::SensorView &sensor_view,
   uint64_t id = sensor_view.host_vehicle_id().value();
 
   std::cout << "---------- time: " << time << " ---------- id: " << id << " ----------" << std::endl;
- 
-  // debug: save input sensor_view and traffic_update
-  if (true)
-  {
-    std::string osi_sensorview_string = sensor_view.SerializeAsString();
-    std::string debug_sensorview_string = sensor_view.DebugString();
-    std::ofstream osi_sensorview ("/work/geller/sensor_view_carla.osi");
-    std::ofstream debug_sensorview ("/work/geller/sensor_view_carla.txt");
-    osi_sensorview << osi_sensorview_string;
-    debug_sensorview << debug_sensorview_string;
-    osi_sensorview.close();
-    debug_sensorview.close();
 
-    std::string osi_trafficcommand_string = traffic_command.SerializeAsString();
-    std::string debug_trafficcommand_string = traffic_command.DebugString();
-    std::ofstream osi_trafficcommand ("/work/geller/traffic_command_carla.osi");
-    std::ofstream debug_trafficcommand ("/work/geller/traffic_command_carla.txt");
-    osi_trafficcommand << osi_trafficcommand_string;
-    debug_trafficcommand << debug_trafficcommand_string;
-    osi_trafficcommand.close();
-    debug_trafficcommand.close();
-  }
+  logger.saveOSI(sensor_view, traffic_command, "/work/geller/SETLevel/ika-driver/test/traces/");
 
   // in the first step, the desired curvature should be zero
   bool firstStep = false;
