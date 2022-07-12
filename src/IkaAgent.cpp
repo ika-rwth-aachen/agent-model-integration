@@ -128,6 +128,9 @@ int IkaAgent::step(double time, double step_size, osi3::SensorView &sensor_view,
 
   logger.saveOSI(sensor_view, traffic_command, "/work/geller/SETLevel/ika-driver/test/traces/");
 
+  std::cout << "sv x = " << sensor_view.host_vehicle_data().location().position().x() << std::endl;
+  std::cout << "sv y = " << sensor_view.host_vehicle_data().location().position().y() << std::endl;
+
   // in the first step, the desired curvature should be zero
   bool firstStep = false;
   // initialize agent
@@ -169,6 +172,8 @@ int IkaAgent::step(double time, double step_size, osi3::SensorView &sensor_view,
 int IkaAgent::buildTrafficUpdate(osi3::TrafficUpdate &traffic_update) {
   osi3::MovingObject *object = traffic_update.mutable_update(0);
 
+  std::cout << "Traffic update x = " << vehicle_state_->position.x << std::endl;
+  std::cout << "Traffic update y = " << vehicle_state_->position.y << std::endl;
   object->mutable_base()->mutable_position()->set_x(vehicle_state_->position.x);
   object->mutable_base()->mutable_position()->set_y(vehicle_state_->position.y);
   object->mutable_base()->mutable_velocity()->set_x(vehicle_state_->v);
