@@ -40,6 +40,7 @@ struct Boundary {
   std::vector<double> y;
 };
 
+
 class OsiConverter {
  public:
   OsiConverter(){};
@@ -60,6 +61,7 @@ class OsiConverter {
   
   std::vector<int> lanes_;
   std::vector<int> lanes_changeable_;
+  std::vector<std::tuple<double, double> > changeable_;
 
   std::vector<Point2D> path_centerline_;
   std::vector<double> path_kappa_;
@@ -69,7 +71,7 @@ class OsiConverter {
   std::vector<double> path_width_;
   std::vector<double> path_toff_left_;
   std::vector<double> path_toff_right_;
-
+  
   // global lanes
   std::vector<LaneGroup> lane_groups_;
   int current_lane_group_;
