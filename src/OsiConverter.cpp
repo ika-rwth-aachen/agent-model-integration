@@ -288,6 +288,9 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view) {
   path_toff_left_.clear();
   path_toff_right_.clear();
 
+  // clear changeable array
+  changeable_.clear();
+
   // initialize last position
   Point2D last_position(INFINITY, INFINITY);
 
@@ -442,6 +445,46 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view) {
 
   // calculate s, psi, kappa from centerline
   xy2Curv(path_centerline_, path_s_, path_psi_, path_kappa_);
+
+  // calculate changeable
+  for (auto &l : lanes_) {
+
+    osi3::Lane *lane = findLane(l, ground_truth);
+
+    // check if lane can be changed from current lane
+    if (std::find(lanes_changeable_.begin(), lanes_changeable_.end(), l) !=   lanes_changeable_.end()){
+
+      // get centerline_points
+      std::vector<double> s_coordinates;
+      std::vector<Point2D> centerline_points;
+      getXY(lane, centerline_points);
+
+      // find start/end index
+      int start =findPointInPoints(path_centerline_, centerline_points.front());
+      int end = findPointInPoints(path_centerline_, centerline_points.back());
+        
+      // check if new entry required
+      if (changeable_.size() == 0 || std::get<1>(changeable_.back()) != path_s_[start])
+      {
+        changeable_.push_back(std::make_tuple(path_s_[start], path_s_[end]));
+      }
+      // update last entry
+      else {
+        std::get<1>(changeable_.back()) = path_s_[end];
+      }
+
+      // update entry of last changeable lane
+      if (l == lanes_changeable_.back()) {
+
+          // compute latest change point
+          Point2D latest_change_point;
+          int idx = closestCenterlinePoint(dest_point_, path_centerline_, latest_change_point) - 1;
+
+          // update end s coordinate of last changeable entry
+          std::get<1>(changeable_.back()) = path_s_[idx] + euclideanDistance(path_centerline_[idx], latest_change_point);
+      }
+    }
+  }
 }
 
 void OsiConverter::generateJunctionPaths(osi3::SensorView &sensor_view) {
