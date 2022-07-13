@@ -320,9 +320,11 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view) {
 
         // initialize toffsets
         double dtoff_left = INFINITY;
-        double dtoff_right = -INFINITY;
+        double dtoff_right = INFINITY;
+        double dtoff_left_boundary = INFINITY;
+        double dtoff_right_boundary = INFINITY;
 
-        // iterate over all ajacent lanes on left
+        // iterate over all ajacent lanes on left side
         for (int j = 0; j < lane->classification().left_adjacent_lane_id_size(); j++) 
         {
           int adj_id = lane->classification().left_adjacent_lane_id(j).value();
@@ -342,7 +344,7 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view) {
           if (dt < dtoff_left) dtoff_left = dt;
         }
         
-        // iterate over all ajacent lanes on right
+        // iterate over all ajacent lanes on right side
         for (int j = 0; j < lane->classification().right_adjacent_lane_id_size(); j++) 
         {
           int adj_id = lane->classification().right_adjacent_lane_id(j).value();
@@ -359,12 +361,48 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view) {
           double dt = euclideanDistance(adjacent_point, position);
 
           // update offset
-          if (dt > dtoff_right) dtoff_right = dt;
+          if (dt < dtoff_right) dtoff_right = dt;
+        }
+       
+        // iterate over all lane boundaries on left side
+        for (int j = 0; j < lane->classification().left_lane_boundary_id_size(); j++) 
+        {
+          int boun_id = lane->classification().left_lane_boundary_id(j).value();
+          
+          // get points on boundary
+          std::vector<Point2D> boundary_points; 
+          getXY(findLaneBoundary(boun_id, ground_truth), boundary_points);
+
+          // calculate closest point on boundary centerline
+          Point2D boundary_point;
+          closestCenterlinePoint(position, boundary_points, boundary_point);
+
+          // calculate euclidean distance
+          double dt = euclideanDistance(boundary_point, position);
+
+          // update offset
+          if (dt < dtoff_left_boundary) dtoff_left_boundary = dt;
         }
 
-        // set offsets to zero if not found
-        dtoff_left = dtoff_left == INFINITY ? 0 : dtoff_left;
-        dtoff_right = dtoff_right == -INFINITY ? 0 : dtoff_right;
+        // iterate over all lane boundaries on right side
+        for (int j = 0; j < lane->classification().right_lane_boundary_id_size(); j++) 
+        {
+          int boun_id = lane->classification().right_lane_boundary_id(j).value();
+          
+          // get points on boundary
+          std::vector<Point2D> boundary_points; 
+          getXY(findLaneBoundary(boun_id, ground_truth), boundary_points);
+
+          // calculate closest point on boundary centerline
+          Point2D boundary_point;
+          closestCenterlinePoint(position, boundary_points, boundary_point);
+
+          // calculate euclidean distance
+          double dt = euclideanDistance(boundary_point, position);
+
+          // update offset
+          if (dt < dtoff_right_boundary) dtoff_right_boundary = dt;
+        }
 
         // modify according to driving direction
         if (lane->classification().centerline_is_driving_direction()){
@@ -376,12 +414,9 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view) {
           path_toff_right_.push_back(-dtoff_left);
         }
 
-        // TODO: width computation
-        double width = 0.0;
-
         // fill path
         path_centerline_.push_back(position);
-        path_width_.push_back(width);
+        path_width_.push_back(dtoff_left_boundary + dtoff_right_boundary);
 
         // update position
         last_position = position;

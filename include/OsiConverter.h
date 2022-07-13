@@ -30,7 +30,7 @@ struct JunctionPath {
 struct LaneGroup {
   int id;                           // id of lane group
   int lane_changes;                 // lane change amount to left(+)/right(-)
-  std::vector<int> lanes;           // lane ids of lane group
+  std::vector<int> lanes;           // lane ids of lane group (until end)
   std::vector<int> lanes_changeable;// lane ids where change is allowed
 };
 

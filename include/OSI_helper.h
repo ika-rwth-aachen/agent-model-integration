@@ -286,6 +286,22 @@ int getXY(osi3::Lane* l, std::vector<Point2D>& pos) {
 }
 
 /**
+ * @brief get vector of x y  centerline-coordinates of a lane boundary
+ *
+ * @param l pointer to lane boundary
+ * @param pos result vector
+ * @return success
+ */
+int getXY(osi3::LaneBoundary* l, std::vector<Point2D>& pos) {
+  for (int i = 0; i < l->boundary_line_size(); i++) {
+    Point2D point(l->boundary_line(i).position().x(),
+                  l->boundary_line(i).position().y());
+    pos.push_back(point);
+  }
+  return 0;
+}
+
+/**
  * @brief calculates width of lane at a point if the lane has adjascent lanes
  *
  *
@@ -435,6 +451,20 @@ int findLaneIdx(osi3::GroundTruth* ground_truth, int id) {
     if (ground_truth->lane(i).id().value() == id) return i;
   }
   return -1;
+}
+
+/**
+ * @brief find a laneboundaryID in ground_truth.lane_boundary and return pointer
+ *
+ * @param ID
+ * @param ground_truth
+ */
+osi3::LaneBoundary* findLaneBoundary(int id, osi3::GroundTruth* ground_truth) {
+  for (int i = 0; i < ground_truth->lane_boundary_size(); i++) {
+    if (ground_truth->lane_boundary(i).id().value() == id)
+      return (ground_truth->mutable_lane_boundary(i));
+  }
+  return nullptr;
 }
 
 LaneGroup findLaneGroup(std::vector<LaneGroup> lane_groups, int id) {
@@ -859,11 +889,13 @@ std::vector<LaneGroup> calculateLaneGroups(int base_idx, int dest_idx, osi3::Gro
             groups = tmp_groups;
           }
 
+          // add current lane to changable lanes
           group.lanes_changeable.push_back(cur_id);
           break;
         }
       }
       
+      // get straight adjacent lanes to move forward on current lane
       std::vector<int> next_lanes = getAdjacentLanes(ground_truth, cur_idx,'S');
       if (next_lanes.size() > 0) 
       {
