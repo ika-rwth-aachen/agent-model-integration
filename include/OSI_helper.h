@@ -9,6 +9,10 @@
 
 #include "osi_sensorview.pb.h"
 
+double euclideanDistance(Point2D p, Point2D q){
+  return sqrt(pow(p.x-q.x,2) + pow(p.y-q.y,2));
+}
+
 /**
  * @brief computes gradients with finite differences
  *
@@ -111,7 +115,7 @@ int xy2Curv(std::vector<Point2D> pos, std::vector<double>& s,
  * @param cl centerline (can also be boundary line)
  * @param closest point
  * @return index of the next centerline point following the projected point. 0
- * when before scope of cl, cl.size()-1 when after
+ * when before scope of cl, cl.size() when after
  */
 int closestCenterlinePoint(const Point2D point, const std::vector<Point2D>& cl,
                            Point2D& closest) {
@@ -475,6 +479,17 @@ LaneGroup findLaneGroup(std::vector<LaneGroup> lane_groups, int id) {
   }
   return tmp;
 }
+
+int findPointInPoints(std::vector<Point2D> points, Point2D point) {
+  double eps = 0.001;
+
+  for (int i = 0; i < points.size(); i++)
+  {
+    if (euclideanDistance(point, points[i]) < eps) return i;
+  }
+  return -1;
+}
+
 
 /**
  * @brief map OSI lane IDs to corresponding agent_model lane IDs
@@ -1230,8 +1245,4 @@ bool isSigAssigned(T &cls, std::vector<int> &signal_lanes, std::vector<int> &lan
     }
 
     return assigned;
-}
-
-double euclideanDistance(Point2D p, Point2D q){
-  return sqrt(pow(p.x-q.x,2) + pow(p.y-q.y,2));
 }
