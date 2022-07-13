@@ -74,8 +74,6 @@ class OsiConverter {
   
   // global lanes
   std::vector<LaneGroup> lane_groups_;
-  int current_lane_group_;
-
   std::unordered_map<int, int> lane_mapping_;
   std::vector<int> intersection_lanes_;
   std::vector<JunctionPath> junction_paths_;
@@ -91,11 +89,14 @@ class OsiConverter {
   // current ego values
   int ego_id_;
   int ego_lane_id_;
+  int ego_lane_group_id_;
   osi3::MovingObject ego_;
   osi3::BaseMoving ego_base_;
   osi3::Lane *ego_lane_ptr_;
   Point2D ego_position_;
   Point2D ego_centerline_point_;
+  double ego_s_;
+
 
   // where to end the simulation
   Point2D dest_point_;
