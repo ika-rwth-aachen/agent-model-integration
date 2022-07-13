@@ -1221,133 +1221,137 @@ void OsiConverter::fillLanes(osi3::SensorView &sensor_view,
   osi3::GroundTruth *ground_truth = sensor_view.mutable_global_ground_truth();
   
   int lane = 0;
+  std::vector<int> processed_lanes;
 
   // get ego lane information
   int ego_lane_idx = findLaneIdx(ground_truth, ego_lane_id_);
   std::vector<Point2D> ego_lane_points;
   getXY(ego_lane_ptr_, ego_lane_points);
 
-  // check if lane change is possible from current ego lane
-  bool lane_change_possible = (find(lanes_changeable_.begin(), lanes_changeable_.end(), ego_lane_id_) != lanes_changeable_.end());
+  // get ego lane group information
+  LaneGroup ego_lane_group = findLaneGroup(lane_groups_, ego_lane_group_id_);
 
-  // TODO: also consider lane width for changeable boolean
-
-  std::vector<int> processed_lanes;
+  // check if lane change is possible from current ego s
+  bool lane_change_possible = false;
+  for (int i = 0; i < changeable_.size(); i++) {
+    if (ego_s_ > std::get<0>(changeable_[i]) && ego_s_ < std::get<1>(changeable_[i])) {
+      lane_change_possible = true;
+      break;
+    }
+  }
 
   // loop over all lane groups
   for (auto lane_group : lane_groups_)
   {
-    if (lane == agent_model::NOL) break;
+    // update lane id
+    int group_id = lane_group.id - ego_lane_group_id_;
 
-    int lane_id = lane_group.id - current_lane_group_;
-
-    // lane group properties
-    int start_lane;
-    int end_lane;
-    int end_of_route;
-    bool lane_change;
-
-    // skip if not ego or neighbouring lane group
-    if (abs(lane_id) > 1) {
+    // skip lane group if not ego or neighbouring lane group
+    if (abs(group_id) > 1) 
       continue;
-    }
 
-    // neighbouring lane group
-    if (abs(lane_id) == 1)
-    {
-      // continue if lane change not possible from ego lane
-      if (!lane_change_possible) continue;
-
-      // get adjacent lanes and try to find start_lane on lane_group
-      std::vector<int> adj_idx;
-      if (lane_id == 1){
-        adj_idx = getAdjacentLanes(ground_truth, ego_lane_idx,'L');
-      }
-      if (lane_id == -1) {
-        adj_idx = getAdjacentLanes(ground_truth, ego_lane_idx,'R');
-      }
-
-      bool found = false;
-      for (auto a_idx: adj_idx)
-      {
-        int a_id = ground_truth->lane(a_idx).id().value();
-        if (find(lane_group.lanes.begin(), lane_group.lanes.end(), a_id) != lane_group.lanes.end()) 
-        {
-          start_lane = a_id;
-          found = true;
-          break;
-        }
-      }
-
-      if (!found) continue;
-    }
-
-    // ego lane group
-    if (lane_id == 0){
-      start_lane = ego_lane_id_;
-    }
-
-    // compute start and end points
-    end_lane = lane_group.lanes.back();
-
-    end_of_route = (lane_group.lane_changes == 0)? end_lane : lane_group.lanes_changeable.back();
-
-    lane_change = (lane_change_possible && lane_group.lane_changes != 0) ? true : false;
+    // skip neigbouring group if lane change not possible
+    if (!lane_change_possible && group_id != 0)
+      continue;
+    
+    // skip group if more lane changes required
+    if (abs(lane_group.lane_changes) > abs(ego_lane_group.lane_changes))
+      continue;
 
     // fill general information
-    input.lanes[lane].id = lane_id;
+    input.lanes[lane].id = group_id;
     input.lanes[lane].width = 0.0;
     input.lanes[lane].access = agent_model::Accessibility::ACC_ACCESSIBLE;
     input.lanes[lane].dir = agent_model::DrivingDirection::DD_FORWARDS;
-    input.lanes[lane].lane_change = lane_change;
 
-    // properties
-    double ds_route = 0;
-    double ds_closed = 0;
-    bool on_route = false;
-    Point2D current_end_point = ego_lane_points.back();
+    // special use case: neigbouring lane group
+    if (abs(group_id) == 1){
+      // lane_change
+      if (lane_group.lane_changes == 0)
+        input.lanes[lane].lane_change = 0;
+      else
+        input.lanes[lane].lane_change = -1;
 
-    // iterate backwards over lanes and compute ds
-    for (int i = lane_group.lanes.size()-1; i >= 0; i--){
+      // route
+      input.lanes[lane].route = INFINITY;
 
-      int cur_lane_id = lane_group.lanes[i];
+      // closed
+      input.lanes[lane].closed = INFINITY;
 
-      // add current lane to processed_lanes
-      processed_lanes.push_back(cur_lane_id);
-
-      // check if now on route on_route
-      if (!on_route && cur_lane_id == end_of_route) {
-        on_route = true;
+      // add lanes to processed_lanes
+      for (int i = 0; i < lane_group.lanes.size(); i++){
+        processed_lanes.push_back(lane_group.lanes[i]);
       }
-
-      // break if ego_lane reached
-      if (cur_lane_id == start_lane) break;
-
-      // get ds of current lane
-      std::vector<Point2D> tmp_lane_points;
-      getXY(findLane(cur_lane_id, ground_truth), tmp_lane_points);
-
-      
-      double start_psi = atan2(tmp_lane_points[1].y - tmp_lane_points[0].y, tmp_lane_points[1].x - tmp_lane_points[0].x);
-      double ds = xy2s(tmp_lane_points.front(), tmp_lane_points.back(), tmp_lane_points, start_psi);
-
-      // increase distance_to_end
-      ds_closed += ds;
-
-      if (on_route) ds_route += ds;
-
-      // update current_end_point
-      current_end_point = tmp_lane_points.front();
     }
 
-    // get remaining distance (always on ego lane)
-    double dist = xy2s(ego_centerline_point_, current_end_point, ego_lane_points, ego_base_.orientation().yaw());
+    // special use case: ego lane group
+    if (group_id == 0) {
 
-    // set road end in input struct
-    input.lanes[lane].closed = dist + ds_closed;
-    input.lanes[lane].route = dist + ds_route;
+      // initialize
+      double ds_closed = 0;
+      Point2D current_end_point = ego_lane_points.back();
+
+      // iterate backwards over lanes and compute ds
+      for (int i = lane_group.lanes.size()-1; i >= 0; i--) {
+        
+        int cur_lane_id = lane_group.lanes[i];
+
+        // add current lane to processed_lanes
+        processed_lanes.push_back(cur_lane_id);
+
+        // break if ego_lane reached
+        if (cur_lane_id == ego_lane_id_) break;
+
+        // get ds of current lane
+        std::vector<Point2D> lane_points;
+        getXY(findLane(cur_lane_id, ground_truth), lane_points);
+        
+        // calculate lane_ds
+        double start_psi = atan2(lane_points[1].y - lane_points[0].y, lane_points[1].x - lane_points[0].x);
+        double lane_ds = xy2s(lane_points.front(), lane_points.back(), lane_points, start_psi);
+
+        // increase ds_closed by lane_ds
+        ds_closed += lane_ds;
+
+        // update current_end_point
+        current_end_point = lane_points.front();
+      }
+
+      // get remaining distance (on ego lane)
+      double dist = xy2s(ego_centerline_point_, current_end_point, ego_lane_points, ego_base_.orientation().yaw());
+
+      // set road end in input struct
+      input.lanes[lane].closed = dist + ds_closed;
+
+      // calculate route
+      if (lane_group.lane_changes == 0)
+      {
+        input.lanes[lane].route = input.lanes[lane].closed;
+        input.lanes[lane].lane_change = 0;
+      }
+      else {
+        // iterate over changeable array to determine lane_change and route
+        for (int i = 0; i < changeable_.size(); i++) {
+          
+          if (ego_s_ < std::get<1>(changeable_[i])) {
+
+            // if not last change
+            if (i == changeable_.size() - 1)
+              input.lanes[lane].lane_change = 2;
+            else
+              input.lanes[lane].lane_change = 1;
+
+            input.lanes[lane].route = std::get<1>(changeable_[i]) - ego_s_;
+            
+            break;
+          }
+        }
+      }
+    }
+    // increase lane counter
     lane++;
   }
+
 
   // iterate over all remaining lanes
   for (int i=0; i < ground_truth->lane_size() && lane < agent_model::NOL; i++) {
@@ -1356,7 +1360,7 @@ void OsiConverter::fillLanes(osi3::SensorView &sensor_view,
 
     osi3::Lane tmp_lane = ground_truth->lane(i);
 
-    // skip if tmp_lane on host path, already processed before
+    // skip if tmp_lane already processed before
     if (find(processed_lanes.begin(), processed_lanes.end(), tmp_lane.id().value()) != processed_lanes.end()) {
       continue;
     }
@@ -1393,12 +1397,13 @@ void OsiConverter::fillLanes(osi3::SensorView &sensor_view,
     lane++;
   }
 
+
   // fill remaining lanes with default values
   for (int i = lane; i < agent_model::NOL; i++) {
     input.lanes[i].id = 127;
-    input.lanes[i].width = 0;
-    input.lanes[i].route = 0;
-    input.lanes[i].closed = 0;
+    input.lanes[i].width = -1;
+    input.lanes[i].route = -1;
+    input.lanes[i].closed = -1;
     input.lanes[i].access = agent_model::ACC_NOT_SET;
     input.lanes[i].dir = agent_model::DD_NOT_SET;
   }
