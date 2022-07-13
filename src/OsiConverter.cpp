@@ -249,10 +249,10 @@ void OsiConverter::newLanes(osi3::SensorView &sensor_view) {
 
   // calculate future lane groups
   lane_groups_.clear();
-  current_lane_group_ = 0;
+  ego_lane_group_id_ = 0;
 
   futureLanes(ground_truth, starting_lane_idx, dest_point_, lane_groups_);
-  LaneGroup lane_group = findLaneGroup(lane_groups_, current_lane_group_);
+  LaneGroup lane_group = findLaneGroup(lane_groups_, ego_lane_group_id_);
 
   lanes_ = lane_group.lanes;
   lanes_changeable_ = lane_group.lanes_changeable;
@@ -407,14 +407,18 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view) {
           if (dt < dtoff_right_boundary) dtoff_right_boundary = dt;
         }
 
+        // set offsets to zero if not found
+        dtoff_left = (dtoff_left == INFINITY) ? 0 : dtoff_left;
+        dtoff_right = (dtoff_right == INFINITY) ? 0 : dtoff_right;
+
         // modify according to driving direction
         if (lane->classification().centerline_is_driving_direction()){
           path_toff_left_.push_back(dtoff_left);
-          path_toff_right_.push_back(-dtoff_right);
+          path_toff_right_.push_back(dtoff_right);
         }
         else { 
           path_toff_left_.push_back(dtoff_right);
-          path_toff_right_.push_back(-dtoff_left);
+          path_toff_right_.push_back(dtoff_left);
         }
 
         // fill path
@@ -716,15 +720,19 @@ void OsiConverter::fillVehicle(osi3::SensorView &sensor_view,
   ego_position_.y = ego_base_.position().y();
 
   // projection of ego coordinates on centerline
-  closestCenterlinePoint(ego_position_, path_centerline_, ego_centerline_point_);
+  int idx = closestCenterlinePoint(ego_position_, path_centerline_, ego_centerline_point_);
+  
+  // crop idx to boundaries
+  if (idx == 0) idx = 1;
 
-  // calculate s, psi, k of ego lane
-  std::vector<double> s, psi, k;
-  xy2Curv(path_centerline_, s, psi, k);
+  // calculate s coordinate
+  ego_s_ = path_s_[idx - 1] + sqrt(
+              pow(ego_centerline_point_.x - path_centerline_[idx - 1].x, 2) + 
+              pow(ego_centerline_point_.y - path_centerline_[idx - 1].y, 2));
 
   // angle between ego yaw and deviation from centerline point
   input.vehicle.psi = ego_base_.orientation().yaw() - 
-              interpolateXY2Value(psi, path_centerline_, ego_centerline_point_);
+              interpolateXY2Value(path_psi_, path_centerline_, ego_centerline_point_);
   input.vehicle.dPsi = ego_base_.orientation_rate().yaw();
 
   // compute distance between ego and centerline
@@ -1127,17 +1135,6 @@ void OsiConverter::fillHorizon(osi3::SensorView &sensor_view,
     ds[i] = pow((i + 1) / double(agent_model::NOH), 2)  * s_max;
   }
 
-  // caculate current ego s
-  Point2D ego_position_cl;
-  int hor_idx = closestCenterlinePoint(ego_position_, path_centerline_, ego_position_cl);
-  
-  // crop idx to boundaries
-  if (hor_idx == 0) hor_idx = 1;
-  if (hor_idx == path_centerline_.size()) hor_idx = path_centerline_.size();
-
-  double ego_s = path_s_[hor_idx - 1] + sqrt(
-              pow(ego_position_cl.x - path_centerline_[hor_idx - 1].x,2) + 
-              pow(ego_position_cl.y - path_centerline_[hor_idx - 1].y,2));
   double ego_psi = ego_base_.orientation().yaw();
 
   // iterate over all horizon points
@@ -1146,7 +1143,7 @@ void OsiConverter::fillHorizon(osi3::SensorView &sensor_view,
     // get correct idx on path array
     int idx = -1;
     for (auto &ss : path_s_) {
-      if (ss > ego_s + ds[i]) break;
+      if (ss > ego_s_ + ds[i]) break;
       idx++;
     }
 
@@ -1154,10 +1151,10 @@ void OsiConverter::fillHorizon(osi3::SensorView &sensor_view,
     Point2D horizon_knot;
 
     // interpolate if end of path not reached
-    if (ego_s + ds[i] < path_s_.back()) {
+    if (ego_s_ + ds[i] < path_s_.back()) {
       
       double ds_path = path_s_[idx + 1] - path_s_[idx];
-      double frac = (ego_s + ds[i] - path_s_[idx]) / ds_path;
+      double frac = (ego_s_ + ds[i] - path_s_[idx]) / ds_path;
 
       double dx_path = path_centerline_[idx + 1].x - path_centerline_[idx].x;
       double dy_path = path_centerline_[idx + 1].y - path_centerline_[idx].y;
@@ -1178,14 +1175,14 @@ void OsiConverter::fillHorizon(osi3::SensorView &sensor_view,
 
       input.horizon.egoLaneWidth[i] = path_width_[idx] + frac * dwidth_path;
  
-      if (path_toff_left_[idx+1] < INFINITY && path_toff_left_[idx] < INFINITY) {
+      if (path_toff_left_[idx+1] > 0 && path_toff_left_[idx] > 0) {
         input.horizon.leftLaneOffset[i] = path_toff_left_[idx] + frac * dtoff_left_path;
       }
       else {
         input.horizon.leftLaneOffset[i] = 0;
       }
 
-      if (path_toff_right_[idx+1] > -INFINITY && path_toff_right_[idx] > -INFINITY) {
+      if (path_toff_right_[idx+1] > 0 && path_toff_right_[idx] > 0) {
         input.horizon.rightLaneOffset[i] = path_toff_right_[idx] + frac * dtoff_right_path;
       }
       else {
@@ -1200,7 +1197,7 @@ void OsiConverter::fillHorizon(osi3::SensorView &sensor_view,
       input.horizon.psi[i] = path_psi_.back();
       input.horizon.kappa[i] = path_kappa_.back();
 
-      input.horizon.ds[i] = path_s_.back() - ego_s;
+      input.horizon.ds[i] = path_s_.back() - ego_s_;
         
       input.horizon.egoLaneWidth[i] = path_width_.back();
       input.horizon.leftLaneOffset[i] = path_toff_left_.back();
