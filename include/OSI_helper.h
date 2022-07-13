@@ -120,6 +120,8 @@ int xy2Curv(std::vector<Point2D> pos, std::vector<double>& s,
 int closestCenterlinePoint(const Point2D point, const std::vector<Point2D>& cl,
                            Point2D& closest) {
 
+  assert(cl.size() > 1);
+
   double min_dist = INFINITY;
   int min_i = 0;
   Point2D tmp;
@@ -129,6 +131,9 @@ int closestCenterlinePoint(const Point2D point, const std::vector<Point2D>& cl,
     double x2 = cl[i].x;
     double y1 = cl[i - 1].y;
     double y2 = cl[i].y;
+
+    // skip if identical centerline points
+    if (x1 == x2 && y1 == x2) continue;
 
     // compute orthogonal projection of (x,y) onto the parameterized line
     // connecting (x1,y1) and (x2,y2)
@@ -150,45 +155,39 @@ int closestCenterlinePoint(const Point2D point, const std::vector<Point2D>& cl,
         min_i = i;
       }
     }
-  }
+    // check distance to start/end point of the segment(not always in a segment)
+    else {
+      double dist_end = pow(point.x - x2, 2) + pow(point.y - y2, 2);
+      double dist_start = pow(point.x - x1, 2) + pow(point.y - y1, 2);
 
-  // check for distances to start/end point
-  double distEnd =
-    pow(point.x - cl.back().x, 2) + pow(point.y - cl.back().y, 2);
-  double distStart =
-    pow(point.x - cl.front().x, 2) + pow(point.y - cl.front().y, 2);
-
-  if (distStart < min_dist || distEnd < min_dist) {
-
-    assert(cl.size() > 1);
-    assert(distEnd != distStart);
+      if (dist_start < min_dist || dist_end < min_dist) {
+        
+        Point2D start, end;
     
-    Point2D start, end;
-    
-    if (distEnd < distStart) {
-      start = cl[cl.size() - 2];
-      end = cl.back();
-      min_i = cl.size();
+        if (dist_end < dist_start) {
+          start = cl[cl.size() - 2];
+          end = cl.back();
+          min_i = cl.size();
+        }
+
+        if (dist_start < dist_end) {
+          start = cl[1];
+          end = cl[0];
+          min_i = 0;
+        }
+
+        double dx = end.x - start.x;
+        double dy = end.y - start.y;
+
+        double l2 = pow(dx,2) + pow(dy,2);
+        double dot = (point.x - end.x) * dx + (point.y - end.y) * dy;
+        double t = dot / l2;
+
+        closest.x = end.x + t * dx;
+        closest.y = end.y + t * dy;
+      }
     }
-
-    if (distStart < distEnd) {
-      start = cl[1];
-      end = cl[0];
-      min_i = 0;
-    }
-
-    double dx = end.x - start.x;
-    double dy = end.y - start.y;
-
-    double l2 = pow(dx,2) + pow(dy,2);
-    double dot = (point.x - end.x) * dx + (point.y - end.y) * dy;
-
-    double t = dot / l2;
-
-    closest.x = end.x + t * dx;
-    closest.y = end.y + t * dy;
   }
-
   return min_i;
 }
 
