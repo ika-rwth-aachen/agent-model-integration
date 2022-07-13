@@ -33,7 +33,7 @@ std::string getFileBuffer(char* fName)
  *  message. Then it extracts the substring of this message and parses the 
  *  Bytes in an osi3 message of type <T>. Finally, the parsed message gets
  *  deleted from the Byte buffer `buf`.
- * @tparam T an osi3 class which should be extracted from the Byte buffer
+ * @param T an osi3 class which should be extracted from the Byte buffer
  * @param buf Byte buffer that holds the remaining trace that shall be parsed.
  * @param osi_msg The message that should be filled. Passed by reference.
  * @return true If an osi3 message could be extracted.

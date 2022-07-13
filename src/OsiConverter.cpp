@@ -260,9 +260,7 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view,
 
   // clear path variable when new path is generated
   path_centerline_.clear();
-  path_kappa_.clear();
-  path_psi_.clear();
-  path_s_.clear();
+
   // get all relevant path points from lanes_
   for (auto &l : lanes_) {
     osi3::Lane *tmp_lane = findLane(l, ground_truth);
@@ -523,8 +521,8 @@ void OsiConverter::fillVehicle(osi3::SensorView &sensor_view,
   xy2Curv(path_centerline_, s, psi, k);
 
   // angle between ego yaw and deviation from centerline point
-  input.vehicle.psi = ego_base_.orientation().yaw() - 
-              interpolateXY2Value(psi, path_centerline_, ego_centerline_point_);
+  input.vehicle.psi = wrapAngle(ego_base_.orientation().yaw() - 
+              interpolateXY2Value(psi, path_centerline_, ego_centerline_point_));
   input.vehicle.dPsi = ego_base_.orientation_rate().yaw();
 
   // compute distance between ego and centerline
@@ -780,7 +778,8 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
 
       input.targets[target].v = getNorm(target_base.velocity());
       input.targets[target].a = getNorm(target_base.acceleration());
-      input.targets[target].psi = target_base.orientation().yaw() - ego_base_.orientation().yaw();
+      input.targets[target].psi = wrapAngle(target_base.orientation().yaw() 
+                                                - ego_base_.orientation().yaw());
 
       input.targets[target].size.length = target_base.dimension().length();
       input.targets[target].size.width = target_base.dimension().width();
@@ -926,7 +925,7 @@ void OsiConverter::fillHorizon(osi3::SensorView &sensor_view,
   // distance (along centerline) to each horizon point from current location
   std::vector<double> ds(agent_model::NOH, 0);
   for (int i = 0; i < agent_model::NOH; i++) {    
-    ds[i] = pow((i + 1) / double(agent_model::NOH), 2)  * s_max;
+    ds[i] = pow((i + 1) / double(agent_model::NOH), 2) * s_max;
   }
 
   // caculate current ego s
@@ -963,13 +962,12 @@ void OsiConverter::fillHorizon(osi3::SensorView &sensor_view,
 
       double dx_path = path_centerline_[idx + 1].x - path_centerline_[idx].x;
       double dy_path = path_centerline_[idx + 1].y - path_centerline_[idx].y;
-      double dpsi_path = path_psi_[idx + 1] - path_psi_[idx];
+      double dpsi_path = wrapAngle(path_psi_[idx + 1] - path_psi_[idx]);
       double dkappa_path = path_kappa_[idx + 1] - path_kappa_[idx];
 
       horizon_knot.x = path_centerline_[idx].x + frac * dx_path;
-      horizon_knot.y = path_centerline_[idx].y + frac * dy_path;
-
-      input.horizon.psi[i] = path_psi_[idx] + frac * dpsi_path - ego_psi;
+      horizon_knot.y = path_centerline_[idx].y + frac * dy_path;      
+      input.horizon.psi[i] = wrapAngle(path_psi_[idx] + frac * dpsi_path - ego_psi);
       input.horizon.kappa[i] = path_kappa_[idx] + frac * dkappa_path;
 
       input.horizon.ds[i] = ds[i];
