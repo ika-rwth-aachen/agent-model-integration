@@ -437,10 +437,14 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view) {
                                     &path_centerline_[gap_idx + 2]);
     int n_gap = calcXYGap(gap_points, path_centerline_, gap_idx);
 
-    std::vector<double> v (n_gap, 0.0);
-    path_width_.insert(path_width_.begin() + gap_idx, v.begin(), v.end());
-    path_toff_left_.insert(path_toff_left_.begin() + gap_idx,v.begin(),v.end());
-    path_toff_right_.insert(path_toff_right_.begin()+gap_idx,v.begin(),v.end());
+    std::vector<double> dummy_width (n_gap, -1);
+    path_width_.insert(path_width_.begin() + gap_idx, dummy_width.begin(), dummy_width.end());
+
+    std::vector<double> dummy_toff_left (n_gap, INFINITY);
+    path_toff_left_.insert(path_toff_left_.begin() + gap_idx, dummy_toff_left.begin(), dummy_toff_left.end());
+
+    std::vector<double> dummy_toff_right (n_gap, -INFINITY);
+    path_toff_right_.insert(path_toff_right_.begin() + gap_idx, dummy_toff_right.begin(), dummy_toff_right.end());
   }
 
   // calculate s, psi, kappa from centerline
@@ -1174,14 +1178,14 @@ void OsiConverter::fillHorizon(osi3::SensorView &sensor_view,
 
       input.horizon.egoLaneWidth[i] = path_width_[idx] + frac * dwidth_path;
  
-      if (path_toff_left_[idx+1] > 0 && path_toff_left_[idx] > 0) {
+      if (path_toff_left_[idx+1] < INFINITY && path_toff_left_[idx] < INFINITY) {
         input.horizon.leftLaneOffset[i] = path_toff_left_[idx] + frac * dtoff_left_path;
       }
       else {
         input.horizon.leftLaneOffset[i] = 0;
       }
 
-      if (path_toff_right_[idx+1] > 0 && path_toff_right_[idx] > 0) {
+      if (path_toff_right_[idx+1] > -INFINITY && path_toff_right_[idx] > -INFINITY) {
         input.horizon.rightLaneOffset[i] = path_toff_right_[idx] + frac * dtoff_right_path;
       }
       else {
