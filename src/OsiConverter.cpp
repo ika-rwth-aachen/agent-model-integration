@@ -500,10 +500,10 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view) {
 
           // compute latest change point
           Point2D latest_change_point;
-          int idx = closestCenterlinePoint(dest_point_, path_centerline_, latest_change_point) - 1;
+          int idx = closestCenterlinePoint(dest_point_, path_centerline_, latest_change_point);
 
           // update end s coordinate of last changeable entry
-          std::get<1>(changeable_.back()) = path_s_[idx] + euclideanDistance(path_centerline_[idx], latest_change_point);
+          std::get<1>(changeable_.back()) = path_s_[idx - 1] + euclideanDistance(path_centerline_[idx], latest_change_point);
       }
     }
   }
@@ -736,13 +736,13 @@ void OsiConverter::fillVehicle(osi3::SensorView &sensor_view,
   // projection of ego coordinates on centerline
   int idx = closestCenterlinePoint(ego_position_, path_centerline_, ego_centerline_point_);
   
-  // crop idx to boundaries
-  if (idx == 0) idx = 1;
-
   // calculate s coordinate
-  ego_s_ = path_s_[idx - 1] + sqrt(
-              pow(ego_centerline_point_.x - path_centerline_[idx - 1].x, 2) + 
-              pow(ego_centerline_point_.y - path_centerline_[idx - 1].y, 2));
+  if (idx > 0) {        
+    ego_s_ = path_s_[idx - 1] + euclideanDistance(ego_centerline_point_, path_centerline_[idx - 1]);
+  }
+  else if (idx == 0) {
+    ego_s_ = path_s_[0] - euclideanDistance(ego_centerline_point_, path_centerline_[0]);
+  }
 
   // angle between ego yaw and deviation from centerline point
   input.vehicle.psi = ego_base_.orientation().yaw() - 
