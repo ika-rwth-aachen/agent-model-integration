@@ -29,17 +29,10 @@ struct JunctionPath {
 
 struct LaneGroup {
   int id;                           // id of lane group
-  int lane_changes;                 // lane change amount to left(+)/right(-)
-  std::vector<int> lanes;           // lane ids of lane group (until end)
-  std::vector<int> lanes_changeable;// lane ids where change is allowed
+  int change_amount;                 // lane change amount to left(+)/right(-)
+  std::vector<int> lanes;           // lane ids of lane group
+  std::vector<int> lanes_changeable;// lane ids where change is possible
 };
-
-struct Boundary {
-  std::vector<double> s;
-  std::vector<double> x;
-  std::vector<double> y;
-};
-
 
 class OsiConverter {
  public:
@@ -57,24 +50,25 @@ class OsiConverter {
   // flags
   bool initialized_ = false;
   bool calculate_lanes_ = false;
-  bool ignore_all_targets_ = false; // use global flag for now - TODO: store ids
+  bool ignore_all_targets_ = false;
   
-  std::vector<int> lanes_;
-  std::vector<int> lanes_changeable_;
-  std::vector<std::tuple<double, double> > changeable_;
-
+  // path variables
   std::vector<Point2D> path_centerline_;
-  std::vector<double> path_kappa_;
   std::vector<double> path_s_;
+  std::vector<double> path_kappa_;
   std::vector<double> path_psi_;
 
   std::vector<double> path_width_;
   std::vector<double> path_toff_left_;
   std::vector<double> path_toff_right_;
   
-  // global lanes
+  std::vector<std::tuple<double, double> > changeable_;
+
+  // lane variables
   std::vector<LaneGroup> lane_groups_;
   std::unordered_map<int, int> lane_mapping_;
+  std::vector<int> lanes_;
+  std::vector<int> lanes_changeable_;
   std::vector<int> intersection_lanes_;
   std::vector<JunctionPath> junction_paths_;
 
@@ -86,23 +80,23 @@ class OsiConverter {
   int speed_action_id_ = -1;
   int custom_action_id_ = -1;
 
-  // current ego values
+  // ego variables
   int ego_id_;
   int ego_lane_id_;
   int ego_lane_group_id_;
+  double ego_s_;
+
+  Point2D ego_position_;
+  Point2D ego_centerline_point_;
+
   osi3::MovingObject ego_;
   osi3::BaseMoving ego_base_;
   osi3::Lane *ego_lane_ptr_;
-  Point2D ego_position_;
-  Point2D ego_centerline_point_;
-  double ego_s_;
-
-
+  
   // where to end the simulation
   Point2D dest_point_;
   
   // helper functions
-  
   void preprocess(osi3::SensorView &sensor_view,
                              osi3::TrafficCommand &traffic_command,
                              agent_model::Input &input,
@@ -115,7 +109,9 @@ class OsiConverter {
 
   void classifyManeuver(osi3::SensorView &sensor_view,
                         agent_model::Input &input);
+
   void generatePath(osi3::SensorView &sensor_view);
+
   void generateJunctionPaths(osi3::SensorView &sensor_view);
 
   void extractEgoInformation(osi3::SensorView &sensor_view,

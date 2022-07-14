@@ -48,7 +48,7 @@ void OsiConverter::extractEgoInformation(osi3::SensorView &sensor_view,
   if (ego_.assigned_lane_id_size() == 1) {
     ego_lane_id_ = ego_.assigned_lane_id(0).value();
   }
-  // multiple assigned lanes and no lane change action
+  // multiple assigned lanes
   else if (ego_.assigned_lane_id_size() > 1) {
     // find assigned lanes  in lane path (iterate over lanes_ in reverse order)
     if (lanes_.size() > 0) {
@@ -271,6 +271,9 @@ void OsiConverter::newLanes(osi3::SensorView &sensor_view) {
   std::cout << "With lanes to pass: ";
   for (auto &lane : lanes_) std::cout << lane << " ";
   std::cout << std::endl;
+  if (lane_group.change_amount != 0) {
+    std::cout << "Note: " << lane_group.change_amount << " lane changes are required to reach the destination!" << std::endl;
+  }
 }
 
 /**
@@ -333,49 +336,23 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view) {
         double dtoff_left_boundary = INFINITY;
         double dtoff_right_boundary = INFINITY;
 
-        // iterate over all ajacent lanes on left side
+        // iterate over all adjacent lanes on left side
         for (int j = 0; j < lane->classification().left_adjacent_lane_id_size(); j++) 
         {
           int adj_id = lane->classification().left_adjacent_lane_id(j).value();
-          osi3::Lane* adj_lane = findLane(adj_id, ground_truth);
-
-          // skip if not driving
-          if (adj_lane->classification().type() != osi3::Lane_Classification_Type_TYPE_DRIVING) continue;
-
-          // get points on adjacent_lane
-          std::vector<Point2D> adjacent_points; 
-          getXY(adj_lane, adjacent_points);
-
-          // calculate closest point on adjacent centerline
-          Point2D adjacent_point;
-          closestCenterlinePoint(position, adjacent_points, adjacent_point);
-
-          // calculate euclidean distance
-          double dt = euclideanDistance(adjacent_point, position);
+         
+          double dt = calcOffsetToLane(adj_id, position, ground_truth);
 
           // update offset
           if (dt < dtoff_left) dtoff_left = dt;
         }
         
-        // iterate over all ajacent lanes on right side
+        // iterate over all adjacent lanes on right side
         for (int j = 0; j < lane->classification().right_adjacent_lane_id_size(); j++) 
         {
           int adj_id = lane->classification().right_adjacent_lane_id(j).value();
-          osi3::Lane* adj_lane = findLane(adj_id, ground_truth);
 
-          // skip if not driving
-          if (adj_lane->classification().type() != osi3::Lane_Classification_Type_TYPE_DRIVING) continue;
-
-          // get points on adjacent_lane
-          std::vector<Point2D> adjacent_points; 
-          getXY(adj_lane, adjacent_points);
-
-          // calculate closest point on adjacent centerline
-          Point2D adjacent_point;
-          closestCenterlinePoint(position, adjacent_points, adjacent_point);
-
-          // calculate euclidean distance
-          double dt = euclideanDistance(adjacent_point, position);
+          double dt = calcOffsetToLane(adj_id, position, ground_truth);
 
           // update offset
           if (dt < dtoff_right) dtoff_right = dt;
@@ -384,18 +361,9 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view) {
         // iterate over all lane boundaries on left side
         for (int j = 0; j < lane->classification().left_lane_boundary_id_size(); j++) 
         {
-          int boun_id = lane->classification().left_lane_boundary_id(j).value();
+          int b_id = lane->classification().left_lane_boundary_id(j).value();
           
-          // get points on boundary
-          std::vector<Point2D> boundary_points; 
-          getXY(findLaneBoundary(boun_id, ground_truth), boundary_points);
-
-          // calculate closest point on boundary centerline
-          Point2D boundary_point;
-          closestCenterlinePoint(position, boundary_points, boundary_point);
-
-          // calculate euclidean distance
-          double dt = euclideanDistance(boundary_point, position);
+           double dt = calcOffsetToLaneBoundary(b_id, position, ground_truth);
 
           // update offset
           if (dt < dtoff_left_boundary) dtoff_left_boundary = dt;
@@ -404,18 +372,9 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view) {
         // iterate over all lane boundaries on right side
         for (int j = 0; j < lane->classification().right_lane_boundary_id_size(); j++) 
         {
-          int boun_id = lane->classification().right_lane_boundary_id(j).value();
+          int b_id = lane->classification().right_lane_boundary_id(j).value();
           
-          // get points on boundary
-          std::vector<Point2D> boundary_points; 
-          getXY(findLaneBoundary(boun_id, ground_truth), boundary_points);
-
-          // calculate closest point on boundary centerline
-          Point2D boundary_point;
-          closestCenterlinePoint(position, boundary_points, boundary_point);
-
-          // calculate euclidean distance
-          double dt = euclideanDistance(boundary_point, position);
+          double dt = calcOffsetToLaneBoundary(b_id, position, ground_truth);
 
           // update offset
           if (dt < dtoff_right_boundary) dtoff_right_boundary = dt;
@@ -425,7 +384,7 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view) {
         dtoff_left = (dtoff_left == INFINITY) ? 0 : dtoff_left;
         dtoff_right = (dtoff_right == INFINITY) ? 0 : dtoff_right;
 
-        // modify according to driving direction
+        // modify offsets according to driving direction
         if (lane->classification().centerline_is_driving_direction()){
           path_toff_left_.push_back(dtoff_left);
           path_toff_right_.push_back(dtoff_right);
@@ -448,6 +407,7 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view) {
     }
   }
 
+
   // fill gap with interpolation based on two points at each end
   //    note: only one free boundary lane is supported for now
   if (gap_idx > 0) {
@@ -458,17 +418,17 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view) {
     std::vector<double> dummy_width (n_gap, -1);
     path_width_.insert(path_width_.begin() + gap_idx, dummy_width.begin(), dummy_width.end());
 
-    std::vector<double> dummy_toff_left (n_gap, INFINITY);
-    path_toff_left_.insert(path_toff_left_.begin() + gap_idx, dummy_toff_left.begin(), dummy_toff_left.end());
-
-    std::vector<double> dummy_toff_right (n_gap, -INFINITY);
-    path_toff_right_.insert(path_toff_right_.begin() + gap_idx, dummy_toff_right.begin(), dummy_toff_right.end());
+    std::vector<double> dummy_toff (n_gap, 0);
+    path_toff_left_.insert(path_toff_left_.begin() + gap_idx, dummy_toff.begin(), dummy_toff.end());
+    path_toff_right_.insert(path_toff_right_.begin() + gap_idx, dummy_toff.begin(), dummy_toff.end());
   }
+
 
   // calculate s, psi, kappa from centerline
   xy2Curv(path_centerline_, path_s_, path_psi_, path_kappa_);
 
-  // calculate changeable
+
+  // calculate changeable vector which determines at which s a change is allowed
   for (auto &l : lanes_) {
 
     osi3::Lane *lane = findLane(l, ground_truth);
@@ -485,7 +445,7 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view) {
       int start =findPointInPoints(path_centerline_, centerline_points.front());
       int end = findPointInPoints(path_centerline_, centerline_points.back());
         
-      // check if new entry required
+      // check if new entry required in changeable_ vector
       if (changeable_.size() == 0 || std::get<1>(changeable_.back()) != path_s_[start])
       {
         changeable_.push_back(std::make_tuple(path_s_[start], path_s_[end]));
@@ -495,7 +455,7 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view) {
         std::get<1>(changeable_.back()) = path_s_[end];
       }
 
-      // update entry of last changeable lane
+      // update entry of last changeable_ entry due to destination
       if (l == lanes_changeable_.back()) {
 
           // compute latest change point
@@ -1189,16 +1149,18 @@ void OsiConverter::fillHorizon(osi3::SensorView &sensor_view,
 
       input.horizon.egoLaneWidth[i] = path_width_[idx] + frac * dwidth_path;
  
-      if (path_toff_left_[idx+1] > 0 && path_toff_left_[idx] > 0) {
+      if (path_toff_left_[idx + 1] > 0 && path_toff_left_[idx] > 0) {
         input.horizon.leftLaneOffset[i] = path_toff_left_[idx] + frac * dtoff_left_path;
       }
+      // set to zero if one entry is zero
       else {
         input.horizon.leftLaneOffset[i] = 0;
       }
 
-      if (path_toff_right_[idx+1] > 0 && path_toff_right_[idx] > 0) {
+      if (path_toff_right_[idx + 1] > 0 && path_toff_right_[idx] > 0) {
         input.horizon.rightLaneOffset[i] = path_toff_right_[idx] + frac * dtoff_right_path;
       }
+      // set to zero if one entry is zero
       else {
         input.horizon.rightLaneOffset[i] = 0;
       }
@@ -1237,8 +1199,7 @@ void OsiConverter::fillLanes(osi3::SensorView &sensor_view,
   int lane = 0;
   std::vector<int> processed_lanes;
 
-  // get ego lane information
-  int ego_lane_idx = findLaneIdx(ground_truth, ego_lane_id_);
+  // get ego lane points
   std::vector<Point2D> ego_lane_points;
   getXY(ego_lane_ptr_, ego_lane_points);
 
@@ -1269,7 +1230,7 @@ void OsiConverter::fillLanes(osi3::SensorView &sensor_view,
       continue;
     
     // skip group if more lane changes required
-    if (abs(lane_group.lane_changes) > abs(ego_lane_group.lane_changes))
+    if (abs(lane_group.change_amount) > abs(ego_lane_group.change_amount))
       continue;
 
     // fill general information
@@ -1281,7 +1242,7 @@ void OsiConverter::fillLanes(osi3::SensorView &sensor_view,
     // special use case: neigbouring lane group
     if (abs(group_id) == 1){
       // lane_change
-      if (lane_group.lane_changes == 0)
+      if (lane_group.change_amount == 0)
         input.lanes[lane].lane_change = 0;
       else
         input.lanes[lane].lane_change = -1;
@@ -1338,7 +1299,7 @@ void OsiConverter::fillLanes(osi3::SensorView &sensor_view,
       input.lanes[lane].closed = dist + ds_closed;
 
       // calculate route
-      if (lane_group.lane_changes == 0)
+      if (lane_group.change_amount == 0)
       {
         input.lanes[lane].route = input.lanes[lane].closed;
         input.lanes[lane].lane_change = 0;
@@ -1349,7 +1310,7 @@ void OsiConverter::fillLanes(osi3::SensorView &sensor_view,
           
           if (ego_s_ < std::get<1>(changeable_[i])) {
 
-            // if not last change
+            // set status depending if last chance to change the lane
             if (i == changeable_.size() - 1)
               input.lanes[lane].lane_change = 2;
             else

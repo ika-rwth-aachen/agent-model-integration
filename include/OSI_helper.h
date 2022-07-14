@@ -9,6 +9,13 @@
 
 #include "osi_sensorview.pb.h"
 
+/**
+ * @brief computes euclidean distance between two points
+ * 
+ * @param p 
+ * @param q 
+ * @return double euclidean distance
+ */
 double euclideanDistance(Point2D p, Point2D q){
   return sqrt(pow(p.x-q.x,2) + pow(p.y-q.y,2));
 }
@@ -16,7 +23,7 @@ double euclideanDistance(Point2D p, Point2D q){
 /**
  * @brief computes gradients with finite differences
  *
- * @param x
+ * @param x 
  * @param y
  * @param order of differentiation
  * @return gradient at every point
@@ -114,14 +121,16 @@ int xy2Curv(std::vector<Point2D> pos, std::vector<double>& s,
  * @param point
  * @param cl centerline (can also be boundary line)
  * @param closest point
- * @return index of the next centerline point following the projected point. 0
- * when before scope of cl, cl.size() when after
+ * @return index of the next centerline point following the projected point. 
+ *    0 when before scope of cl
+ *    cl.size() when after scope of cl
  */
 int closestCenterlinePoint(const Point2D point, const std::vector<Point2D>& cl,
                            Point2D& closest) {
 
   assert(cl.size() > 1);
 
+  // initialize variables
   double min_dist_in = INFINITY;
   double min_dist_out = INFINITY;
   int min_i;
@@ -133,7 +142,9 @@ int closestCenterlinePoint(const Point2D point, const std::vector<Point2D>& cl,
   Point2D closest_in;
   Point2D closest_out;
 
+  // iterate over all segments of centerline
   for (int i = 1; i < cl.size(); i++) {
+    // get coordinates
     double x1 = cl[i - 1].x;
     double x2 = cl[i].x;
     double y1 = cl[i - 1].y;
@@ -151,12 +162,13 @@ int closestCenterlinePoint(const Point2D point, const std::vector<Point2D>& cl,
     double dot = (point.x - x1) * dx + (point.y - y1) * dy;
     double t = dot / l2;
 
+    // compute point on centerline
     tmp.x = x1 + t * dx;
     tmp.y = y1 + t * dy;
 
-    double dist = pow(tmp.x - point.x, 2) + pow(tmp.y - point.y, 2);
-    
+    // if in segment
     if (t >= 0 && t <= 1) {
+      double dist = pow(tmp.x - point.x, 2) + pow(tmp.y - point.y, 2);
 
       if (dist < min_dist_in) {
         found_in = true;
@@ -166,6 +178,7 @@ int closestCenterlinePoint(const Point2D point, const std::vector<Point2D>& cl,
         min_in = i;
       }
     }
+    // if outside of segment
     else {
         double dist_start = pow(point.x - x1, 2) + pow(point.y - y1, 2);
         double dist_end = pow(point.x - x2, 2) + pow(point.y - y2, 2);
@@ -173,16 +186,19 @@ int closestCenterlinePoint(const Point2D point, const std::vector<Point2D>& cl,
       if (dist_start < min_dist_out) {
         min_dist_out = dist_start;
         closest_out = tmp;
+
         min_out = i - 1;
       }
       if (dist_end < min_dist_out) {
         min_dist_out = dist_end;
         closest_out = tmp;
+
         min_out = i + 1;
       }
     }
   }
 
+  // take closest point in segment intervall (if exist)
   if (found_in) {
     closest = closest_in;
     min_i = min_in;
@@ -191,6 +207,7 @@ int closestCenterlinePoint(const Point2D point, const std::vector<Point2D>& cl,
     closest = closest_out;
     min_i = min_out;
   }
+
   return min_i;
 }
 
@@ -267,7 +284,7 @@ int calcXYGap(std::vector<Point2D> p1_p2, std::vector<Point2D>& pos, int idx) {
 }
 
 /**
- * @brief get vector of x y  centerline-coordinates of a lane
+ * @brief get vector of xy centerline-coordinates of a lane
  *
  * @param lane pointer
  * @param pos result vector
@@ -292,7 +309,7 @@ int getXY(osi3::Lane* l, std::vector<Point2D>& pos) {
 }
 
 /**
- * @brief get vector of x y  centerline-coordinates of a lane boundary
+ * @brief get vector of xy centerline-coordinates of a lane boundary
  *
  * @param l pointer to lane boundary
  * @param pos result vector
@@ -308,7 +325,7 @@ int getXY(osi3::LaneBoundary* l, std::vector<Point2D>& pos) {
 }
 
 /**
- * @brief calculates width of lane at a point if the lane has adjascent lanes
+ * @brief calculates width of lane at a point if the lane has adjacent lanes
  *
  *
  * @param point width at this point
@@ -316,15 +333,13 @@ int getXY(osi3::LaneBoundary* l, std::vector<Point2D>& pos) {
  * @param ground_truth
  * @return width
  */
-double calcWidth(const Point2D point, osi3::Lane* lane,
+double calcLaneWidth(const Point2D point, osi3::Lane* lane,
                  osi3::GroundTruth* ground_truth) {
 
   std::vector<int> lb_ids, rb_ids;
   std::vector<Point2D> lb_points, rb_points;
 
-  // std::cout << "left:"<<
-  // lane->classification().left_lane_boundary_id_size()<<" right:"<<
-  // lane->classification().right_lane_boundary_id_size()<<"\n";
+  // get boundary ids  
   for (int i = 0; i < lane->classification().left_lane_boundary_id_size();
        i++) {
     lb_ids.push_back(lane->classification().left_lane_boundary_id(i).value());
@@ -336,7 +351,7 @@ double calcWidth(const Point2D point, osi3::Lane* lane,
 
   if (lb_ids.size() == 0 || rb_ids.size() == 0) return 0;
 
-
+  // get boundary points
   for (int i = 0; i < ground_truth->lane_boundary_size(); i++) {
     if (find(lb_ids.begin(), lb_ids.end(),
              ground_truth->lane_boundary(i).id().value()) != lb_ids.end()) {
@@ -361,10 +376,12 @@ double calcWidth(const Point2D point, osi3::Lane* lane,
     }
   }
 
+  // get desired point on boundaries
   Point2D r_point, l_point;
   closestCenterlinePoint(point, lb_points, l_point);
   closestCenterlinePoint(point, rb_points, r_point);
 
+  // calculate width
   return sqrt(pow(l_point.x - r_point.x, 2) + pow(l_point.y - r_point.y, 2));
 }
 
@@ -464,6 +481,7 @@ int findLaneIdx(osi3::GroundTruth* ground_truth, int id) {
  *
  * @param ID
  * @param ground_truth
+ * @return osi3::LaneBounddary* pointer to desired lane boundary
  */
 osi3::LaneBoundary* findLaneBoundary(int id, osi3::GroundTruth* ground_truth) {
   for (int i = 0; i < ground_truth->lane_boundary_size(); i++) {
@@ -473,6 +491,13 @@ osi3::LaneBoundary* findLaneBoundary(int id, osi3::GroundTruth* ground_truth) {
   return nullptr;
 }
 
+/**
+ * @brief find a lane group by lane group id
+ * 
+ * @param lane_groups vector of all lane groups
+ * @param id 
+ * @return LaneGroup desired lane group
+ */
 LaneGroup findLaneGroup(std::vector<LaneGroup> lane_groups, int id) {
   LaneGroup tmp;
 
@@ -482,6 +507,13 @@ LaneGroup findLaneGroup(std::vector<LaneGroup> lane_groups, int id) {
   return tmp;
 }
 
+/**
+ * @brief find a point in a point vector based on distanc (small tolerance eps) 
+ * 
+ * @param points 
+ * @param point 
+ * @return int  index of point in vector
+ */
 int findPointInPoints(std::vector<Point2D> points, Point2D point) {
   double eps = 0.001;
 
@@ -514,13 +546,13 @@ void mapLanes(osi3::GroundTruth* ground_truth,
     // assign ego lane
     mapping[future_lanes[i]] = 0;
 
-    // assign left adjacent lane: 2 (1 is reserved for neighbouring group)
+    // assign left adjacent lane: 2
     if (current->classification().left_adjacent_lane_id_size() > 0)
     {
       int lane_id = current->classification().left_adjacent_lane_id(0).value();
       mapping[lane_id] = 2;
     }
-    // assign right adjacent lane: -2 (-1 is reserved for neighbouring group)
+    // assign right adjacent lane: -2
     if (current->classification().right_adjacent_lane_id_size() > 0)
     {
       int lane_id =current->classification().right_adjacent_lane_id(0).value();
@@ -756,17 +788,32 @@ JunctionPath calcJunctionPath(osi3::GroundTruth* ground_truth, int lane_id)
   return junction_path; 
 }
 
+/**
+ * @brief Get the adjacent lanes object
+ * 
+ * @param ground_truth 
+ * @param lane_idx 
+ * @param mode mode determines if searching for:
+ *    straight adjacent lanes (S)
+ *    left adjacent lanes (L)
+ *    right adjacent lanes (R)
+ * @return std::vector<int> 
+ */
 std::vector<int> getAdjacentLanes(osi3::GroundTruth* ground_truth, int lane_idx, char mode)
 {
   std::vector<int> lanes; 
 
   osi3::Lane lane = ground_truth->lane(lane_idx);
+
+  // get driving direction
   bool is_driving_direction = lane.classification().centerline_is_driving_direction();
 
   if (mode == 'S')
   {
+    // iterate over all lane pairings
     for (int j = 0; j < lane.classification().lane_pairing_size(); j++) 
     {
+      // get adjacent_id
       int adjacent_id;
       if (is_driving_direction) 
       {
@@ -777,6 +824,8 @@ std::vector<int> getAdjacentLanes(osi3::GroundTruth* ground_truth, int lane_idx,
       }
 
       if (adjacent_id == -1) continue;
+
+      // skip if wrong type
       if (findLane(adjacent_id, ground_truth)->classification().type() != osi3::Lane_Classification_Type_TYPE_DRIVING && findLane(adjacent_id, ground_truth)->classification().type() != osi3::Lane_Classification_Type_TYPE_INTERSECTION) continue;
 
       lanes.push_back(findLaneIdx(ground_truth, adjacent_id));
@@ -785,6 +834,7 @@ std::vector<int> getAdjacentLanes(osi3::GroundTruth* ground_truth, int lane_idx,
 
   if (mode == 'L' || mode == 'R')
   {
+      // skip if wrong type
     if (lane.classification().type() != osi3::Lane_Classification_Type_TYPE_DRIVING) return lanes;
 
     // check for left neighbouring lanes
@@ -794,6 +844,7 @@ std::vector<int> getAdjacentLanes(osi3::GroundTruth* ground_truth, int lane_idx,
       {
         int adjacent_id = lane.classification().left_adjacent_lane_id(i).value();
 
+        // skip if wrong type
         if (findLane(adjacent_id, ground_truth)->classification().type() != osi3::Lane_Classification_Type_TYPE_DRIVING) continue;
 
         // skip if opposite driving direction (assumption: same reference line)
@@ -810,6 +861,7 @@ std::vector<int> getAdjacentLanes(osi3::GroundTruth* ground_truth, int lane_idx,
       {
         int adjacent_id = lane.classification().right_adjacent_lane_id(i).value();
 
+        // skip if wrong type
         if (findLane(adjacent_id, ground_truth)->classification().type() != osi3::Lane_Classification_Type_TYPE_DRIVING) continue;
 
         // skip if opposite driving direction (assumption: same reference line)
@@ -823,6 +875,14 @@ std::vector<int> getAdjacentLanes(osi3::GroundTruth* ground_truth, int lane_idx,
   return lanes;
 }
 
+/**
+ * @brief recursively calculate route
+ * 
+ * @param cur_idx 
+ * @param dest_idx 
+ * @param ground_truth 
+ * @return std::vector<int> 
+ */
 std::vector<int> calculateRoute(int cur_idx, int dest_idx, osi3::GroundTruth* ground_truth)
 {
   std::vector<int> route;
@@ -834,8 +894,10 @@ std::vector<int> calculateRoute(int cur_idx, int dest_idx, osi3::GroundTruth* gr
     return route;
   }
 
-  std::vector<int> adjacent_lanes = getAdjacentLanes(ground_truth, cur_idx, 'S');
+  // get straight adjacent lanes
+  std::vector<int> adjacent_lanes = getAdjacentLanes(ground_truth, cur_idx,'S');
 
+  // recursivly try to reach the destination from adjacent lanes
   for (int j = 0; j < adjacent_lanes.size(); j++) 
   {
     route = calculateRoute(adjacent_lanes[j], dest_idx, ground_truth);
@@ -851,7 +913,17 @@ std::vector<int> calculateRoute(int cur_idx, int dest_idx, osi3::GroundTruth* gr
   return route;
 }
 
-
+/**
+ * @brief recursively calculates lane groups which are relevant to reach the detination lane from the starting lane
+ * 
+ * As a side product, also the amount of required lane changes, and the lanes where a lane change is possible are computed.
+ * 
+ * @param base_idx start lane
+ * @param dest_idx end lane
+ * @param ground_truth 
+ * @param mode can be a combindation of 'L' and 'R', determine allowed changes
+ * @return std::vector<LaneGroup> 
+ */
 std::vector<LaneGroup> calculateLaneGroups(int base_idx, int dest_idx, osi3::GroundTruth* ground_truth, std::string mode)
 {
   std::vector<LaneGroup> groups;
@@ -868,12 +940,13 @@ std::vector<LaneGroup> calculateLaneGroups(int base_idx, int dest_idx, osi3::Gro
       group.lanes.push_back(ground_truth->lane(route[i]).id().value());
     }
     group.id = 0;
-    group.lane_changes = 0;
+    group.change_amount = 0;
 
     groups.push_back(group);
     return groups;
   }
 
+  // go to left/right neighbouring lane (according to mode) to find destination
   for(int k = 0; k < mode.length(); k++)
   {
     char m = mode.at(k);
@@ -881,7 +954,6 @@ std::vector<LaneGroup> calculateLaneGroups(int base_idx, int dest_idx, osi3::Gro
     int cur_idx = base_idx;
     int cur_id = ground_truth->lane(cur_idx).id().value();
       
-    // if not reachable directly adjacent lanes to the left/right are checked
     bool reachable = false;     // if destination reachable
     bool end_of_lane = false;   // if end of current lane reached
 
@@ -890,6 +962,7 @@ std::vector<LaneGroup> calculateLaneGroups(int base_idx, int dest_idx, osi3::Gro
     {
       group.lanes.push_back(cur_id);
 
+      // iterate over adjacent lanes
       std::vector<int> adj_lanes = getAdjacentLanes(ground_truth, cur_idx, m);
       for (int i = 0; i < adj_lanes.size(); i++)
       {
@@ -925,7 +998,7 @@ std::vector<LaneGroup> calculateLaneGroups(int base_idx, int dest_idx, osi3::Gro
       }
     }
     
-    // add properties to group
+    // add properties to group if reachable
     if (reachable)
     {
       int dir = 0;
@@ -933,11 +1006,11 @@ std::vector<LaneGroup> calculateLaneGroups(int base_idx, int dest_idx, osi3::Gro
       if (m == 'R') dir = -1;
       
       group.id = groups.back().id - dir;
-      group.lane_changes = groups.back().lane_changes + dir;
+      group.change_amount = groups.back().change_amount + dir;
 
       groups.push_back(group);
 
-      // break loop over modes if destination reached
+      // if destination reachable
       break;
     }
   } 
@@ -945,7 +1018,7 @@ std::vector<LaneGroup> calculateLaneGroups(int base_idx, int dest_idx, osi3::Gro
   return groups;
 }
 /**
- * @brief determines lanes along Trajectory from the lane with start_idx to the
+ * @brief determines lanes along trajectory from the lane with start_idx to the
  * (x,y) point destination.
  *
  *
@@ -972,12 +1045,12 @@ void futureLanes(osi3::GroundTruth* ground_truth, const int& start_idx,
     lane_groups[i].id -= lane_groups.back().id;
   }
 
-  // add starting lane if no route could be found
+  // add starting lane within single lane group, if no route could be found
   if (lane_groups.size() == 0)
   {
     LaneGroup group;
     group.id = 0;
-    group.lane_changes = 0;
+    group.change_amount = 0;
     group.lanes.push_back(ground_truth->lane(start_idx).id().value());
 
     lane_groups.push_back(group);
@@ -1247,4 +1320,55 @@ bool isSigAssigned(T &cls, std::vector<int> &signal_lanes, std::vector<int> &lan
     }
 
     return assigned;
+}
+
+/**
+ * @brief calculate toffset to lane
+ * 
+ * @param land_id 
+ * @param ground_truth 
+ * @return double toffset
+ */
+double calcOffsetToLane(int land_id, Point2D position, osi3::GroundTruth* ground_truth) {
+
+  osi3::Lane* adj_lane = findLane(land_id, ground_truth);
+
+  // skip if not driving
+  if (adj_lane->classification().type() != osi3::Lane_Classification_Type_TYPE_DRIVING) return INFINITY;
+
+  // get points on adjacent_lane
+  std::vector<Point2D> adjacent_points; 
+  getXY(adj_lane, adjacent_points);
+
+  // calculate closest point on adjacent centerline
+  Point2D adjacent_point;
+  closestCenterlinePoint(position, adjacent_points, adjacent_point);
+
+  // calculate euclidean distance
+  double offset = euclideanDistance(adjacent_point, position);
+
+  return offset;
+}
+
+/**
+ * @brief calculate toffset to lane boundary
+ * 
+ * @param land_id 
+ * @param ground_truth 
+ * @return double toffset
+ */
+double calcOffsetToLaneBoundary(int boundary_id, Point2D position, osi3::GroundTruth* ground_truth) {
+
+  // get points on boundary
+  std::vector<Point2D> boundary_points; 
+  getXY(findLaneBoundary(boundary_id, ground_truth), boundary_points);
+
+  // calculate closest point on boundary centerline
+  Point2D boundary_point;
+  closestCenterlinePoint(position, boundary_points, boundary_point);
+
+  // calculate euclidean distance
+  double offset = euclideanDistance(boundary_point, position);
+
+  return offset;
 }
