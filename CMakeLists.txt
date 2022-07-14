@@ -20,7 +20,7 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 
 # FMU output directory
-set(FMU_OUTDIR "${CMAKE_SOURCE_DIR}/../openpass/" CACHE STRING "Fmu output directory")
+set(FMU_OUTDIR "${CMAKE_SOURCE_DIR}/lib" CACHE STRING "Fmu output directory")
 
 # Debug output directory
 add_definitions(-DDEBUG_OUTDIR="${CMAKE_SOURCE_DIR}/debug")
@@ -191,6 +191,9 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 	$<$<BOOL:${PUBLIC_LOGGING}>:PUBLIC_LOGGING>
 	$<$<BOOL:${VERBOSE_FMI_LOGGING}>:VERBOSE_FMI_LOGGING>
 	$<$<BOOL:${DEBUG_BREAKS}>:DEBUG_BREAKS>)
+
+target_compile_definitions(${PROJECT_NAME} PUBLIC -D_GLIBCXX_CONCEPT_CHECKS)
+#target_compile_definitions(${PROJECT_NAME} PUBLIC -D_GLIBCXX_DEBUG)
 
 if(WIN32)
 	if(CMAKE_SIZEOF_VOID_P EQUAL 8)
