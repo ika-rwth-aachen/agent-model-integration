@@ -7,6 +7,9 @@
 #include <unordered_map>
 #include <vector>
 
+#define _USE_MATH_DEFINES
+#include <math.h>
+
 #include "osi_sensorview.pb.h"
 
 /**
@@ -68,10 +71,27 @@ std::vector<double> gradient(std::vector<double> x, std::vector<double> y,
  */
 int xy2Curv(std::vector<Point2D> pos, std::vector<double>& s,
             std::vector<double>& psi, std::vector<double>& k) {
+
+  s.clear();
+  psi.clear();
+  k.clear();
+  
+  if (pos.size() == 0) return 0;
+
+  if (pos.size() == 1) {
+    s.push_back(0);
+    psi.push_back(0);
+    k.push_back(0);
+    
+    return 0;
+  }
+
   // calculate s from xy coordinates
   s.push_back(0);
+  
   std::vector<double> x(1, pos[0].x), y(1, pos[0].y);
 
+  // calculate s from xy coordinates
   for (int i = 1; i < pos.size(); i++) {
     double dx = pos[i].x - pos[i - 1].x;
     double dy = pos[i].y - pos[i - 1].y;
@@ -79,17 +99,15 @@ int xy2Curv(std::vector<Point2D> pos, std::vector<double>& s,
     y.push_back(pos[i].y);
 
     s.push_back(s.back() + sqrt(pow(dx, 2) + pow(dy, 2)));
-    double p = atan2(dy, dx);
-    // psi.push_back(p >= 0 ? p : p + 2 * M_PI);
-    psi.push_back(p);
+    psi.push_back(atan2(dy, dx));
   }
+  psi.push_back(psi.back()); // keep psi for last entry to ensure same dimension
 
   // calculate psi and kappa
   std::vector<double> dxds = gradient(s, x, 1);
   std::vector<double> dyds = gradient(s, y, 1);
   std::vector<double> dxxdss = gradient(s, x, 2);
   std::vector<double> dyydss = gradient(s, y, 2);
-
 
   for (int i = 0; i < pos.size(); i++) {
     if (pos.size() > 2) {
@@ -557,7 +575,7 @@ bool BFS(std::vector<int> adj[], int src, int dest, int num_vertices,
          int pred[]) {
   std::list<int> queue;
 
-  bool visited[num_vertices];
+  std::vector<bool> visited(num_vertices);
 
   for (int i = 0; i < num_vertices; i++) {
     visited[i] = false;
@@ -639,6 +657,12 @@ uint64_t closestLane(osi3::GroundTruth* ground_truth, const Point2D point) {
     centerline.clear();
     osi3::Lane cur_lane;
     cur_lane.CopyFrom(ground_truth->lane(i));
+
+    // skip free lane boundary lanes 
+    //    (no distance calculation due to arbitrary sorted points)
+    if (cur_lane.classification().free_lane_boundary_id_size() > 0)
+      continue;
+      
     getXY(&cur_lane, centerline);
 
     Point2D closest;
@@ -752,7 +776,7 @@ void futureLanes(osi3::GroundTruth* ground_truth, const int& start_idx,
   //std::cout << " on lane " << dest_id << std::endl;
   // Graph setup
   // create adjacency list for graph representing lane connections
-  std::vector<int> adj[ground_truth->lane_size()];
+  std::vector<int>* adj = new std::vector<int>[ground_truth->lane_size()];
   createGraph(ground_truth, adj);
   // remove possible dublicates in adj[i]
   for (int i = 0; i < ground_truth->lane_size(); i++) {
@@ -760,7 +784,7 @@ void futureLanes(osi3::GroundTruth* ground_truth, const int& start_idx,
     adj[i].erase(unique(adj[i].begin(), adj[i].end()), adj[i].end());
   }
 
-  int pred[ground_truth->lane_size()];
+  int* pred = new int[ground_truth->lane_size()];
 
   if (BFS(adj, start_idx, dest_idx, ground_truth->lane_size(), pred) == false) {
     // add starting lane into future_lanes if it is not already contained
@@ -768,6 +792,9 @@ void futureLanes(osi3::GroundTruth* ground_truth, const int& start_idx,
         (!future_lanes.empty() &&
          future_lanes.back() != ground_truth->lane(start_idx).id().value()))
       future_lanes.push_back(ground_truth->lane(start_idx).id().value());
+    
+    delete[] adj;
+    delete[] pred;
     return;
   }
 
@@ -786,6 +813,8 @@ void futureLanes(osi3::GroundTruth* ground_truth, const int& start_idx,
       continue;
     future_lanes.push_back(ground_truth->lane(path[i]).id().value());
   }
+  delete[] adj;
+  delete[] pred;
 }
 
 /**

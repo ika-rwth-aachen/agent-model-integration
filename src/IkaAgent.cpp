@@ -79,7 +79,7 @@ void IkaAgent::init(osi3::BaseMoving &host) {
   vehicle_param->steer_transmission = 0.5;
   vehicle_param->wheel_base = wheel_base;
   vehicle_param->mass = 1.5e3;
-  vehicle_param->power_max = 1.0e4;
+  vehicle_param->power_max = 1.0e5;
   vehicle_param->force_max = 6.0e3;
   vehicle_param->idle = 0.05;
   vehicle_param->roll_coefficient[0] = 4.0 * 9.91e-3;

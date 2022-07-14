@@ -6,4 +6,4 @@ build/
 lib/*.fmu
 
 .vscode/
-__pycache__/
+*.osi
