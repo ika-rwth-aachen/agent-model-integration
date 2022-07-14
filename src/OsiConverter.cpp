@@ -337,10 +337,14 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view) {
         for (int j = 0; j < lane->classification().left_adjacent_lane_id_size(); j++) 
         {
           int adj_id = lane->classification().left_adjacent_lane_id(j).value();
-          
+          osi3::Lane* adj_lane = findLane(adj_id, ground_truth);
+
+          // skip if not driving
+          if (adj_lane->classification().type() != osi3::Lane_Classification_Type_TYPE_DRIVING) continue;
+
           // get points on adjacent_lane
           std::vector<Point2D> adjacent_points; 
-          getXY(findLane(adj_id, ground_truth), adjacent_points);
+          getXY(adj_lane, adjacent_points);
 
           // calculate closest point on adjacent centerline
           Point2D adjacent_point;
@@ -357,10 +361,14 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view) {
         for (int j = 0; j < lane->classification().right_adjacent_lane_id_size(); j++) 
         {
           int adj_id = lane->classification().right_adjacent_lane_id(j).value();
-          
+          osi3::Lane* adj_lane = findLane(adj_id, ground_truth);
+
+          // skip if not driving
+          if (adj_lane->classification().type() != osi3::Lane_Classification_Type_TYPE_DRIVING) continue;
+
           // get points on adjacent_lane
           std::vector<Point2D> adjacent_points; 
-          getXY(findLane(adj_id, ground_truth), adjacent_points);
+          getXY(adj_lane, adjacent_points);
 
           // calculate closest point on adjacent centerline
           Point2D adjacent_point;
