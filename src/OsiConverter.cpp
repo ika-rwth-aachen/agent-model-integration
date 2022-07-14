@@ -48,10 +48,9 @@ void OsiConverter::extractEgoInformation(osi3::SensorView &sensor_view,
   if (ego_.assigned_lane_id_size() == 1) {
     ego_lane_id_ = ego_.assigned_lane_id(0).value();
   }
-  // multiple assigned lanes
+  // multiple assigned lanes and no lane change action
   else if (ego_.assigned_lane_id_size() > 1) {
-    //after lanes_ was created:
-    // e.g. on intersection: iterate over lanes_ in reverse order, (take last)
+    // find assigned lanes  in lane path (iterate over lanes_ in reverse order)
     if (lanes_.size() > 0) {
       for (int j = lanes_.size() - 1; j >= 0; j--) {
         for (int i = 0; i < ego_.assigned_lane_id_size(); i++) {
@@ -227,6 +226,13 @@ void OsiConverter::newLanes(osi3::SensorView &sensor_view) {
   lanes_changeable_.clear();
 
   osi3::GroundTruth *ground_truth = sensor_view.mutable_global_ground_truth();
+
+  // update ego_lane_id_ based on distance only (path is outdated in newLanes)
+  if (ego_.assigned_lane_id_size() != 1) {
+    Point2D ego_position =
+      Point2D(ego_base_.position().x(), ego_base_.position().y());
+    ego_lane_id_ = closestLane(ground_truth, ego_position);
+  }
 
   // find starting_lane_idx
   int starting_lane_idx = findLaneIdx(ground_truth, ego_lane_id_);
