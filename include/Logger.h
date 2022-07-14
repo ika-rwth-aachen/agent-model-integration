@@ -31,7 +31,7 @@ class Logger {
     void saveDebugInformation(double time, agent_model::Input input, agent_model::State *driver_state, VehicleModel::State *vehicle_state);
 
     void saveOSI(osi3::SensorView &sensor_view,
-                   osi3::TrafficCommand &traffic_command, std::string path);
+                   osi3::TrafficCommand &traffic_command);
 
   private:
     uint64_t ego_id_;

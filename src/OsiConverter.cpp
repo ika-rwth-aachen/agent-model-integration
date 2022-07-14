@@ -111,9 +111,6 @@ void OsiConverter::preprocess(osi3::SensorView &sensor_view,
 void OsiConverter::processTrafficCommand(osi3::TrafficCommand &traffic_command,
                                          agent_model::Parameters &param) {
 
-  // hot fix because traffic command has new id every timestep
-  if (initialized_) return;
-
   // iterate over all traffic commands
   for (int i = 0; i < traffic_command.action_size(); i++) {
 
