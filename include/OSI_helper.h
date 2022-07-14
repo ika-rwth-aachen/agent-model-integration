@@ -122,9 +122,16 @@ int closestCenterlinePoint(const Point2D point, const std::vector<Point2D>& cl,
 
   assert(cl.size() > 1);
 
-  double min_dist = INFINITY;
-  int min_i = 0;
+  double min_dist_in = INFINITY;
+  double min_dist_out = INFINITY;
+  int min_i;
+  int min_in = -1;
+  int min_out = -1;
+  bool found_in = false;
+
   Point2D tmp;
+  Point2D closest_in;
+  Point2D closest_out;
 
   for (int i = 1; i < cl.size(); i++) {
     double x1 = cl[i - 1].x;
@@ -132,61 +139,57 @@ int closestCenterlinePoint(const Point2D point, const std::vector<Point2D>& cl,
     double y1 = cl[i - 1].y;
     double y2 = cl[i].y;
 
+    double dx = x2 - x1;
+    double dy = y2 - y1;
+
     // skip if identical centerline points
     if (x1 == x2 && y1 == x2) continue;
 
     // compute orthogonal projection of (x,y) onto the parameterized line
     // connecting (x1,y1) and (x2,y2)
-    double l2 = (x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1);
-    double dot = (point.x - x1) * (x2 - x1) + (point.y - y1) * (y2 - y1);
+    double l2 = dx * dx + dy * dy;
+    double dot = (point.x - x1) * dx + (point.y - y1) * dy;
     double t = dot / l2;
 
-    // check if projection is in segment
-    if (t >= 0 && t <= 1) { 
-      tmp.x = x1 + t * (x2 - x1);
-      tmp.y = y1 + t * (y2 - y1);
+    tmp.x = x1 + t * dx;
+    tmp.y = y1 + t * dy;
 
-      double dist = pow(tmp.x - point.x, 2) + pow(tmp.y - point.y, 2);
-      
-      // update minimal distance
-      if (dist < min_dist) {
-        min_dist = dist;
-        closest = tmp;
-        min_i = i;
-      }
-    }
-    // check distance to start/end point of the segment(not always in a segment)
-    else {
-      double dist_end = pow(point.x - x2, 2) + pow(point.y - y2, 2);
-      double dist_start = pow(point.x - x1, 2) + pow(point.y - y1, 2);
-
-      if (dist_start < min_dist || dist_end < min_dist) {
-        
-        Point2D start, end;
+    double dist = pow(tmp.x - point.x, 2) + pow(tmp.y - point.y, 2);
     
-        if (dist_end < dist_start) {
-          start = cl[cl.size() - 2];
-          end = cl.back();
-          min_i = cl.size();
-        }
+    if (t >= 0 && t <= 1) {
 
-        if (dist_start < dist_end) {
-          start = cl[1];
-          end = cl[0];
-          min_i = 0;
-        }
+      if (dist < min_dist_in) {
+        found_in = true;
+        min_dist_in = dist;
+        closest_in = tmp;
 
-        double dx = end.x - start.x;
-        double dy = end.y - start.y;
-
-        double l2 = pow(dx,2) + pow(dy,2);
-        double dot = (point.x - end.x) * dx + (point.y - end.y) * dy;
-        double t = dot / l2;
-
-        closest.x = end.x + t * dx;
-        closest.y = end.y + t * dy;
+        min_in = i;
       }
     }
+    else {
+        double dist_start = pow(point.x - x1, 2) + pow(point.y - y1, 2);
+        double dist_end = pow(point.x - x2, 2) + pow(point.y - y2, 2);
+
+      if (dist_start < min_dist_out) {
+        min_dist_out = dist_start;
+        closest_out = tmp;
+        min_out = i - 1;
+      }
+      if (dist_end < min_dist_out) {
+        min_dist_out = dist_end;
+        closest_out = tmp;
+        min_out = i + 1;
+      }
+    }
+  }
+
+  if (found_in) {
+    closest = closest_in;
+    min_i = min_in;
+  }
+  else {
+    closest = closest_out;
+    min_i = min_out;
   }
   return min_i;
 }
