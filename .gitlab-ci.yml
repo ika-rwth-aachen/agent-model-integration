@@ -15,17 +15,6 @@ before_script:
   - pip3 install --upgrade pip
   - pip3 install -r /openPASS/pyOpenPASS/requirements.txt
 
-buildFMU1804:
-  image: ubuntu:18.04
-  stage: build
-  script: 
-    - cmake . 
-    - make -j10
-  artifacts:
-      paths:
-        - lib/ikaDriverAgent.fmu
-  allow_failure: true
-
 buildFMU2004:
   image: ubuntu:20.04
   stage: build
