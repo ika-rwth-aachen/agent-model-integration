@@ -460,7 +460,7 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view) {
 
           // compute latest change point
           Point2D latest_change_point;
-          int idx = closestCenterlinePoint(dest_point_, path_centerline_, latest_change_point);
+          int idx = closestCenterlinePoint(dest_point_, path_centerline_, latest_change_point, false);
 
           // update end s coordinate of last changeable entry
           std::get<1>(changeable_.back()) = path_s_[idx - 1] + euclideanDistance(path_centerline_[idx], latest_change_point);
@@ -694,7 +694,7 @@ void OsiConverter::fillVehicle(osi3::SensorView &sensor_view,
   ego_position_.y = ego_base_.position().y();
 
   // projection of ego coordinates on centerline
-  int idx = closestCenterlinePoint(ego_position_, path_centerline_, ego_centerline_point_);
+  int idx = closestCenterlinePoint(ego_position_, path_centerline_, ego_centerline_point_, true);
   
   // calculate s coordinate
   if (idx > 0) {        
@@ -768,7 +768,7 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
 
     // projection of signal position to centerline
     Point2D centerline_point;
-    closestCenterlinePoint(signal_point, path_centerline_, centerline_point);
+    closestCenterlinePoint(signal_point, path_centerline_, centerline_point, true);
     traffic_light_positions.push_back(signal_point);
 
     // save all original signal ids
@@ -849,7 +849,7 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
     Point2D centerline_point;
     Point2D signal_point(sign.main_sign().base().position().x(),
                    sign.main_sign().base().position().y());
-    closestCenterlinePoint(signal_point, path_centerline_, centerline_point);
+    closestCenterlinePoint(signal_point, path_centerline_, centerline_point, true);
 
     // add signal with id
     input.signals[signal].id = signal + 1; 
@@ -991,7 +991,7 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
         // projection of target position to centerline
         Point2D centerline_point;
         Point2D target_point(target_base.position().x(), target_base.position().y());
-        closestCenterlinePoint(target_point, path_centerline_, centerline_point);
+        closestCenterlinePoint(target_point, path_centerline_, centerline_point, true);
 
         // ds along centerline to reach target 
         double ds_target = xy2s(ego_centerline_point_, target_point,  

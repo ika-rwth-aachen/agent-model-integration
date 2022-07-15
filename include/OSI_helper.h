@@ -121,29 +121,24 @@ int xy2Curv(std::vector<Point2D> pos, std::vector<double>& s,
  * @param point
  * @param cl centerline (can also be boundary line)
  * @param closest point
+ * @param extrap if closest point can be also an extrapolation beyond boundaries
  * @return index of the next centerline point following the projected point. 
  *    0 when before scope of cl
  *    cl.size() when after scope of cl
  */
 int closestCenterlinePoint(const Point2D point, const std::vector<Point2D>& cl,
-                           Point2D& closest) {
+                           Point2D& closest, bool extrap) {
 
   assert(cl.size() > 1);
 
   // initialize variables
-  double min_dist_in = INFINITY;
-  double min_dist_out = INFINITY;
+  double min_dist = INFINITY;
   int min_i;
-  int min_in = -1;
-  int min_out = -1;
-  bool found_in = false;
-
   Point2D tmp;
-  Point2D closest_in;
-  Point2D closest_out;
 
   // iterate over all segments of centerline
   for (int i = 1; i < cl.size(); i++) {
+
     // get coordinates
     double x1 = cl[i - 1].x;
     double x2 = cl[i].x;
@@ -162,50 +157,74 @@ int closestCenterlinePoint(const Point2D point, const std::vector<Point2D>& cl,
     double dot = (point.x - x1) * dx + (point.y - y1) * dy;
     double t = dot / l2;
 
-    // compute point on centerline
-    tmp.x = x1 + t * dx;
-    tmp.y = y1 + t * dy;
-
     // if in segment
     if (t >= 0 && t <= 1) {
+      
+      // compute point on centerline
+      tmp.x = x1 + t * dx;
+      tmp.y = y1 + t * dy;
+      
       double dist = pow(tmp.x - point.x, 2) + pow(tmp.y - point.y, 2);
 
-      if (dist < min_dist_in) {
-        found_in = true;
-        min_dist_in = dist;
-        closest_in = tmp;
-
-        min_in = i;
+      if (dist < min_dist) {
+        min_dist = dist;
+        closest = tmp;
+        min_i = i;
       }
     }
     // if outside of segment
     else {
-        double dist_start = pow(point.x - x1, 2) + pow(point.y - y1, 2);
-        double dist_end = pow(point.x - x2, 2) + pow(point.y - y2, 2);
+      double dist_end = pow(point.x - x2, 2) + pow(point.y - y2, 2);
 
-      if (dist_start < min_dist_out) {
-        min_dist_out = dist_start;
-        closest_out = tmp;
-
-        min_out = i - 1;
-      }
-      if (dist_end < min_dist_out) {
-        min_dist_out = dist_end;
-        closest_out = tmp;
-
-        min_out = i + 1;
+      if (dist_end < min_dist) {
+        min_dist = dist_end;
+        closest = cl[i];
+        min_i = i;
       }
     }
   }
 
-  // take closest point in segment intervall (if exist)
-  if (found_in) {
-    closest = closest_in;
-    min_i = min_in;
-  }
-  else {
-    closest = closest_out;
-    min_i = min_out;
+  // check if distance to start point is smaller
+  double dist_start = pow(point.x - cl.front().x, 2) + pow(point.y - cl.front().y, 2);
+  double dist_end = pow(point.x - cl.back().x, 2) + pow(point.y - cl.back().y, 2);
+
+  if (dist_start < min_dist || dist_end < min_dist) {
+    
+    Point2D start, end;
+
+    // if distance to start is minimal
+    if (dist_start < dist_end){
+      min_i = 0;
+
+      start = cl[0];
+      end = cl[1];
+
+      closest = start;
+    }
+
+    // if distance to end is minimal
+    if (dist_end < dist_start){
+      min_i = cl.size();
+
+      start = cl[cl.size() - 2];
+      end = cl[cl.size() - 1];
+
+      closest = end;
+    }
+
+    // calculate closest if extrapolation desired
+    if (extrap) {
+      double dx = end.x - start.x;
+      double dy = end.y - start.y;
+
+
+      double l2 = dx * dx + dy * dy;
+      double dot = (point.x - start.x) * dx + (point.y - start.y) * dy;
+      double t = dot / l2;
+
+      closest.x = start.x + t * dx;
+      closest.y = start.y + t * dy;
+    }
   }
 
   return min_i;
@@ -378,8 +397,8 @@ double calcLaneWidth(const Point2D point, osi3::Lane* lane,
 
   // get desired point on boundaries
   Point2D r_point, l_point;
-  closestCenterlinePoint(point, lb_points, l_point);
-  closestCenterlinePoint(point, rb_points, r_point);
+  closestCenterlinePoint(point, lb_points, l_point, true);
+  closestCenterlinePoint(point, rb_points, r_point, true);
 
   // calculate width
   return sqrt(pow(l_point.x - r_point.x, 2) + pow(l_point.y - r_point.y, 2));
@@ -410,8 +429,8 @@ double xy2s(const Point2D start, const Point2D end,
   }
 
   Point2D start_centerline, end_centerline;
-  int start_idx = closestCenterlinePoint(start, cl, start_centerline);
-  int end_idx = closestCenterlinePoint(end, cl, end_centerline);
+  int start_idx = closestCenterlinePoint(start, cl, start_centerline, true);
+  int end_idx = closestCenterlinePoint(end, cl, end_centerline, true);
 
   // if start and end in same interval 
   if (start_idx == end_idx) {
@@ -652,7 +671,7 @@ bool BFS(std::vector<int> adj[], int src, int dest, int num_vertices,
 int interpolateXY2Value(std::vector<double> y, std::vector<Point2D> xy,
                         Point2D pos) {
   Point2D dummy;
-  int i = closestCenterlinePoint(pos, xy, dummy);
+  int i = closestCenterlinePoint(pos, xy, dummy, false);
 
   // crop idx to boundaries
   if (i == 0) i = 1;
@@ -700,17 +719,8 @@ int closestLane(osi3::GroundTruth* ground_truth, const Point2D point) {
     getXY(&cur_lane, centerline);
 
     Point2D closest;
-    int idx = closestCenterlinePoint(point, centerline, closest);
+    int idx = closestCenterlinePoint(point, centerline, closest, false);
 
-    // update closest if before centerline  
-    if (idx == 0) {
-      closest = centerline[0];
-    }
-    // update closest if after centerline  
-    if (idx == centerline.size()) {
-      closest = centerline[centerline.size()-1];
-    }
-    
     // compute distance 
     double d = (closest.x - point.x) * (closest.x - point.x) +
                (closest.y - point.y) * (closest.y - point.y);
@@ -1276,10 +1286,10 @@ double calcDsSignal(osi3::GroundTruth &ground_truth, std::vector<Point2D> &cente
     // set centerline point w.r.t. road marking position.
     // Assumption: Road marking is perpendicular to lanes(s).
     Point2D rm_position(rm.base().position().x(), rm.base().position().y());
-    closestCenterlinePoint(rm_position, center_line, centerline_point);
+    closestCenterlinePoint(rm_position, center_line, centerline_point, true);
   } else {
     // set centerline point w.r.t. signal position
-    closestCenterlinePoint(signal_point, center_line, centerline_point);
+    closestCenterlinePoint(signal_point, center_line, centerline_point, true);
     ds = -ds_gap; // when no road marking was found apply ds_gap
   }
 
@@ -1342,7 +1352,7 @@ double calcOffsetToLane(int land_id, Point2D position, osi3::GroundTruth* ground
 
   // calculate closest point on adjacent centerline
   Point2D adjacent_point;
-  closestCenterlinePoint(position, adjacent_points, adjacent_point);
+  closestCenterlinePoint(position, adjacent_points, adjacent_point, true);
 
   // calculate euclidean distance
   double offset = euclideanDistance(adjacent_point, position);
@@ -1365,7 +1375,7 @@ double calcOffsetToLaneBoundary(int boundary_id, Point2D position, osi3::GroundT
 
   // calculate closest point on boundary centerline
   Point2D boundary_point;
-  closestCenterlinePoint(position, boundary_points, boundary_point);
+  closestCenterlinePoint(position, boundary_points, boundary_point, true);
 
   // calculate euclidean distance
   double offset = euclideanDistance(boundary_point, position);
