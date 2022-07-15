@@ -20,7 +20,7 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 
 # FMU output directory
-set(FMU_OUTDIR "${CMAKE_SOURCE_DIR}/../openPASS" CACHE STRING "Fmu output directory")
+set(FMU_OUTDIR "${CMAKE_SOURCE_DIR}/lib" CACHE STRING "Fmu output directory")
 
 # Debug output directory
 add_definitions(-DDEBUG_OUTDIR="${CMAKE_SOURCE_DIR}/debug")
