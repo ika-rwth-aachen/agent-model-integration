@@ -122,9 +122,10 @@ int IkaAgent::step(double time, double step_size, osi3::SensorView &sensor_view,
                    osi3::TrafficCommand &traffic_command,
                    osi3::TrafficUpdate &traffic_update,
                    setlevel4to5::DynamicsRequest &dynamic_request) {
-  int id = sensor_view.host_vehicle_id().value();
+  uint64_t id = sensor_view.host_vehicle_id().value();
 
   std::cout << "---------- time: " << time << " ---------- id: " << id << " ----------" << std::endl;
+  
 
   // in the first step, the desired curvature should be zero
   bool firstStep = false;
@@ -159,6 +160,7 @@ int IkaAgent::step(double time, double step_size, osi3::SensorView &sensor_view,
   this->buildTrafficUpdate(traffic_update);
 
   if (debug_) {
+    logger.saveOSI(sensor_view, traffic_command);
     logger.saveDebugInformation(time, _input, driver_state_, vehicle_state_);
   }
   return 0;

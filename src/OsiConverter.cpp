@@ -33,6 +33,7 @@ void OsiConverter::extractEgoInformation(osi3::SensorView &sensor_view,
 
   // find ego object
   ego_id_ = sensor_view.host_vehicle_id().value();
+
   for (int i = 0; i < ground_truth->moving_object_size(); i++) {
     if (ground_truth->moving_object(i).id().value() == ego_id_) {
       ego_ = ground_truth->moving_object(i);
@@ -109,6 +110,7 @@ void OsiConverter::preprocess(osi3::SensorView &sensor_view,
 
 void OsiConverter::processTrafficCommand(osi3::TrafficCommand &traffic_command,
                                          agent_model::Parameters &param) {
+
   // iterate over all traffic commands
   for (int i = 0; i < traffic_command.action_size(); i++) {
 
@@ -292,7 +294,7 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view,
   // calculate s, psi, kappa from centerline
   xy2Curv(path_centerline_, path_s_, path_psi_, path_kappa_);
   
-  std::vector<int> start_lane_ids;
+  std::vector<uint64_t> start_lane_ids;
 
   // generate junction paths for traffic lights
   for (auto &light : *ground_truth->mutable_traffic_light()) {
@@ -300,7 +302,7 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view,
     // create path from assigned lane of light backwards
     for (auto &assigned_lane : light.classification().assigned_lane_id()) {
 
-      int lane_id = assigned_lane.value();
+      uint64_t lane_id = assigned_lane.value();
 
       // check if lane_id already contained in start_lane_ids
       if (std::find(start_lane_ids.begin(), start_lane_ids.end(), lane_id) !=
@@ -339,7 +341,7 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view,
     for (auto &assigned_lane :
          sign.main_sign().classification().assigned_lane_id()) {
 
-      int lane_id = assigned_lane.value();
+      uint64_t lane_id = assigned_lane.value();
 
       // check if lane_id already contained in start_lane_ids
       if (std::find(start_lane_ids.begin(), start_lane_ids.end(), lane_id) !=
@@ -376,7 +378,7 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view,
   {
     for (int i = 0; i < ground_truth->lane_size(); i++)
     {
-      int lane_id = ground_truth->lane(i).id().value();
+      uint64_t lane_id = ground_truth->lane(i).id().value();
       auto* lane = findLane(lane_id, ground_truth);
 
       // check for intersection lane
@@ -557,7 +559,7 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
 
   int signal = 0;
   
-  std::vector<int> signal_lanes;  
+  std::vector<uint64_t> signal_lanes;  
   std::vector<int> traffic_light_ids;            
   std::vector<Point2D> traffic_light_positions;
 
@@ -576,7 +578,7 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
       continue;
 
     // check if traffic light is assigned along the route
-    int assigned_lane_id;
+    uint64_t assigned_lane_id;
     bool assigned = isSigAssigned(cls, signal_lanes, lanes_, assigned_lane_id);
 
     // continue if not assigned to route
@@ -655,7 +657,7 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
       sign.main_sign().classification();
 
     // check if traffic light is assigned along the route
-    int assigned_lane_id;
+    uint64_t assigned_lane_id;
     bool assigned = isSigAssigned(cls, signal_lanes, lanes_, assigned_lane_id);
 
     // skip a non-assigned signal    
@@ -691,7 +693,7 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
     while ((known_position != traffic_light_positions.end())) {
       
       // calculate and set paired_signal_id
-      int paired_signal_id = traffic_light_ids[known_position - traffic_light_positions.begin()];
+      uint64_t paired_signal_id = traffic_light_ids[known_position - traffic_light_positions.begin()];
 
       // calculate if all signals out of service
       if (!ground_truth->traffic_light(paired_signal_id).classification().        is_out_of_service()) all_out_of_service = false;
