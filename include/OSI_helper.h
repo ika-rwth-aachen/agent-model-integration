@@ -587,13 +587,23 @@ void mapLanes(osi3::GroundTruth* ground_truth,
     if (current->classification().left_adjacent_lane_id_size() > 0)
     {
       uint64_t lane_id = current->classification().left_adjacent_lane_id(0).value();
-      mapping[lane_id] = 2;
+      if (current->classification().centerline_is_driving_direction()) {
+        mapping[lane_id] = 2;
+      }
+      else {  
+        mapping[lane_id] = -2;
+      }
     }
     // assign right adjacent lane: -2
     if (current->classification().right_adjacent_lane_id_size() > 0)
     {
       uint64_t lane_id =current->classification().right_adjacent_lane_id(0).value();
-      mapping[lane_id] = -2;
+      if (current->classification().centerline_is_driving_direction()) {
+        mapping[lane_id] = -2;
+      }
+      else {  
+        mapping[lane_id] = 2;
+      }
     }
   }
 

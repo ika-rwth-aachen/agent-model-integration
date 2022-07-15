@@ -66,7 +66,6 @@ class OsiConverter {
 
   // lane variables
   std::vector<LaneGroup> lane_groups_;
-  std::unordered_map<uint64_t, int> lane_mapping_;
   std::vector<uint64_t> lanes_;
   std::vector<uint64_t> lanes_changeable_;
   std::vector<uint64_t> intersection_lanes_;

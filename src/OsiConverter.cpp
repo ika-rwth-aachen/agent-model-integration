@@ -265,9 +265,6 @@ void OsiConverter::newLanes(osi3::SensorView &sensor_view) {
   lanes_ = lane_group.lanes;
   lanes_changeable_ = lane_group.lanes_changeable;
     
-  // fill lane_mapping_
-  mapLanes(ground_truth, lane_mapping_, ego_lane_ptr_, lanes_);
-
   // print lanes
   std::cout << "Destination at: " << dest_point_.x <<","<< dest_point_.y <<"\n";
   std::cout << "With lanes to pass: ";
@@ -1329,7 +1326,7 @@ void OsiConverter::fillLanes(osi3::SensorView &sensor_view,
     lane++;
   }
 
-
+  int lane_counter = 100;
   // iterate over all remaining lanes
   for (int i=0; i < ground_truth->lane_size() && lane < agent_model::NOL; i++) {
 
@@ -1342,8 +1339,8 @@ void OsiConverter::fillLanes(osi3::SensorView &sensor_view,
       continue;
     }
 
-    // set id from lane_mapping_
-    input.lanes[lane].id = lane_mapping_[tmp_lane.id().value()];
+    // set arbitrary id
+    input.lanes[lane].id = lane_counter++;
 
     // calculate type
     if (tmp_lane.classification().type() ==
