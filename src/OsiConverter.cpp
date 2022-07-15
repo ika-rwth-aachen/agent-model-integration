@@ -977,15 +977,22 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
         }
 
         // check if target on route
-        auto target_lane = find(lanes_.begin(), lanes_.end(), tar.assigned_lane_id(j).value());
-        if (target_lane != lanes_.end()) {
-          assigned_lane_idx = lane_mapping_[tar.assigned_lane_id(j).value()];
-          assigned = true;
-          break;
+        for (int i = 0; i < lane_groups_.size(); i++){
+          
+          auto lanes = lane_groups_[i].lanes;
+          
+          auto target_lane = find(lanes.begin(), lanes.end(), tar.assigned_lane_id(j).value());
+          
+          if (target_lane != lanes.end()) {
+            assigned_lane_idx = lane_groups_[i].id;
+            assigned = true;
+            break;
+          }
         }
+        if (assigned) break;
       }
 
-      // only fill ds, d, lane and fields when target is assigned to host's path
+      // only fill ds, d, lane and fields when target is assigned on route
       if (assigned) {
 
         // projection of target position to centerline
