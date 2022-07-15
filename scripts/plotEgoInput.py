@@ -52,9 +52,9 @@ def plotEgoInput(args):
         if not args.output.exists():
             os.mkdir(args.output)
 
-        name = 'ego_input.eps'
+        name = 'ego_input.png'
         file_name = pathlib.PurePath(args.output, name)
-        plt.savefig(file_name, format='eps', dpi=1200)
+        plt.savefig(file_name, format='png', dpi=1200)
 
 if __name__ == "__main__":
         

@@ -8,6 +8,9 @@
 #include "Interface.h"
 #include "VehicleModel.h"
 
+#include "osi_sensorview.pb.h"
+#include "osi_trafficcommand.pb.h"
+
 #if __cplusplus < 201703L // If the version of C++ is less than 17
 #include <experimental/filesystem>
     // It was still in the experimental:: namespace
@@ -24,11 +27,14 @@ class Logger {
     Logger(){};
     ~Logger(){};
 
-    void init(int ego_id);
+    void init(uint64_t ego_id);
     void saveDebugInformation(double time, agent_model::Input input, agent_model::State *driver_state, VehicleModel::State *vehicle_state);
 
+    void saveOSI(osi3::SensorView &sensor_view,
+                   osi3::TrafficCommand &traffic_command);
+
   private:
-    int ego_id_;
+    uint64_t ego_id_;
 
     json json_logger_;
     int json_counter_ = 0;

@@ -34,6 +34,7 @@ void OsiConverter::extractEgoInformation(osi3::SensorView &sensor_view,
 
   // find ego object
   ego_id_ = sensor_view.host_vehicle_id().value();
+
   for (int i = 0; i < ground_truth->moving_object_size(); i++) {
     if (ground_truth->moving_object(i).id().value() == ego_id_) {
       ego_ = ground_truth->moving_object(i);
@@ -124,6 +125,7 @@ void OsiConverter::preprocess(osi3::SensorView &sensor_view,
 
 void OsiConverter::processTrafficCommand(osi3::TrafficCommand &traffic_command,
                                          agent_model::Parameters &param) {
+
   // iterate over all traffic commands
   for (int i = 0; i < traffic_command.action_size(); i++) {
 
@@ -339,7 +341,7 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view) {
         // iterate over all adjacent lanes on left side
         for (int j = 0; j < lane->classification().left_adjacent_lane_id_size(); j++) 
         {
-          int adj_id = lane->classification().left_adjacent_lane_id(j).value();
+          uint64_t adj_id = lane->classification().left_adjacent_lane_id(j).value();
          
           double dt = calcOffsetToLane(adj_id, position, ground_truth);
 
@@ -350,7 +352,7 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view) {
         // iterate over all adjacent lanes on right side
         for (int j = 0; j < lane->classification().right_adjacent_lane_id_size(); j++) 
         {
-          int adj_id = lane->classification().right_adjacent_lane_id(j).value();
+          uint64_t adj_id = lane->classification().right_adjacent_lane_id(j).value();
 
           double dt = calcOffsetToLane(adj_id, position, ground_truth);
 
@@ -361,7 +363,7 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view) {
         // iterate over all lane boundaries on left side
         for (int j = 0; j < lane->classification().left_lane_boundary_id_size(); j++) 
         {
-          int b_id = lane->classification().left_lane_boundary_id(j).value();
+          uint64_t b_id = lane->classification().left_lane_boundary_id(j).value();
           
            double dt = calcOffsetToLaneBoundary(b_id, position, ground_truth);
 
@@ -372,7 +374,7 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view) {
         // iterate over all lane boundaries on right side
         for (int j = 0; j < lane->classification().right_lane_boundary_id_size(); j++) 
         {
-          int b_id = lane->classification().right_lane_boundary_id(j).value();
+          uint64_t b_id = lane->classification().right_lane_boundary_id(j).value();
           
           double dt = calcOffsetToLaneBoundary(b_id, position, ground_truth);
 
@@ -473,14 +475,14 @@ void OsiConverter::generateJunctionPaths(osi3::SensorView &sensor_view) {
   osi3::GroundTruth *ground_truth = sensor_view.mutable_global_ground_truth();
 
   // generate junction paths for traffic lights
-  std::vector<int> start_lane_ids;
+  std::vector<uint64_t> start_lane_ids;
 
   for (auto &light : *ground_truth->mutable_traffic_light()) {
 
     // create path from assigned lane of light backwards
     for (auto &assigned_lane : light.classification().assigned_lane_id()) {
 
-      int lane_id = assigned_lane.value();
+      uint64_t lane_id = assigned_lane.value();
 
       // check if lane_id already contained in start_lane_ids
       if (std::find(start_lane_ids.begin(), start_lane_ids.end(), lane_id) !=
@@ -519,7 +521,7 @@ void OsiConverter::generateJunctionPaths(osi3::SensorView &sensor_view) {
     for (auto &assigned_lane :
          sign.main_sign().classification().assigned_lane_id()) {
 
-      int lane_id = assigned_lane.value();
+      uint64_t lane_id = assigned_lane.value();
 
       // check if lane_id already contained in start_lane_ids
       if (std::find(start_lane_ids.begin(), start_lane_ids.end(), lane_id) !=
@@ -556,7 +558,7 @@ void OsiConverter::generateJunctionPaths(osi3::SensorView &sensor_view) {
   {
     for (int i = 0; i < ground_truth->lane_size(); i++)
     {
-      int lane_id = ground_truth->lane(i).id().value();
+      uint64_t lane_id = ground_truth->lane(i).id().value();
       auto* lane = findLane(lane_id, ground_truth);
 
       // check for intersection lane
@@ -705,8 +707,8 @@ void OsiConverter::fillVehicle(osi3::SensorView &sensor_view,
   }
 
   // angle between ego yaw and deviation from centerline point
-  input.vehicle.psi = ego_base_.orientation().yaw() - 
-              interpolateXY2Value(path_psi_, path_centerline_, ego_centerline_point_);
+  input.vehicle.psi = wrapAngle(ego_base_.orientation().yaw() - 
+              interpolateXY2Value(path_psi_, path_centerline_, ego_centerline_point_));
   input.vehicle.dPsi = ego_base_.orientation_rate().yaw();
 
   // compute distance between ego and centerline
@@ -741,8 +743,8 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
 
   int signal = 0;
   
-  std::vector<int> signal_lanes;  
-  std::vector<int> traffic_light_ids;            
+  std::vector<uint64_t> signal_lanes;  
+  std::vector<int> traffic_light_idx;            
   std::vector<Point2D> traffic_light_positions;
 
   // iterate over all traffic lights
@@ -760,7 +762,7 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
       continue;
 
     // check if traffic light is assigned along the route
-    int assigned_lane_id;
+    uint64_t assigned_lane_id;
     bool assigned = isSigAssigned(cls, signal_lanes, lanes_, assigned_lane_id);
 
     // continue if not assigned to route
@@ -772,7 +774,7 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
     traffic_light_positions.push_back(signal_point);
 
     // save all original signal ids
-    traffic_light_ids.push_back(i);
+    traffic_light_idx.push_back(i);
 
     // add signal with id
     input.signals[signal].id = signal + 1;
@@ -839,7 +841,7 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
       sign.main_sign().classification();
 
     // check if traffic light is assigned along the route
-    int assigned_lane_id;
+    uint64_t assigned_lane_id;
     bool assigned = isSigAssigned(cls, signal_lanes, lanes_, assigned_lane_id);
 
     // skip a non-assigned signal    
@@ -874,11 +876,11 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
     bool all_out_of_service = true;
     while ((known_position != traffic_light_positions.end())) {
       
-      // calculate and set paired_signal_id
-      int paired_signal_id = traffic_light_ids[known_position - traffic_light_positions.begin()];
+      // calculate and set paired_signal_idx
+      int paired_signal_idx = traffic_light_idx[known_position - traffic_light_positions.begin()];
 
       // calculate if all signals out of service
-      if (!ground_truth->traffic_light(paired_signal_id).classification().        is_out_of_service()) all_out_of_service = false;
+      if (!ground_truth->traffic_light(paired_signal_idx).classification().        is_out_of_service()) all_out_of_service = false;
 
       // get next known position
       known_position =
@@ -960,7 +962,8 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
 
       input.targets[target].v = getNorm(target_base.velocity());
       input.targets[target].a = getNorm(target_base.acceleration());
-      input.targets[target].psi = target_base.orientation().yaw() - ego_base_.orientation().yaw();
+      input.targets[target].psi = wrapAngle(target_base.orientation().yaw() 
+                                                - ego_base_.orientation().yaw());
 
       input.targets[target].size.length = target_base.dimension().length();
       input.targets[target].size.width = target_base.dimension().width();
@@ -1106,7 +1109,7 @@ void OsiConverter::fillHorizon(osi3::SensorView &sensor_view,
   // distance (along centerline) to each horizon point from current location
   std::vector<double> ds(agent_model::NOH, 0);
   for (int i = 0; i < agent_model::NOH; i++) {    
-    ds[i] = pow((i + 1) / double(agent_model::NOH), 2)  * s_max;
+    ds[i] = pow((i + 1) / double(agent_model::NOH), 2) * s_max;
   }
 
   double ego_psi = ego_base_.orientation().yaw();
@@ -1132,7 +1135,7 @@ void OsiConverter::fillHorizon(osi3::SensorView &sensor_view,
 
       double dx_path = path_centerline_[idx + 1].x - path_centerline_[idx].x;
       double dy_path = path_centerline_[idx + 1].y - path_centerline_[idx].y;
-      double dpsi_path = path_psi_[idx + 1] - path_psi_[idx];
+      double dpsi_path = wrapAngle(path_psi_[idx + 1] - path_psi_[idx]);
       double dkappa_path = path_kappa_[idx + 1] - path_kappa_[idx];
 
       double dwidth_path = path_width_[idx + 1] - path_width_[idx];
@@ -1140,9 +1143,8 @@ void OsiConverter::fillHorizon(osi3::SensorView &sensor_view,
       double dtoff_right_path = path_toff_right_[idx + 1]-path_toff_right_[idx];
 
       horizon_knot.x = path_centerline_[idx].x + frac * dx_path;
-      horizon_knot.y = path_centerline_[idx].y + frac * dy_path;
-
-      input.horizon.psi[i] = path_psi_[idx] + frac * dpsi_path - ego_psi;
+      horizon_knot.y = path_centerline_[idx].y + frac * dy_path;      
+      input.horizon.psi[i] = wrapAngle(path_psi_[idx] + frac * dpsi_path - ego_psi);
       input.horizon.kappa[i] = path_kappa_[idx] + frac * dkappa_path;
 
       input.horizon.ds[i] = ds[i];
@@ -1197,7 +1199,7 @@ void OsiConverter::fillLanes(osi3::SensorView &sensor_view,
   osi3::GroundTruth *ground_truth = sensor_view.mutable_global_ground_truth();
   
   int lane = 0;
-  std::vector<int> processed_lanes;
+  std::vector<uint64_t> processed_lanes;
 
   // get ego lane points
   std::vector<Point2D> ego_lane_points;
@@ -1269,7 +1271,7 @@ void OsiConverter::fillLanes(osi3::SensorView &sensor_view,
       // iterate backwards over lanes and compute ds
       for (int i = lane_group.lanes.size()-1; i >= 0; i--) {
         
-        int cur_lane_id = lane_group.lanes[i];
+        uint64_t cur_lane_id = lane_group.lanes[i];
 
         // add current lane to processed_lanes
         processed_lanes.push_back(cur_lane_id);

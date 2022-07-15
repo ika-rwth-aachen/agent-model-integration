@@ -21,17 +21,17 @@
 using Point2D = agent_model::Position;
 
 struct JunctionPath {
-  std::vector<int> lanes;
+  std::vector<uint64_t> lanes;
   std::vector<Point2D> pts;
-  int signal_id;
+  uint64_t signal_id;
   int type; // -1 unknown, 0 changing, 1 priority, 2 give way
 };
 
 struct LaneGroup {
-  int id;                           // id of lane group
-  int change_amount;                 // lane change amount to left(+)/right(-)
-  std::vector<int> lanes;           // lane ids of lane group
-  std::vector<int> lanes_changeable;// lane ids where change is possible
+  int id;                                 // id of lane group
+  int change_amount;                      // lane change amount to left/right
+  std::vector<uint64_t> lanes;            // lane ids of lane group
+  std::vector<uint64_t> lanes_changeable; // lane ids where change is possible
 };
 
 class OsiConverter {
@@ -66,24 +66,24 @@ class OsiConverter {
 
   // lane variables
   std::vector<LaneGroup> lane_groups_;
-  std::unordered_map<int, int> lane_mapping_;
-  std::vector<int> lanes_;
-  std::vector<int> lanes_changeable_;
-  std::vector<int> intersection_lanes_;
+  std::unordered_map<uint64_t, int> lane_mapping_;
+  std::vector<uint64_t> lanes_;
+  std::vector<uint64_t> lanes_changeable_;
+  std::vector<uint64_t> intersection_lanes_;
   std::vector<JunctionPath> junction_paths_;
 
   // last action id's
-  int lc_action_id_ = -1;
-  int traj_action_id_ = -1;
-  int path_action_id_ = -1;
-  int glob_pos_action_id_ = -1;
-  int speed_action_id_ = -1;
-  int custom_action_id_ = -1;
+  uint64_t lc_action_id_ = -1;
+  uint64_t traj_action_id_ = -1;
+  uint64_t path_action_id_ = -1;
+  uint64_t glob_pos_action_id_ = -1;
+  uint64_t speed_action_id_ = -1;
+  uint64_t custom_action_id_ = -1;
 
   // ego variables
-  int ego_id_;
-  int ego_lane_id_;
-  int ego_lane_group_id_;
+  uint64_t ego_id_;
+  uint64_t ego_lane_id_;
+  uint64_t ego_lane_group_id_;
   double ego_s_;
 
   Point2D ego_position_;

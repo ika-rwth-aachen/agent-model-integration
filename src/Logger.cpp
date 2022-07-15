@@ -9,7 +9,7 @@
  */
 #include "Logger.h"
 
-void Logger::init(int ego_id) {
+void Logger::init(uint64_t ego_id) {
 
   ego_id_ = ego_id;
   path_ = DEBUG_OUTDIR;
@@ -21,11 +21,55 @@ void Logger::init(int ego_id) {
   }
 }
 
+void Logger::saveOSI(osi3::SensorView &sensor_view,
+                   osi3::TrafficCommand &traffic_command) {
+  
+  std::string sensor_view_string;
+  sensor_view.SerializeToString(&sensor_view_string);
+
+  std::ofstream file_sensor_view;
+  file_sensor_view.open(path_ + "/sensor_view_carla.osi", std::ofstream::app|std::ofstream::binary);
+  file_sensor_view.imbue(std::locale::classic());
+
+  uint32_t val_sv = (uint32_t) sensor_view.ByteSizeLong();
+  file_sensor_view.write(reinterpret_cast<const char*>(&val_sv), sizeof val_sv);
+
+  file_sensor_view << sensor_view_string;
+  file_sensor_view.close();
+
+
+  std::string traffic_command_string;
+  traffic_command.SerializeToString(&traffic_command_string);
+
+  std::ofstream file_traffic_command;
+  file_traffic_command.open(path_ + "/traffic_command_carla.osi", std::ofstream::app|std::ofstream::binary);
+  file_traffic_command.imbue(std::locale::classic());
+
+  uint32_t val_tc = (uint32_t) traffic_command.ByteSizeLong();
+  file_traffic_command.write(reinterpret_cast<const char*>(&val_tc), sizeof val_tc);
+
+  file_traffic_command << traffic_command_string;
+  file_traffic_command.close();
+
+
+  std::string debug_sensorview_string = sensor_view.DebugString();
+  std::ofstream debug_sensorview (path_ + "/sensor_view_carla.txt",  std::ofstream::app);
+  debug_sensorview << debug_sensorview_string;
+  debug_sensorview.close();
+
+
+  std::string debug_trafficcommand_string = traffic_command.DebugString();
+  std::ofstream debug_trafficcommand (path_ + "/traffic_command_carla.txt",  std::ofstream::app);
+  debug_trafficcommand << debug_trafficcommand_string;
+  debug_trafficcommand.close();
+}
+
+
 void Logger::saveDebugInformation(double time, agent_model::Input input, agent_model::State *driver_state, VehicleModel::State *vehicle_state) {
 
-  // convert time and dt_log to milliseconds (int) to allow modulo operator 
+  // convert time and dt_log to milliseconds (uint64_t) to allow modulo operator
   // add 0.5 for proper rounding
-  if (int(1000*time + 0.5) % int(1000*dt_log_ + 0.5) == 0) {
+  if (uint64_t(1000*time + 0.5) % uint64_t(1000*dt_log_ + 0.5) == 0) {
 
     json json_conscious_follow;
     json_conscious_follow["distance"] = driver_state->conscious.follow.distance;
@@ -39,7 +83,7 @@ void Logger::saveDebugInformation(double time, agent_model::Input input, agent_m
 
     
     json json_conscious_lateral;
-    for (int i=0; i < 3; i++)
+    for (int i = 0; i < 3; i++)
     {
       json_conscious_lateral[i]["factor"] = driver_state->conscious.lateral.paths[i].factor;
       json_conscious_lateral[i]["offset"] = driver_state->conscious.lateral.paths[i].offset;
@@ -110,7 +154,7 @@ void Logger::saveDebugInformation(double time, agent_model::Input input, agent_m
   }
 
   // save debug file
-  if (int(1000*time + 0.5) % int(1000*dt_save_ + 0.5) == 0) {
+  if (uint64_t(1000*time + 0.5) % uint64_t(1000*dt_save_ + 0.5) == 0) {
     std::ofstream output(path_ + "/vehicle_" + std::to_string(ego_id_) + ".json", std::ofstream::out);
     output << json_logger_.dump(4);
     output.close();

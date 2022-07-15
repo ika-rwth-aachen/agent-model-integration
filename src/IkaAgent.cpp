@@ -82,7 +82,7 @@ void IkaAgent::init(osi3::BaseMoving &host) {
   vehicle_param->steer_transmission = 0.5;
   vehicle_param->wheel_base = wheel_base;
   vehicle_param->mass = 1.5e3;
-  vehicle_param->power_max = 1.0e4;
+  vehicle_param->power_max = 1.0e5;
   vehicle_param->force_max = 6.0e3;
   vehicle_param->idle = 0.05;
   vehicle_param->roll_coefficient[0] = 4.0 * 9.91e-3;
@@ -125,9 +125,10 @@ int IkaAgent::step(double time, double step_size, osi3::SensorView &sensor_view,
                    osi3::TrafficCommand &traffic_command,
                    osi3::TrafficUpdate &traffic_update,
                    setlevel4to5::DynamicsRequest &dynamic_request) {
-  int id = sensor_view.host_vehicle_id().value();
+  uint64_t id = sensor_view.host_vehicle_id().value();
 
   std::cout << "---------- time: " << time << " ---------- id: " << id << " ----------" << std::endl;
+  
 
   // in the first step, the desired curvature should be zero
   bool firstStep = false;
@@ -162,6 +163,7 @@ int IkaAgent::step(double time, double step_size, osi3::SensorView &sensor_view,
   this->buildTrafficUpdate(traffic_update);
 
   if (debug_) {
+    logger.saveOSI(sensor_view, traffic_command);
     logger.saveDebugInformation(time, _input, driver_state_, vehicle_state_);
   }
   return 0;
