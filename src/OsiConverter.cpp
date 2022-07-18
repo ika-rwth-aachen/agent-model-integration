@@ -417,12 +417,10 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view) {
                                     &path_centerline_[gap_idx + 2]);
     int n_gap = calcGap(gap_points, path_centerline_, gap_idx);
 
-    std::vector<double> dummy_width (n_gap, -1);
-    path_width_.insert(path_width_.begin() + gap_idx, dummy_width.begin(), dummy_width.end());
-
-    std::vector<double> dummy_toff (n_gap, 0);
-    path_toff_left_.insert(path_toff_left_.begin() + gap_idx, dummy_toff.begin(), dummy_toff.end());
-    path_toff_right_.insert(path_toff_right_.begin() + gap_idx, dummy_toff.begin(), dummy_toff.end());
+    std::vector<double> dummy (n_gap, 0.0);
+    path_width_.insert(path_width_.begin() + gap_idx, dummy.begin(), dummy.end());
+    path_toff_left_.insert(path_toff_left_.begin() + gap_idx, dummy.begin(), dummy.end());
+    path_toff_right_.insert(path_toff_right_.begin() + gap_idx, dummy.begin(), dummy.end());
   }
 
 
@@ -1158,7 +1156,15 @@ void OsiConverter::fillHorizon(osi3::SensorView &sensor_view,
 
       input.horizon.egoLaneWidth[i] = path_width_[idx] + frac * dwidth_path;
  
-      if (path_toff_left_[idx + 1] > 0 && path_toff_left_[idx] > 0) {
+      if (path_width_[idx + 1] != 0 && path_width_[idx] != 0) {
+        input.horizon.egoLaneWidth[i] = path_width_[idx] + frac * dwidth_path;
+      }
+      // set to -1 if one entry is zero
+      else {
+        input.horizon.egoLaneWidth[i] = 0;
+      }
+
+      if (path_toff_left_[idx + 1] != 0 && path_toff_left_[idx] != 0) {
         input.horizon.leftLaneOffset[i] = path_toff_left_[idx] + frac * dtoff_left_path;
       }
       // set to zero if one entry is zero
@@ -1166,7 +1172,7 @@ void OsiConverter::fillHorizon(osi3::SensorView &sensor_view,
         input.horizon.leftLaneOffset[i] = 0;
       }
 
-      if (path_toff_right_[idx + 1] > 0 && path_toff_right_[idx] > 0) {
+      if (path_toff_right_[idx + 1] != 0 && path_toff_right_[idx] != 0) {
         input.horizon.rightLaneOffset[i] = path_toff_right_[idx] + frac * dtoff_right_path;
       }
       // set to zero if one entry is zero
@@ -1244,7 +1250,7 @@ void OsiConverter::fillLanes(osi3::SensorView &sensor_view,
 
     // fill general information
     input.lanes[lane].id = group_id;
-    input.lanes[lane].width = -1.0;
+    input.lanes[lane].width = 0.0;
     input.lanes[lane].access = agent_model::Accessibility::ACC_ACCESSIBLE;
     input.lanes[lane].dir = agent_model::DrivingDirection::DD_FORWARDS;
 
@@ -1377,7 +1383,7 @@ void OsiConverter::fillLanes(osi3::SensorView &sensor_view,
     }
 
     // general information
-    input.lanes[lane].width = -1;
+    input.lanes[lane].width = 0.0;
     input.lanes[lane].closed = -1;
     input.lanes[lane].route = -1;
 
@@ -1388,7 +1394,7 @@ void OsiConverter::fillLanes(osi3::SensorView &sensor_view,
   // fill remaining lanes with default values
   for (int i = lane; i < agent_model::NOL; i++) {
     input.lanes[i].id = 127;
-    input.lanes[i].width = -1;
+    input.lanes[i].width = 0.0;
     input.lanes[i].route = -1;
     input.lanes[i].closed = -1;
     input.lanes[i].access = agent_model::ACC_NOT_SET;
