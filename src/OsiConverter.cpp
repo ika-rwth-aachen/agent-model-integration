@@ -8,8 +8,11 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 #include "OsiConverter.h"
-#include "OSI_helper.h"
-#include <nlohmann/json.hpp>
+
+#include "Utils_general.h"
+#include "Utils_osi.h"
+#include "Utils_geometry.h"
+#include "Utils_route.h"
 
 void OsiConverter::convert(osi3::SensorView &sensor_view,
                            osi3::TrafficCommand &traffic_command,
@@ -412,7 +415,7 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view) {
   if (gap_idx > 0) {
     std::vector<Point2D> gap_points(&path_centerline_[gap_idx - 2],
                                     &path_centerline_[gap_idx + 2]);
-    int n_gap = calcXYGap(gap_points, path_centerline_, gap_idx);
+    int n_gap = calcGap(gap_points, path_centerline_, gap_idx);
 
     std::vector<double> dummy_width (n_gap, -1);
     path_width_.insert(path_width_.begin() + gap_idx, dummy_width.begin(), dummy_width.end());
@@ -709,7 +712,7 @@ void OsiConverter::fillVehicle(osi3::SensorView &sensor_view,
   input.vehicle.dPsi = ego_base_.orientation_rate().yaw();
 
   // compute distance between ego and centerline
-  input.vehicle.d = computeDistanceInRefAngleSystem(ego_position_, 
+  input.vehicle.d = calcSignedTOffset(ego_position_, 
                         ego_centerline_point_, ego_base_.orientation().yaw());
 
   // set dummy values
@@ -1016,7 +1019,7 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
 
         // calculate distance to centerline point
         Point2D target_position(target_base.position().x(), target_base.position().y());
-        input.targets[target].d = computeDistanceInRefAngleSystem(target_position, centerline_point, target_base.orientation().yaw());
+        input.targets[target].d = calcSignedTOffset(target_position, centerline_point, target_base.orientation().yaw());
 
         // set assigned lane id
         input.targets[target].lane = assigned_lane_idx;
@@ -1247,7 +1250,7 @@ void OsiConverter::fillLanes(osi3::SensorView &sensor_view,
 
     // special use case: neigbouring lane group
     if (abs(group_id) == 1){
-      
+
       // lane_change status
       if (lane_group.change_amount == 0) {
         input.lanes[lane].lane_change = 0;

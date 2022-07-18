@@ -10,13 +10,17 @@
 #pragma once
 #include <cmath>
 #include <vector>
+#include <list>
 
 #include "AgentModel.h"
 #include "Interface.h"
+
 #include "osi_sensorview.pb.h"
 #include "osi_trafficcommand.pb.h"
 #include "osi_trafficupdate.pb.h"
 #include "sl45_dynamicsrequest.pb.h"
+
+#include <nlohmann/json.hpp>
 
 using Point2D = agent_model::Position;
 
