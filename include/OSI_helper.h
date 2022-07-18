@@ -145,7 +145,7 @@ int xy2Curv(std::vector<Point2D> pos, std::vector<double>& s,
  *    cl.size() when after scope of cl
  */
 int closestCenterlinePoint(const Point2D point, const std::vector<Point2D>& cl,
-                           Point2D& closest, bool extrap) {
+                           Point2D& closest, bool extrap=true) {
 
   assert(cl.size() > 1);
 

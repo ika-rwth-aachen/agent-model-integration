@@ -693,7 +693,7 @@ void OsiConverter::fillVehicle(osi3::SensorView &sensor_view,
   ego_position_.y = ego_base_.position().y();
 
   // projection of ego coordinates on centerline
-  int idx = closestCenterlinePoint(ego_position_, path_centerline_, ego_centerline_point_, true);
+  int idx = closestCenterlinePoint(ego_position_, path_centerline_, ego_centerline_point_);
   
   // calculate s coordinate
   if (idx > 0) {        
@@ -767,7 +767,7 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
 
     // projection of signal position to centerline
     Point2D centerline_point;
-    closestCenterlinePoint(signal_point, path_centerline_, centerline_point, true);
+    closestCenterlinePoint(signal_point, path_centerline_, centerline_point);
     traffic_light_positions.push_back(signal_point);
 
     // save all original signal ids
@@ -848,7 +848,7 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
     Point2D centerline_point;
     Point2D signal_point(sign.main_sign().base().position().x(),
                    sign.main_sign().base().position().y());
-    closestCenterlinePoint(signal_point, path_centerline_, centerline_point, true);
+    closestCenterlinePoint(signal_point, path_centerline_, centerline_point);
 
     // add signal with id
     input.signals[signal].id = signal + 1; 
@@ -998,7 +998,7 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
         // projection of target position to centerline
         Point2D centerline_point;
         Point2D target_point(target_base.position().x(), target_base.position().y());
-        closestCenterlinePoint(target_point, path_centerline_, centerline_point, true);
+        closestCenterlinePoint(target_point, path_centerline_, centerline_point);
 
         // ds along centerline to reach target 
         double ds_target = xy2s(ego_centerline_point_, target_point,  
