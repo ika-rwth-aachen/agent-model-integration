@@ -415,8 +415,8 @@ double calcLaneWidth(const Point2D point, osi3::Lane* lane,
 
   // get desired point on boundaries
   Point2D r_point, l_point;
-  closestCenterlinePoint(point, lb_points, l_point, true);
-  closestCenterlinePoint(point, rb_points, r_point, true);
+  closestCenterlinePoint(point, lb_points, l_point);
+  closestCenterlinePoint(point, rb_points, r_point);
 
   // calculate width
   return sqrt(pow(l_point.x - r_point.x, 2) + pow(l_point.y - r_point.y, 2));
@@ -447,8 +447,8 @@ double xy2s(const Point2D start, const Point2D end,
   }
 
   Point2D start_centerline, end_centerline;
-  int start_idx = closestCenterlinePoint(start, cl, start_centerline, true);
-  int end_idx = closestCenterlinePoint(end, cl, end_centerline, true);
+  int start_idx = closestCenterlinePoint(start, cl, start_centerline);
+  int end_idx = closestCenterlinePoint(end, cl, end_centerline);
 
   // if start and end in same interval 
   if (start_idx == end_idx) {
@@ -1318,10 +1318,10 @@ double calcDsSignal(osi3::GroundTruth &ground_truth, std::vector<Point2D> &cente
     // set centerline point w.r.t. road marking position.
     // Assumption: Road marking is perpendicular to lanes(s).
     Point2D rm_position(rm.base().position().x(), rm.base().position().y());
-    closestCenterlinePoint(rm_position, center_line, centerline_point, true);
+    closestCenterlinePoint(rm_position, center_line, centerline_point);
   } else {
     // set centerline point w.r.t. signal position
-    closestCenterlinePoint(signal_point, center_line, centerline_point, true);
+    closestCenterlinePoint(signal_point, center_line, centerline_point);
     ds = -ds_gap; // when no road marking was found apply ds_gap
   }
 
@@ -1384,7 +1384,7 @@ double calcOffsetToLane(uint64_t land_id, Point2D position, osi3::GroundTruth* g
 
   // calculate closest point on adjacent centerline
   Point2D adjacent_point;
-  closestCenterlinePoint(position, adjacent_points, adjacent_point, true);
+  closestCenterlinePoint(position, adjacent_points, adjacent_point);
 
   // calculate euclidean distance
   double offset = euclideanDistance(adjacent_point, position);
@@ -1407,7 +1407,7 @@ double calcOffsetToLaneBoundary(uint64_t boundary_id, Point2D position, osi3::Gr
 
   // calculate closest point on boundary centerline
   Point2D boundary_point;
-  closestCenterlinePoint(position, boundary_points, boundary_point, true);
+  closestCenterlinePoint(position, boundary_points, boundary_point);
 
   // calculate euclidean distance
   double offset = euclideanDistance(boundary_point, position);
