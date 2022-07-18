@@ -1156,9 +1156,17 @@ void OsiConverter::fillHorizon(osi3::SensorView &sensor_view,
 
       input.horizon.ds[i] = ds[i];
 
+      if (path_width_[idx + 1] != -1 && path_width_[idx] != -1) {
+        input.horizon.egoLaneWidth[i] = path_width_[idx] + frac * dwidth_path;
+      }
+      // set to zero if one entry is -1
+      else {
+        input.horizon.egoLaneWidth[i] = -1;
+      }
+      
       input.horizon.egoLaneWidth[i] = path_width_[idx] + frac * dwidth_path;
  
-      if (path_toff_left_[idx + 1] > 0 && path_toff_left_[idx] > 0) {
+      if (path_toff_left_[idx + 1] != 0 && path_toff_left_[idx] != 0) {
         input.horizon.leftLaneOffset[i] = path_toff_left_[idx] + frac * dtoff_left_path;
       }
       // set to zero if one entry is zero
@@ -1166,7 +1174,7 @@ void OsiConverter::fillHorizon(osi3::SensorView &sensor_view,
         input.horizon.leftLaneOffset[i] = 0;
       }
 
-      if (path_toff_right_[idx + 1] > 0 && path_toff_right_[idx] > 0) {
+      if (path_toff_right_[idx + 1] != 0 && path_toff_right_[idx] != 0) {
         input.horizon.rightLaneOffset[i] = path_toff_right_[idx] + frac * dtoff_right_path;
       }
       // set to zero if one entry is zero
