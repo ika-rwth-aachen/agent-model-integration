@@ -1241,17 +1241,20 @@ void OsiConverter::fillLanes(osi3::SensorView &sensor_view,
 
     // fill general information
     input.lanes[lane].id = group_id;
-    input.lanes[lane].width = 0.0;
+    input.lanes[lane].width = -1.0;
     input.lanes[lane].access = agent_model::Accessibility::ACC_ACCESSIBLE;
     input.lanes[lane].dir = agent_model::DrivingDirection::DD_FORWARDS;
 
     // special use case: neigbouring lane group
     if (abs(group_id) == 1){
-      // lane_change
-      if (lane_group.change_amount == 0)
+      
+      // lane_change status
+      if (lane_group.change_amount == 0) {
         input.lanes[lane].lane_change = 0;
-      else
+      }
+      else {
         input.lanes[lane].lane_change = -1;
+      }
 
       // route
       input.lanes[lane].route = INFINITY;
@@ -1371,7 +1374,7 @@ void OsiConverter::fillLanes(osi3::SensorView &sensor_view,
     }
 
     // general information
-    input.lanes[lane].width = 0.0;
+    input.lanes[lane].width = -1;
     input.lanes[lane].closed = -1;
     input.lanes[lane].route = -1;
 
