@@ -1,10 +1,10 @@
 [submodule "open-simulation-interface"]
-	path = lib/open-simulation-interface
+	path = lib/osiWrapper/lib/open-simulation-interface
 	url = ../../../architecture/open-simulation-interface.git
 	#url = https://github.com/OpenSimulationInterface/open-simulation-interface.git 
 [submodule "SimDriver"]
-	path = lib/SimDriver
+	path = lib/osiWrapper/lib/SimDriver
 	url = https://github.com/ika-rwth-aachen/SimDriver.git
-[submodule "lib/json"]
-	path = lib/json
+[submodule "json"]
+	path = lib/osiWrapper/lib/json
 	url = https://github.com/nlohmann/json.git
