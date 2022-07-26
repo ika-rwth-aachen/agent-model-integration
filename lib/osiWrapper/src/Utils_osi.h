@@ -128,7 +128,7 @@ LaneGroup findLaneGroup(std::vector<LaneGroup> lane_groups, int id) {
  *    right adjacent lanes (R)
  * @return std::vector<int> 
  */
-std::vector<int> findAdjacentLanes(osi3::GroundTruth* ground_truth, int lane_idx, char mode) {
+std::vector<int> findAdjacentLanes(osi3::GroundTruth* ground_truth, int lane_idx, std::string mode) {
 
   std::vector<int> lanes; 
 
@@ -136,67 +136,71 @@ std::vector<int> findAdjacentLanes(osi3::GroundTruth* ground_truth, int lane_idx
 
   // get driving direction
   bool is_driving_direction = lane.classification().centerline_is_driving_direction();
+  
+  for(int k = 0; k < mode.length(); k++)
+  {  
 
-  if (mode == 'S')
-  {
-    // iterate over all lane pairings
-    for (int j = 0; j < lane.classification().lane_pairing_size(); j++) 
+    if (mode.at(k) == 'S')
     {
-      // get adjacent_id
-      uint64_t adjacent_id;
-      if (is_driving_direction) 
+      // iterate over all lane pairings
+      for (int j = 0; j < lane.classification().lane_pairing_size(); j++) 
       {
-        adjacent_id = lane.classification().lane_pairing(j).successor_lane_id().value();
-      } else 
-      {
-        adjacent_id = lane.classification().lane_pairing(j).antecessor_lane_id().value();
-      }
+        // get adjacent_id
+        uint64_t adjacent_id;
+        if (is_driving_direction) 
+        {
+          adjacent_id = lane.classification().lane_pairing(j).successor_lane_id().value();
+        } else 
+        {
+          adjacent_id = lane.classification().lane_pairing(j).antecessor_lane_id().value();
+        }
 
-      if (adjacent_id == -1) continue;
-
-      // skip if wrong type
-      if (findLane(adjacent_id, ground_truth)->classification().type() != osi3::Lane_Classification_Type_TYPE_DRIVING && findLane(adjacent_id, ground_truth)->classification().type() != osi3::Lane_Classification_Type_TYPE_INTERSECTION) continue;
-
-      lanes.push_back(findLaneIdx(ground_truth, adjacent_id));
-    }
-  }
-
-  if (mode == 'L' || mode == 'R')
-  {
-      // skip if wrong type
-    if (lane.classification().type() != osi3::Lane_Classification_Type_TYPE_DRIVING) return lanes;
-
-    // check for left neighbouring lanes
-    if ((mode == 'L' && is_driving_direction) || (mode == 'R' && !is_driving_direction))
-    {
-      for (int i = 0; i < lane.classification().left_adjacent_lane_id_size() > 0; i++)
-      {
-        uint64_t adjacent_id = lane.classification().left_adjacent_lane_id(i).value();
+        if (adjacent_id == -1) continue;
 
         // skip if wrong type
-        if (findLane(adjacent_id, ground_truth)->classification().type() != osi3::Lane_Classification_Type_TYPE_DRIVING) continue;
+        if (findLane(adjacent_id, ground_truth)->classification().type() != osi3::Lane_Classification_Type_TYPE_DRIVING && findLane(adjacent_id, ground_truth)->classification().type() != osi3::Lane_Classification_Type_TYPE_INTERSECTION) continue;
 
-        // skip if opposite driving direction (assumption: same reference line)
-        if (findLane(adjacent_id, ground_truth)->classification().centerline_is_driving_direction() != is_driving_direction) continue;
-        
         lanes.push_back(findLaneIdx(ground_truth, adjacent_id));
       }
     }
 
-    // check for right neighbouring lanes
-    if ((mode == 'R' && is_driving_direction) || (mode == 'L' && !is_driving_direction))
+    if (mode.at(k) == 'L' || mode.at(k) == 'R')
     {
-      for (int i = 0; i < lane.classification().right_adjacent_lane_id_size() > 0; i++)
-      {
-        uint64_t adjacent_id = lane.classification().right_adjacent_lane_id(i).value();
-
         // skip if wrong type
-        if (findLane(adjacent_id, ground_truth)->classification().type() != osi3::Lane_Classification_Type_TYPE_DRIVING) continue;
+      if (lane.classification().type() != osi3::Lane_Classification_Type_TYPE_DRIVING) continue;
 
-        // skip if opposite driving direction (assumption: same reference line)
-        if (findLane(adjacent_id, ground_truth)->classification().centerline_is_driving_direction() != is_driving_direction) continue;
-        
-        lanes.push_back(findLaneIdx(ground_truth, adjacent_id));
+      // check for left neighbouring lanes
+      if ((mode.at(k) == 'L' && is_driving_direction) || (mode.at(k) == 'R' && !is_driving_direction))
+      {
+        for (int i = 0; i < lane.classification().left_adjacent_lane_id_size() > 0; i++)
+        {
+          uint64_t adjacent_id = lane.classification().left_adjacent_lane_id(i).value();
+
+          // skip if wrong type
+          if (findLane(adjacent_id, ground_truth)->classification().type() != osi3::Lane_Classification_Type_TYPE_DRIVING) continue;
+
+          // skip if opposite driving direction (assume same reference line)
+          if (findLane(adjacent_id, ground_truth)->classification().centerline_is_driving_direction() != is_driving_direction) continue;
+          
+          lanes.push_back(findLaneIdx(ground_truth, adjacent_id));
+        }
+      }
+
+      // check for right neighbouring lanes
+      if ((mode.at(k) == 'R' && is_driving_direction) || (mode.at(k) == 'L' && !is_driving_direction))
+      {
+        for (int i = 0; i < lane.classification().right_adjacent_lane_id_size() > 0; i++)
+        {
+          uint64_t adjacent_id = lane.classification().right_adjacent_lane_id(i).value();
+
+          // skip if wrong type
+          if (findLane(adjacent_id, ground_truth)->classification().type() != osi3::Lane_Classification_Type_TYPE_DRIVING) continue;
+
+          // skip if opposite driving direction (assume same reference line)
+          if (findLane(adjacent_id, ground_truth)->classification().centerline_is_driving_direction() != is_driving_direction) continue;
+          
+          lanes.push_back(findLaneIdx(ground_truth, adjacent_id));
+        }
       }
     }
   }
