@@ -11,7 +11,7 @@ before_script:
   - apt update
   - DEBIAN_FRONTEND="noninteractive" apt install -y cmake build-essential git
   - git clone https://$USER_AUTH_CODE@$OPENPASS_URL /openPASS
-  - apt install -y libglib2.0-dev python3-pip python3-dev
+  - apt install -y libglib2.0-dev python3-pip python3-dev libboost-all-dev
   - pip3 install --upgrade pip
   - pip3 install -r /openPASS/pyOpenPASS/requirements.txt
 
