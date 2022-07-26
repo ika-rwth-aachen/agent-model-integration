@@ -141,7 +141,7 @@ JunctionPath calcJunctionPath(osi3::GroundTruth* ground_truth, uint64_t lane_id)
  * @param ground_truth 
  * @return std::vector<int> 
  */
-std::vector<int> calculateRoute(int cur_idx, int dest_idx, osi3::GroundTruth* ground_truth) {
+std::vector<int> isReachable(int cur_idx, int dest_idx, osi3::GroundTruth* ground_truth) {
 
   std::vector<int> route;
 
@@ -153,12 +153,12 @@ std::vector<int> calculateRoute(int cur_idx, int dest_idx, osi3::GroundTruth* gr
   }
 
   // get straight adjacent lanes
-  std::vector<int> adjacent_lanes = findAdjacentLanes(ground_truth, cur_idx,'S');
+  std::vector<int> adjacent_lanes = findAdjacentLanes(ground_truth, cur_idx,"S");
 
   // recursivly try to reach the destination from adjacent lanes
   for (int j = 0; j < adjacent_lanes.size(); j++) 
   {
-    route = calculateRoute(adjacent_lanes[j], dest_idx, ground_truth);
+    route = isReachable(adjacent_lanes[j], dest_idx, ground_truth);
     
     if (route.size() > 0)  
     {
