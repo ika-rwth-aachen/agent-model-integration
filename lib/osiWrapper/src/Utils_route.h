@@ -183,13 +183,13 @@ std::vector<int> calculateRoute(int cur_idx, int dest_idx, osi3::GroundTruth* gr
  * @param mode can be a combindation of 'L' and 'R', determine allowed changes
  * @return std::vector<LaneGroup> 
  */
-std::vector<LaneGroup> calculateLaneGroups(int base_idx, int dest_idx, osi3::GroundTruth* ground_truth, std::string mode) {
+std::vector<LaneGroup> calculateLaneGroups(int base_idx, int dest_idx, osi3::GroundTruth* ground_truth, std::vector<int> distance) {
 
   std::vector<LaneGroup> groups;
   LaneGroup group; 
 
-  // check if destination can be reached from current lane without lane change
-  std::vector<int> route = calculateRoute(base_idx, dest_idx, ground_truth);
+  // check if destination can be reached from current lane WITHOUT lane change
+  std::vector<int> route = isReachable(base_idx, dest_idx, ground_truth);
 
   // if destination can be reached from current lane, add single lane group
   if (route.size() > 0) 
@@ -205,69 +205,92 @@ std::vector<LaneGroup> calculateLaneGroups(int base_idx, int dest_idx, osi3::Gro
     return groups;
   }
 
-  // go to left/right neighbouring lane (according to mode) to find destination
-  for(int k = 0; k < mode.length(); k++)
-  {
-    char m = mode.at(k);
-
-    int cur_idx = base_idx;
-    uint64_t cur_id = ground_truth->lane(cur_idx).id().value();
-      
-    bool reachable = false;     // if destination reachable
-    bool end_of_lane = false;   // if end of current lane reached
-
-    // iterate over successor lanes and check adjacent lanes for reachability
-    while(!end_of_lane)
-    {
-      group.lanes.push_back(cur_id);
-
-      // iterate over adjacent lanes
-      std::vector<int> adj_lanes = findAdjacentLanes(ground_truth, cur_idx, m);
-      for (int i = 0; i < adj_lanes.size(); i++)
-      {
-        std::vector<LaneGroup> tmp_groups;
-        tmp_groups = calculateLaneGroups(adj_lanes[i], dest_idx, ground_truth, std::string(1,m)); 
-
-        // if lane change can be performed at current lane
-        if (tmp_groups.size() > 0)
-        {
-          // mark first reachable lane
-          if (!reachable)
-          {
-            reachable = true;
-            groups = tmp_groups;
-          }
-
-          // add current lane to changable lanes
-          group.lanes_changeable.push_back(cur_id);
-          break;
-        }
-      }
-      
-      // get straight adjacent lanes to move forward on current lane
-      std::vector<int> next_lanes = findAdjacentLanes(ground_truth, cur_idx,'S');
-      if (next_lanes.size() > 0) 
-      {
-        cur_idx = next_lanes[0]; // TODO only one lane supported
-        cur_id = ground_truth->lane(cur_idx).id().value();
-      }
-      else
-      {
-        end_of_lane = true;
-      }
-    }
+  int cur_idx = base_idx;
+  uint64_t cur_id = ground_truth->lane(cur_idx).id().value();
+  double cur_d = distance[cur_idx];
     
-    // add properties to group if reachable
-    if (reachable)
-    {
-      int dir = 0;
-      if (m == 'L') dir = 1;
-      if (m == 'R') dir = -1;
-      
-      group.id = groups.back().id - dir;
-      group.change_amount = groups.back().change_amount + dir;
+  bool reachable = false;     // if destination reachable
+  bool end_of_lane = false;   // if end of current lane reached
+  int dir = 0;                // direction of lane change
 
-      groups.push_back(group);
+  // iterate over successor lanes and check adjacent lanes for reachability
+  while(!end_of_lane)
+  {
+    group.lanes.push_back(cur_id);
+
+    // iterate over neighbouring adjacent lanes
+    int min_idx = -1;
+    int type = 0;
+    std::vector<int> left_adj = findAdjacentLanes(ground_truth, cur_idx, "L");
+    for (int i = 0; i < left_adj.size(); i++)
+    {
+      double d = distance[left_adj[i]];
+      if (d < cur_d)
+      {
+        min_idx = left_adj[i];
+        type = 1;
+      }
+    }     
+
+    std::vector<int> right_adj = findAdjacentLanes(ground_truth, cur_idx, "R");
+    for (int i = 0; i < right_adj.size(); i++)
+    {
+      double d = distance[right_adj[i]];
+      if (d < cur_d)
+      {
+        min_idx = right_adj[i];
+        type = -1;
+      }
+    }    
+
+    if (min_idx != -1) {
+      group.lanes_changeable.push_back(cur_id);
+
+      // if first possible change calculate new lanegroup
+      if (!reachable) {
+      
+        reachable = true;
+        groups = calculateLaneGroups(min_idx, dest_idx, ground_truth, distance);
+        dir = type;
+      }
+    }  
+
+    // iterate over straight adjacent lanes
+    min_idx = -1;
+    std::vector<int> next_lanes = findAdjacentLanes(ground_truth, cur_idx, "S");
+    for (int i = 0; i < next_lanes.size(); i++)
+    {
+      double d = distance[next_lanes[i]];
+      if (d < cur_d)
+      {
+        min_idx = next_lanes[i];
+      }
+    }     
+
+    if (min_idx != -1) {
+      cur_idx = min_idx;
+      cur_id = ground_truth->lane(cur_idx).id().value();
+      cur_d = distance[cur_idx];
+    }  
+    else
+    {
+      end_of_lane = true;
+    }
+  }
+  
+  // add properties to group if reachable
+  if (reachable)
+  {
+    group.id = groups.back().id - dir;
+    group.change_amount = groups.back().change_amount + dir;
+
+    groups.push_back(group);
+  }
+
+  return groups;
+}
+
+
 
 /**
  * @brief creates graph for Dijkstra
@@ -403,8 +426,17 @@ void futureLanes(osi3::GroundTruth* ground_truth, const int& start_idx,
   uint64_t dest_id = closestLane(ground_truth, destination);
   dest_idx = findLaneIdx(ground_truth, dest_id);
 
+  std::vector<vertex_descriptor> vertex_list(ground_truth->lane_size());
+  std::vector<int> d(ground_truth->lane_size());
+
+  // build up graph
+  DirectedGraph graph = createGraph(ground_truth, vertex_list);
+
+  // calculate path with Dijkstra
+  computeDijkstra(graph, vertex_list, d, start_idx, dest_idx);
+
   // calculate lane groups
-  lane_groups = calculateLaneGroups(start_idx, dest_idx, ground_truth, "LR");
+  lane_groups = calculateLaneGroups(start_idx, dest_idx, ground_truth, d);
 
   // shift ids so that ego lane group has id 0
   for (int i = 0; i < lane_groups.size(); i++)
