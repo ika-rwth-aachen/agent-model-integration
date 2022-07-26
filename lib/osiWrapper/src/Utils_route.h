@@ -3,7 +3,18 @@
 #ifndef __UTILS_ROUTE_H__
 #define __UTILS_ROUTE_H__
 
+#include <iostream>
+#include <boost/config.hpp>
+#include <boost/graph/graph_traits.hpp>
+#include <boost/graph/adjacency_list.hpp>
+#include <boost/graph/dijkstra_shortest_paths.hpp>
+using namespace boost;
+
 #endif // __UTILS_ROUTE_H__ 
+
+typedef property< edge_weight_t, double > Weight;
+typedef adjacency_list< vecS, vecS, directedS, no_property, Weight > DirectedGraph;
+typedef graph_traits < DirectedGraph >::vertex_descriptor vertex_descriptor;
 
 
 /**
@@ -258,12 +269,118 @@ std::vector<LaneGroup> calculateLaneGroups(int base_idx, int dest_idx, osi3::Gro
 
       groups.push_back(group);
 
-      // if destination reachable
-      break;
-    }
-  } 
+/**
+ * @brief creates graph for Dijkstra
+ * 
+ * @param ground_truth
+ */
+DirectedGraph createGraph(osi3::GroundTruth* ground_truth, std::vector<vertex_descriptor> &vertex_list) {
 
-  return groups;
+  DirectedGraph digraph(ground_truth->lane_size());
+
+  // create vertices
+  for (int i = 0; i < ground_truth->lane_size(); i++) 
+  {
+    int id = ground_truth->lane(i).id().value();
+    vertex_list[i] = vertex(i, digraph);
+  }
+
+  // create edges
+  for (int i = 0; i < ground_truth->lane_size(); i++) 
+  {
+    vertex_descriptor v = vertex_list[i];
+    osi3::Lane::Classification cls = ground_truth->lane(i).classification();
+
+    // only consider driving and intersection lanes
+    if (cls.type() != osi3::Lane_Classification_Type_TYPE_DRIVING && cls.type() != osi3::Lane_Classification_Type_TYPE_INTERSECTION) continue;
+    
+    for (int j = 0; j < cls.lane_pairing_size(); j++) 
+    {
+      uint64_t id = ground_truth->lane(i).id().value();
+      uint64_t ant_id = cls.lane_pairing(j).antecessor_lane_id().value();
+      uint64_t suc_id = cls.lane_pairing(j).successor_lane_id().value();
+
+      if (cls.centerline_is_driving_direction()) {
+        if (suc_id == -1) continue;
+
+        osi3::Lane::Classification::Type type = findLane(suc_id, ground_truth)->classification().type();
+
+        if (type != osi3::Lane_Classification_Type_TYPE_DRIVING && type != osi3::Lane_Classification_Type_TYPE_INTERSECTION) continue;
+
+        int lane_idx = findLaneIdx(ground_truth, suc_id);
+        add_edge(vertex_list[lane_idx], v, Weight(1.0), digraph);
+
+      } else {
+        if (ant_id == -1) continue;
+
+        osi3::Lane::Classification::Type type = findLane(ant_id, ground_truth)->classification().type();
+
+        if (type != osi3::Lane_Classification_Type_TYPE_DRIVING && type != osi3::Lane_Classification_Type_TYPE_INTERSECTION) continue;
+
+        int lane_idx = findLaneIdx(ground_truth, ant_id);
+        add_edge(vertex_list[lane_idx], v, Weight(1.0), digraph);
+      }
+    }
+
+    // only consider driving lanes for adjacent lanes
+    if (cls.type() != osi3::Lane_Classification_Type_TYPE_DRIVING) continue;
+
+    for (int j = 0; j < cls.left_adjacent_lane_id_size(); j++) 
+    {
+      uint64_t adj_id = cls.left_adjacent_lane_id(j).value();
+      osi3::Lane::Classification::Type type = findLane(adj_id, ground_truth)->classification().type();
+
+      if (type != osi3::Lane_Classification_Type_TYPE_DRIVING) continue;
+
+      int lane_idx = findLaneIdx(ground_truth, adj_id);
+      add_edge(vertex_list[lane_idx], v, Weight(10.0), digraph);
+    }
+
+    for (int j = 0; j < cls.right_adjacent_lane_id_size(); j++) 
+    {
+      uint64_t adj_id = cls.right_adjacent_lane_id(j).value();    osi3::Lane::Classification::Type type = findLane(adj_id, ground_truth)->classification().type();
+
+      if (type != osi3::Lane_Classification_Type_TYPE_DRIVING) continue;
+
+      int lane_idx = findLaneIdx(ground_truth, adj_id);
+      add_edge(vertex_list[lane_idx], v, Weight(10.0), digraph);
+    }
+  }
+  return digraph;
+}
+
+void computeDijkstra(DirectedGraph digraph, std::vector<vertex_descriptor> vertex_list, std::vector<int> &d, int start, int dest) {
+
+  property_map<DirectedGraph, edge_weight_t>::type weightmap = get(edge_weight, digraph);
+  property_map<DirectedGraph, vertex_index_t>::type indexmap = get(vertex_index, digraph);
+
+  // modify weights to compute simply reachability
+  graph_traits< DirectedGraph >::edge_iterator e_it, e_end;
+  for(std::tie(e_it, e_end) = boost::edges(digraph); e_it != e_end; ++e_it)
+  {
+    weightmap[*e_it] = 1;
+  }
+
+  // dijkstra
+  std::vector<vertex_descriptor> p(num_vertices(digraph));
+  dijkstra_shortest_paths(digraph, vertex_list[dest], 
+                          &p[0], &d[0], 
+                          weightmap, indexmap, 
+                          std::less<int>(), closed_plus<int>(), 
+                          (std::numeric_limits<int>::max)(), 0,
+                          default_dijkstra_visitor());
+
+  // debug printing
+  if (true) {
+    std::cout << "Reachability:" << std::endl;
+    graph_traits < DirectedGraph >::vertex_iterator vi, vend;
+    for (tie(vi, vend) = vertices(digraph); vi != vend; ++vi) {
+      std::cout << "distance(" << *vi << ") = " << d[*vi] << ", ";
+      std::cout << "parent(" << *vi << ") = " << p[*vi] << std::
+        endl;
+    }
+    std::cout << std::endl;
+  }
 }
 
 
