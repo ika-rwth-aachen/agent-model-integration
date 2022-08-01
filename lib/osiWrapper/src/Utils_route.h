@@ -372,7 +372,7 @@ DirectedGraph createGraph(osi3::GroundTruth* ground_truth, std::vector<vertex_de
   return digraph;
 }
 
-void computeDijkstra(DirectedGraph digraph, std::vector<vertex_descriptor> vertex_list, std::vector<int> &d, int start, int dest) {
+void computeDijkstra(DirectedGraph digraph, std::vector<vertex_descriptor> vertex_list, std::vector<int> &d, int start, int dest, bool debug=false) {
 
   property_map<DirectedGraph, edge_weight_t>::type weightmap = get(edge_weight, digraph);
   property_map<DirectedGraph, vertex_index_t>::type indexmap = get(vertex_index, digraph);
@@ -394,7 +394,7 @@ void computeDijkstra(DirectedGraph digraph, std::vector<vertex_descriptor> verte
                           default_dijkstra_visitor());
 
   // debug printing
-  if (true) {
+  if (debug) {
     std::cout << "Reachability:" << std::endl;
     graph_traits < DirectedGraph >::vertex_iterator vi, vend;
     for (tie(vi, vend) = vertices(digraph); vi != vend; ++vi) {
