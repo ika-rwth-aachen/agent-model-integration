@@ -55,6 +55,8 @@ class OsiConverter {
   bool initialized_ = false;
   bool calculate_lanes_ = false;
   bool ignore_all_targets_ = false;
+  bool ignore_right_of_way_ = false;
+  bool ignore_traffic_signals_ = false;
   
   // path variables
   std::vector<Point2D> path_centerline_;

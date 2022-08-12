@@ -215,10 +215,17 @@ void OsiConverter::processTrafficCommand(osi3::TrafficCommand &traffic_command,
       if (custom_command.contains("trafficRules")){
         if (custom_command["trafficRules"].contains("IgnoreRightOfWay"))          
         {
-          bool ignore_right_of_way 
+          ignore_right_of_way_
               = custom_command["trafficRules"]["IgnoreRightOfWay"];
-          if (ignore_right_of_way)
+          if (ignore_right_of_way_)
             std::cout << "Soon: Right of way will be ignored.\n";
+        }
+        if (custom_command["trafficRules"].contains("IgnoreTrafficSignals"))          
+        {
+          ignore_traffic_signals_ 
+              = custom_command["trafficRules"]["IgnoreTrafficSignals"];
+          if (ignore_traffic_signals_)
+            std::cout << "All traffic signals will be ignored.\n";
         }
       }
     }
@@ -750,6 +757,9 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
   // iterate over all traffic lights
   for (int i = 0; i < ground_truth->traffic_light_size(); i++) {
 
+    // ignore traffic signals
+    if (ignore_traffic_signals_) break;
+
     // break when signals array is full
     if (signal >= agent_model::NOS-1) break;
 
@@ -832,6 +842,9 @@ void OsiConverter::fillSignals(osi3::SensorView &sensor_view,
 
   // iterate over all traffic signs
   for (int i = 0; i < ground_truth->traffic_sign_size(); i++) {
+    
+    // ignore traffic signals
+    if (ignore_traffic_signals_) break;
 
     // only consider NOS signals
     if (signal >= agent_model::NOS-1) break;
