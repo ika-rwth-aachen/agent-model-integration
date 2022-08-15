@@ -72,9 +72,11 @@ void Logger::saveDebugInformation(double time, agent_model::Input input, agent_m
   if (uint64_t(1000*time + 0.5) % uint64_t(1000*dt_log_ + 0.5) == 0) {
 
     json json_conscious_follow;
-    json_conscious_follow["distance"] = driver_state->conscious.follow.distance;
+    json_conscious_follow["distance_0"] = driver_state->conscious.follow.targets[0].distance;
+    json_conscious_follow["velocity_0"] = driver_state->conscious.follow.targets[0].velocity; 
+    json_conscious_follow["distance_1"] = driver_state->conscious.follow.targets[1].distance;
+    json_conscious_follow["velocity_1"] = driver_state->conscious.follow.targets[1].velocity;
     json_conscious_follow["standing"] = driver_state->conscious.follow.standing;
-    json_conscious_follow["velocity"] = driver_state->conscious.follow.velocity;
 
     json json_conscious_stop;
     json_conscious_stop["ds"] = driver_state->conscious.stop.ds;

@@ -4,12 +4,12 @@
 #include <sys/stat.h>
 #include <nlohmann/json.hpp>
 
+#include "osi_sensorview.pb.h"
+#include "osi_trafficcommand.pb.h"
+
 #include "AgentModel.h"
 #include "Interface.h"
 #include "VehicleModel.h"
-
-#include "osi_sensorview.pb.h"
-#include "osi_trafficcommand.pb.h"
 
 #if __cplusplus < 201703L // If the version of C++ is less than 17
 #include <experimental/filesystem>

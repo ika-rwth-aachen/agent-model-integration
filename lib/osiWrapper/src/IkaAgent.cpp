@@ -69,6 +69,9 @@ void IkaAgent::init(osi3::BaseMoving &host) {
   driver_param->steering.D[0] = 0.5;
   driver_param->steering.D[1] = 0.1;
 
+  // lane change parameters
+  driver_param->laneChange.time = 5;
+
   AgentModel::init();
 
   // set vehicle parameters
@@ -140,7 +143,7 @@ int IkaAgent::step(double time, double step_size, osi3::SensorView &sensor_view,
   }
 
   // converter converts from osi to agent_model::input
-  converter_.convert(sensor_view, traffic_command, _input, _param);
+  converter_.convert(sensor_view, traffic_command, _input, _param, _memory);
 
   // ika agent model step
   this->AgentModel::step(time);
