@@ -60,14 +60,14 @@ void IkaAgent::init(osi3::BaseMoving &host) {
   driver_param->follow.timeHeadway = 1.8;
 
   // steering components
-  driver_param->steering.thw[0] = 0.5;
+  driver_param->steering.thw[0] = 1.5;
   driver_param->steering.thw[1] = 3.0;
-  driver_param->steering.dsMin[0] = 0.5;
+  driver_param->steering.dsMin[0] = 2.0;
   driver_param->steering.dsMin[1] = 8.0;
-  driver_param->steering.P[0] = 6.0; // * wheel_base;
+  driver_param->steering.P[0] = 0.5; // * wheel_base;
   driver_param->steering.P[1] = 0.0; // * wheel_base; // S&G paper says zero
-  driver_param->steering.D[0] = 0.5;
-  driver_param->steering.D[1] = 0.1;
+  driver_param->steering.D[0] = 0.1;
+  driver_param->steering.D[1] = 0.05;
 
   // lane change parameters
   driver_param->laneChange.time = 5;
