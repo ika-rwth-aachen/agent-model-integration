@@ -290,7 +290,7 @@ def plotState(args):
         axs1.legend(lines, [f'{p}', f'{p2}'], frameon = True, loc = legend_location)
 
         # change properties here if tight_layout not preferred
-        #plt.subplots_adjust(left=0.19, right=0.77, bottom=0.25, top=0.88, wspace=0.5
+        #plt.subplots_adjust(left=0.19, right=0.77, bottom=0.25, top=0.88, wspace=0.5)
 
         anim = animation.FuncAnimation(fig, animate_two, frames = x.size + 1, interval = 50, blit = True) # set speed over interval: 100=normal, 50=double
         name = f'{p}_and_{p2}'
