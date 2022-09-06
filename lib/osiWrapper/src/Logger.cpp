@@ -28,7 +28,7 @@ void Logger::saveOSI(osi3::SensorView &sensor_view,
   sensor_view.SerializeToString(&sensor_view_string);
 
   std::ofstream file_sensor_view;
-  file_sensor_view.open(path_ + "/sensor_view_carla.osi", std::ofstream::app|std::ofstream::binary);
+  file_sensor_view.open(path_ + "/sensor_view.osi", std::ofstream::app|std::ofstream::binary);
   file_sensor_view.imbue(std::locale::classic());
 
   uint32_t val_sv = (uint32_t) sensor_view.ByteSizeLong();
@@ -42,7 +42,7 @@ void Logger::saveOSI(osi3::SensorView &sensor_view,
   traffic_command.SerializeToString(&traffic_command_string);
 
   std::ofstream file_traffic_command;
-  file_traffic_command.open(path_ + "/traffic_command_carla.osi", std::ofstream::app|std::ofstream::binary);
+  file_traffic_command.open(path_ + "/traffic_command.osi", std::ofstream::app|std::ofstream::binary);
   file_traffic_command.imbue(std::locale::classic());
 
   uint32_t val_tc = (uint32_t) traffic_command.ByteSizeLong();
@@ -53,13 +53,13 @@ void Logger::saveOSI(osi3::SensorView &sensor_view,
 
 
   std::string debug_sensorview_string = sensor_view.DebugString();
-  std::ofstream debug_sensorview (path_ + "/sensor_view_carla.txt",  std::ofstream::app);
+  std::ofstream debug_sensorview (path_ + "/sensor_view.txt",  std::ofstream::app);
   debug_sensorview << debug_sensorview_string;
   debug_sensorview.close();
 
 
   std::string debug_trafficcommand_string = traffic_command.DebugString();
-  std::ofstream debug_trafficcommand (path_ + "/traffic_command_carla.txt",  std::ofstream::app);
+  std::ofstream debug_trafficcommand (path_ + "/traffic_command.txt",  std::ofstream::app);
   debug_trafficcommand << debug_trafficcommand_string;
   debug_trafficcommand.close();
 }
