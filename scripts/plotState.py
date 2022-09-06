@@ -22,7 +22,7 @@ figure_size_one = (7*cm, 4.1*cm)
 figure_size_multi = (45*cm, 30*cm)
 
 # set dpi
-set_dpi = 300 # 300: print
+set_dpi = 300 # print: 300
 
 # location of legend in plot (lower/upper; left/right; best)
 legend_location = 'upper left'
@@ -44,7 +44,7 @@ def helperOneVal(axs, x, y, p, unit, a = False, name = True, color = light_blue)
 
     axs.set_title(f'{p} values')
     axs.set(xlabel=f"time [{r'$s$'}]", ylabel=f'{p} [{unit}]')
-    if not name:
+    if name != True:
          axs.set_ylabel(name, color = color)
     return axs
 
@@ -72,9 +72,9 @@ def helperTwoVal(axs1, axs2, x, y1, y2, p, p2, unit1, unit2, a = False, name_1 =
     axs1.set_xlabel(f"time [{r'$s$'}]")
     axs1.set_ylabel(f'{p} [{unit1}]', color = color_1)
     axs2.set_ylabel(f'{p2} [{unit2}]', color = color_2)
-    if not name_1:
+    if name_1 != True:
         axs1.set_ylabel(name_1, color = color_1)
-    if not name_2:
+    if name_2 != True:
         axs2.set_ylabel(name_2, color = color_2)
     return axs1, axs2
 
@@ -309,7 +309,7 @@ def plotState(args):
         if not args.output.exists():
             os.mkdir(args.output)
 
-        format_anim = 'mp4'
+        format_anim = 'gif'
         file_name = pathlib.PurePath(args.output, name)
         anim.save(f'{file_name}.{format_anim}', dpi=set_dpi)
 
