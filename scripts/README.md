@@ -33,6 +33,6 @@ Here you can see an output of this script where the values of desired accelerati
 ![](example.gif)
 
 The following command was used for this: 
-`python3 plotState.py -f ~/set_level/ika-driver-setlevel/debug/vehicle_16.json -p subconscious_a -p2 subconscious_kappa -a -t 23.0-40.0 -s`
+`python3 plotState.py -f ../debug/vehicle_16.json -p subconscious_a -p2 subconscious_kappa -a -t 23.0-40.0 -s`
 
 Note: To recreate the four basic maneuvers shown at the SETLevel ASE, use the linked [script](plotBasicManeuvers.sh).
