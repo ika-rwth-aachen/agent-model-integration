@@ -24,6 +24,8 @@ buildFMU2004:
   artifacts:
       paths:
         - lib/ikaDriverAgent.fmu
+  rules:
+    - if: "$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH" # run job on default branch
 
 generic:
   image: ubuntu:20.04
@@ -39,6 +41,8 @@ generic:
       -r /openPASS/test 
       -c /openPASS/test/end_to_end.json 
       --scope generic
+  rules:
+    - if: "$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH" # run job on default branch
 
 velocity:
   image: ubuntu:20.04
@@ -54,6 +58,8 @@ velocity:
       -r /openPASS/test 
       -c /openPASS/test/end_to_end.json 
       --scope velocity
+  rules:
+    - if: "$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH" # run job on default branch
 
 reachend:
   image: ubuntu:20.04
@@ -69,6 +75,8 @@ reachend:
       -r /openPASS/test 
       -c /openPASS/test/end_to_end.json 
       --scope reachend
+  rules:
+  - if: "$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH" # run job on default branch
 
 toffset:
   image: ubuntu:20.04
@@ -84,3 +92,5 @@ toffset:
       -r /openPASS/test 
       -c /openPASS/test/end_to_end.json 
       --scope toffset
+  rules:
+    - if: "$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH" # run job on default branch
