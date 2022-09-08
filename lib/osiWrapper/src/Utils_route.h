@@ -180,6 +180,9 @@ std::vector<LaneGroup> calculateLaneGroups(int base_idx, int dest_idx, osi3::Gro
   std::vector<LaneGroup> groups;
   LaneGroup group; 
 
+  // skip if distance can not be reached
+  if (distance[base_idx] > 1000000) return groups;
+
   // check if destination can be reached from current lane WITHOUT lane change
   std::vector<int> route = isReachable(base_idx, dest_idx, ground_truth);
 
@@ -313,8 +316,11 @@ std::vector<std::vector<int>> createAdjacencyMatrix(osi3::GroundTruth* ground_tr
       // in driving direction:
       if (cls.centerline_is_driving_direction()) {
         if (suc_id == -1) continue;
+        
+        auto* next_lane = findLane(suc_id, ground_truth);
+        if (next_lane == nullptr) continue;
 
-        osi3::Lane::Classification::Type type = findLane(suc_id, ground_truth)->classification().type();
+        osi3::Lane::Classification::Type type = next_lane->classification().type();
 
         if (type != osi3::Lane_Classification_Type_TYPE_DRIVING && type != osi3::Lane_Classification_Type_TYPE_INTERSECTION) continue;
 
@@ -325,8 +331,11 @@ std::vector<std::vector<int>> createAdjacencyMatrix(osi3::GroundTruth* ground_tr
       // opposite to driving direction:
       } else {
         if (ant_id == -1) continue;
+        
+        auto* next_lane = findLane(ant_id, ground_truth);
+        if (next_lane == nullptr) continue;
 
-        osi3::Lane::Classification::Type type = findLane(ant_id, ground_truth)->classification().type();
+        osi3::Lane::Classification::Type type = next_lane->classification().type();
 
         if (type != osi3::Lane_Classification_Type_TYPE_DRIVING && type != osi3::Lane_Classification_Type_TYPE_INTERSECTION) continue;
 
@@ -343,7 +352,11 @@ std::vector<std::vector<int>> createAdjacencyMatrix(osi3::GroundTruth* ground_tr
     for (int j = 0; j < cls.left_adjacent_lane_id_size(); j++) 
     {
       uint64_t adj_id = cls.left_adjacent_lane_id(j).value();
-      osi3::Lane::Classification::Type type = findLane(adj_id, ground_truth)->classification().type();
+
+      auto* next_lane = findLane(adj_id, ground_truth);
+      if (next_lane == nullptr) continue;
+
+      osi3::Lane::Classification::Type type = next_lane->classification().type();
 
       if (type != osi3::Lane_Classification_Type_TYPE_DRIVING) continue;
 
@@ -356,7 +369,11 @@ std::vector<std::vector<int>> createAdjacencyMatrix(osi3::GroundTruth* ground_tr
     for (int j = 0; j < cls.right_adjacent_lane_id_size(); j++) 
     {
       uint64_t adj_id = cls.right_adjacent_lane_id(j).value();
-      osi3::Lane::Classification::Type type = findLane(adj_id, ground_truth)->classification().type();
+
+      auto* next_lane = findLane(adj_id, ground_truth);
+      if (next_lane == nullptr) continue;
+
+      osi3::Lane::Classification::Type type = next_lane->classification().type();
 
       if (type != osi3::Lane_Classification_Type_TYPE_DRIVING) continue;
 

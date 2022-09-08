@@ -170,6 +170,10 @@ int IkaAgent::step(double time, double step_size, osi3::SensorView &sensor_view,
 }
 
 int IkaAgent::buildTrafficUpdate(osi3::TrafficUpdate &traffic_update) {
+
+  // check if traffic update already allocated
+  if (traffic_update.update_size() == 0) return 1;
+
   osi3::MovingObject *object = traffic_update.mutable_update(0);
 
   object->mutable_base()->mutable_position()->set_x(vehicle_state_->position.x);

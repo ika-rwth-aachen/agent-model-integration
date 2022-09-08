@@ -349,6 +349,8 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view) {
         for (int j = 0; j < lane->classification().left_adjacent_lane_id_size(); j++) 
         {
           uint64_t adj_id = lane->classification().left_adjacent_lane_id(j).value();
+
+          if (findLane(adj_id, ground_truth) == nullptr) continue;
          
           double dt = calcOffsetToLane(adj_id, position, ground_truth);
 
@@ -361,6 +363,8 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view) {
         {
           uint64_t adj_id = lane->classification().right_adjacent_lane_id(j).value();
 
+          if (findLane(adj_id, ground_truth) == nullptr) continue;
+
           double dt = calcOffsetToLane(adj_id, position, ground_truth);
 
           // update offset
@@ -371,6 +375,8 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view) {
         for (int j = 0; j < lane->classification().left_lane_boundary_id_size(); j++) 
         {
           uint64_t b_id = lane->classification().left_lane_boundary_id(j).value();
+
+          if (findLaneBoundary(b_id, ground_truth) == nullptr) continue;
           
            double dt = calcOffsetToLaneBoundary(b_id, position, ground_truth);
 
@@ -382,6 +388,8 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view) {
         for (int j = 0; j < lane->classification().right_lane_boundary_id_size(); j++) 
         {
           uint64_t b_id = lane->classification().right_lane_boundary_id(j).value();
+          
+          if (findLaneBoundary(b_id, ground_truth) == nullptr) continue;
           
           double dt = calcOffsetToLaneBoundary(b_id, position, ground_truth);
 
