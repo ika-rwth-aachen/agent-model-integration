@@ -90,6 +90,7 @@ class OsiConverter {
   uint64_t ego_lane_id_;
   uint64_t ego_lane_group_id_;
   double ego_s_;
+  bool ego_approaching_junction_;
 
   Point2D ego_position_;
   Point2D ego_centerline_point_;
