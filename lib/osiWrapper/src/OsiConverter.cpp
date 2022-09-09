@@ -312,16 +312,24 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view) {
   // initialize last position
   Point2D last_position(INFINITY, INFINITY);
 
+  ego_approaching_junction_ = false;
+  
   // get all relevant path points from lanes_
   for (auto &l : lanes_) {
     osi3::Lane *lane = findLane(l, ground_truth);
 
-    // determine lane type
+    // determine lane_type
     bool is_free_boundary_lane = false;
     if (lane->classification().free_lane_boundary_id_size() > 0 &&
         lane->classification().type() ==
           osi3::Lane_Classification_Type_TYPE_INTERSECTION) {
       is_free_boundary_lane = true;
+    }
+
+    // calculate approaching_junction
+    if (lane->classification().type() ==
+          osi3::Lane_Classification_Type_TYPE_INTERSECTION) {
+      ego_approaching_junction_ = true;
     }
 
     if (!is_free_boundary_lane) {
@@ -505,7 +513,7 @@ void OsiConverter::generateJunctionPaths(osi3::SensorView &sensor_view) {
         continue;
       start_lane_ids.push_back(lane_id);
 
-      // calculate path backwards
+      // calculate junction path
       JunctionPath junction_path = calcJunctionPath(ground_truth, lane_id);
 
       // add signal_id
@@ -544,7 +552,7 @@ void OsiConverter::generateJunctionPaths(osi3::SensorView &sensor_view) {
         continue;
       start_lane_ids.push_back(lane_id);
 
-      // calculate path backwards
+      // calculate junction path
       JunctionPath junction_path = calcJunctionPath(ground_truth, lane_id);
 
       // add signal_id
@@ -613,7 +621,7 @@ void OsiConverter::generateJunctionPaths(osi3::SensorView &sensor_view) {
           continue;
         start_lane_ids.push_back(lane_id);
 
-        // calculate path backwards
+        // calculate junction path
         JunctionPath junction_path = calcJunctionPath(ground_truth, lane_id);
 
         // add signal_id
@@ -736,16 +744,18 @@ void OsiConverter::fillVehicle(osi3::SensorView &sensor_view,
   input.vehicle.dsIntersection = INFINITY;
 
   // if ego is approaching junction set dsIntersection
-  for (auto &junction_path : junction_paths_) 
-  {
-    if (find(junction_path.lanes.begin(), junction_path.lanes.end(),
-      ego_lane_id_) != junction_path.lanes.end()) 
+  if (ego_approaching_junction_) {
+    for (auto &junction_path : junction_paths_) 
     {
-      double ds_intersection = abs(xy2s(ego_position_, junction_path.pts.back(), junction_path.pts, ego_base_.orientation().yaw()));
+      if (find(junction_path.lanes.begin(), junction_path.lanes.end(),
+        ego_lane_id_) != junction_path.lanes.end()) 
+      {
+        double ds_intersection = abs(xy2s(ego_position_, junction_path.pts.back(), junction_path.pts, ego_base_.orientation().yaw()));
 
-      input.vehicle.dsIntersection = ds_intersection;
+        input.vehicle.dsIntersection = ds_intersection;
 
-      break;
+        break;
+      }
     }
   }
 }
@@ -994,6 +1004,7 @@ void OsiConverter::fillTargets(osi3::SensorView &sensor_view,
       int assigned_lane_idx = -1;
       for (int j = 0; j < tar.assigned_lane_id_size(); j++) {
         
+        // only if ego is approaching intersection
         // check if assigned to intersection
         if (std::find(intersection_lanes_.begin(), intersection_lanes_.end(),
                     tar.assigned_lane_id(j).value()) != intersection_lanes_.end()){
