@@ -1,3 +1,5 @@
+image: ubuntu:20.04
+
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
   OPENPASS_URL: "gitlab.ika.rwth-aachen.de/setlevel/openpass.git"
@@ -6,6 +8,7 @@ variables:
 stages:
   - build
   - test
+  - deploy
 
 before_script:
   - apt update
@@ -15,8 +18,7 @@ before_script:
   - pip3 install --upgrade pip
   - pip3 install -r /openPASS/pyOpenPASS/requirements.txt
 
-buildFMU2004:
-  image: ubuntu:20.04
+build_fmu:
   stage: build
   script: 
     - cmake -DCMAKE_BUILD_TYPE=Release .
@@ -24,14 +26,9 @@ buildFMU2004:
   artifacts:
       paths:
         - lib/ikaDriverAgent.fmu
-  rules:
-    - if: "$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH" # run job on default branch
 
-generic:
-  image: ubuntu:20.04
+test_generic:
   stage: test
-  dependencies:
-    - buildFMU2004
   script:
     - cp lib/ikaDriverAgent.fmu /ikaDriverAgent.fmu
     - cd /openPASS/pyOpenPASS
@@ -41,14 +38,9 @@ generic:
       -r /openPASS/test 
       -c /openPASS/test/end_to_end.json 
       --scope generic
-  rules:
-    - if: "$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH" # run job on default branch
 
-velocity:
-  image: ubuntu:20.04
+test_velocity:
   stage: test
-  dependencies: 
-    - buildFMU2004
   script:
     - cp lib/ikaDriverAgent.fmu /ikaDriverAgent.fmu
     - cd /openPASS/pyOpenPASS
@@ -58,14 +50,9 @@ velocity:
       -r /openPASS/test 
       -c /openPASS/test/end_to_end.json 
       --scope velocity
-  rules:
-    - if: "$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH" # run job on default branch
 
-reachend:
-  image: ubuntu:20.04
+test_reachend:
   stage: test
-  dependencies:
-    - buildFMU2004
   script:
     - cp lib/ikaDriverAgent.fmu /ikaDriverAgent.fmu
     - cd /openPASS/pyOpenPASS
@@ -75,14 +62,9 @@ reachend:
       -r /openPASS/test 
       -c /openPASS/test/end_to_end.json 
       --scope reachend
-  rules:
-  - if: "$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH" # run job on default branch
 
-toffset:
-  image: ubuntu:20.04
+test_toffset:
   stage: test
-  dependencies:
-    - buildFMU2004
   script:
     - cp lib/ikaDriverAgent.fmu /ikaDriverAgent.fmu
     - cd /openPASS/pyOpenPASS
@@ -92,5 +74,10 @@ toffset:
       -r /openPASS/test 
       -c /openPASS/test/end_to_end.json 
       --scope toffset
-  rules:
-    - if: "$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH" # run job on default branch
+
+deploy_to_openpass:
+  stage: deploy
+  script: 
+    - "curl -X POST --fail -F token=eea9e0095f33e1c72b9e32c6eb390a -F ref=master https://gitlab.ika.rwth-aachen.de/api/v4/projects/1469/trigger/pipeline"
+  rules: 
+    - if: "$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH" # run job on master branch
