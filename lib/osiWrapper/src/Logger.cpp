@@ -10,9 +10,13 @@
 #include "Logger.h"
 
 void Logger::init(uint64_t ego_id) {
-
+  
+  active = true;
   ego_id_ = ego_id;
-  path_ = DEBUG_OUTDIR;
+
+  // get debug folder
+  path_ = std::string(get_current_dir_name()) + "/debug";
+  std::cout << "Debugging is enabled and files are stored in: " << path_ << std::endl;
 
   // create new directory if not exist
   struct stat buffer;
@@ -23,6 +27,8 @@ void Logger::init(uint64_t ego_id) {
 
 void Logger::saveOSI(osi3::SensorView &sensor_view,
                    osi3::TrafficCommand &traffic_command) {
+  
+  if (!active) return;
   
   std::string sensor_view_string;
   sensor_view.SerializeToString(&sensor_view_string);
@@ -66,6 +72,8 @@ void Logger::saveOSI(osi3::SensorView &sensor_view,
 
 
 void Logger::saveDebugInformation(double time, agent_model::Input input, agent_model::State *driver_state, VehicleModel::State *vehicle_state) {
+  
+  if (!active) return;
 
   // convert time and dt_log to milliseconds (uint64_t) to allow modulo operator
   // add 0.5 for proper rounding

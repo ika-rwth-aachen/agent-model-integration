@@ -3,6 +3,10 @@
 #include <fstream>
 #include <sys/stat.h>
 #include <nlohmann/json.hpp>
+#include <filesystem>
+#include <unistd.h>
+#include <string>
+#include <iostream>
 
 #include "osi_sensorview.pb.h"
 #include "osi_trafficcommand.pb.h"
@@ -21,6 +25,7 @@
 #endif
 
 using json = nlohmann::json;
+using std::filesystem::current_path;
 
 class Logger {
   public:
@@ -34,6 +39,9 @@ class Logger {
                    osi3::TrafficCommand &traffic_command);
 
   private:
+
+    bool active = false;
+
     uint64_t ego_id_;
 
     json json_logger_;

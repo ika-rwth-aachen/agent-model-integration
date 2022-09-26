@@ -1,99 +1,222 @@
+image: ubuntu:20.04
+
+before_script:
+  - apt update
+  - DEBIAN_FRONTEND="noninteractive" apt install -y git python3-pip python3-dev libglib2.0-dev
+  - git clone https://$USER_AUTH_CODE@$OPENPASS_URL /openpass
+  - pip3 install --upgrade pip
+  - pip3 install -r /openpass/pyOpenPASS/requirements.txt
+  - cp ikaDriverAgent.fmu /ikaDriverAgent.fmu
+
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
-  USER_AUTH_CODE: "geller:glpat-q8KxApwGqCAMWNaak2qW"
   OPENPASS_URL: "gitlab.ika.rwth-aachen.de/setlevel/openpass.git"
+  USER_AUTH_CODE: "geller:glpat-q8KxApwGqCAMWNaak2qW"
 
 stages:
   - build
   - test
+  - deploy
 
-before_script:
-  - apt update
-  - DEBIAN_FRONTEND="noninteractive" apt install -y cmake build-essential git
-  - git clone https://$USER_AUTH_CODE@$OPENPASS_URL /openPASS
-  - apt install -y libglib2.0-dev python3-pip python3-dev
-  - pip3 install --upgrade pip
-  - pip3 install -r /openPASS/pyOpenPASS/requirements.txt
-
-buildFMU2004:
-  image: ubuntu:20.04
+build_fmu:
   stage: build
   before_script:
-    - apt update
-    - DEBIAN_FRONTEND="noninteractive" apt install -y cmake build-essential git
+  - apt update
+  - DEBIAN_FRONTEND="noninteractive" apt install -y cmake build-essential git
   script: 
-    - cmake . 
+    - cmake -DCMAKE_BUILD_TYPE=Release .
     - make -j10
+    - cp lib/ikaDriverAgent.fmu ikaDriverAgent.fmu
   artifacts:
-      paths:
-        - lib/ikaDriverAgent.fmu
-  rules:
-    - if: "$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH" # run job on default branch
+    paths:
+      - ikaDriverAgent.fmu
 
-generic:
-  image: ubuntu:20.04
+test_generic:
   stage: test
   dependencies:
-    - buildFMU2004
+    - build_fmu
   script:
-    - cp lib/ikaDriverAgent.fmu /ikaDriverAgent.fmu
-    - cd /openPASS/pyOpenPASS
+    - cd /openpass/pyOpenPASS
     - >-
       python3 ./main.py 
-      -s /openPASS 
-      -r /openPASS/test 
-      -c /openPASS/test/end_to_end.json 
+      -s /openpass 
+      -r /openpass/test 
+      -c /openpass/test/end_to_end.json 
       --scope generic
-  rules:
-    - if: "$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH" # run job on default branch
 
-velocity:
-  image: ubuntu:20.04
+test_velocity:
   stage: test
-  dependencies: 
-    - buildFMU2004
+  dependencies:
+    - build_fmu
   script:
-    - cp lib/ikaDriverAgent.fmu /ikaDriverAgent.fmu
-    - cd /openPASS/pyOpenPASS
+    - cd /openpass/pyOpenPASS
     - >-
       python3 ./main.py 
-      -s /openPASS 
-      -r /openPASS/test 
-      -c /openPASS/test/end_to_end.json 
+      -s /openpass 
+      -r /openpass/test 
+      -c /openpass/test/end_to_end.json 
       --scope velocity
-  rules:
-    - if: "$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH" # run job on default branch
 
-reachend:
-  image: ubuntu:20.04
+test_reachend:
   stage: test
   dependencies:
-    - buildFMU2004
+    - build_fmu
   script:
-    - cp lib/ikaDriverAgent.fmu /ikaDriverAgent.fmu
-    - cd /openPASS/pyOpenPASS
+    - cd /openpass/pyOpenPASS
     - >-
       python3 ./main.py 
-      -s /openPASS 
-      -r /openPASS/test 
-      -c /openPASS/test/end_to_end.json 
+      -s /openpass 
+      -r /openpass/test 
+      -c /openpass/test/end_to_end.json 
       --scope reachend
-  rules:
-  - if: "$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH" # run job on default branch
 
-toffset:
-  image: ubuntu:20.04
+test_toffset:
   stage: test
   dependencies:
-    - buildFMU2004
+    - build_fmu  
   script:
-    - cp lib/ikaDriverAgent.fmu /ikaDriverAgent.fmu
-    - cd /openPASS/pyOpenPASS
+    - cd /openpass/pyOpenPASS
     - >-
       python3 ./main.py 
-      -s /openPASS 
-      -r /openPASS/test 
-      -c /openPASS/test/end_to_end.json 
+      -s /openpass 
+      -r /openpass/test 
+      -c /openpass/test/end_to_end.json 
       --scope toffset
-  rules:
-    - if: "$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH" # run job on default branch
+
+test_s103:
+  stage: test
+  dependencies:
+    - build_fmu
+  script:
+    - cd /openpass/pyOpenPASS
+    - >-
+      python3 ./main.py 
+      -s /openpass 
+      -r /openpass/test 
+      -c /openpass/test/end_to_end.json 
+      --scope s103
+
+test_s201:
+  stage: test
+  dependencies:
+    - build_fmu
+  script:
+    - cd /openpass/pyOpenPASS
+    - >-
+      python3 ./main.py 
+      -s /openpass 
+      -r /openpass/test 
+      -c /openpass/test/end_to_end.json 
+      --scope s201
+
+test_s501:
+  stage: test
+  dependencies:
+    - build_fmu
+  script:
+    - cd /openpass/pyOpenPASS
+    - >-
+      python3 ./main.py 
+      -s /openpass 
+      -r /openpass/test 
+      -c /openpass/test/end_to_end.json 
+      --scope s501
+
+test_s502:
+  stage: test
+  dependencies:
+    - build_fmu
+  script:
+    - cd /openpass/pyOpenPASS
+    - >-
+      python3 ./main.py 
+      -s /openpass 
+      -r /openpass/test 
+      -c /openpass/test/end_to_end.json 
+      --scope s502
+
+test_s601:
+  stage: test
+  dependencies:
+    - build_fmu
+  script:
+    - cd /openpass/pyOpenPASS
+    - >-
+      python3 ./main.py 
+      -s /openpass 
+      -r /openpass/test 
+      -c /openpass/test/end_to_end.json 
+      --scope s601
+
+test_s602:
+  stage: test
+  dependencies:
+    - build_fmu
+  script:
+    - cd /openpass/pyOpenPASS
+    - >-
+      python3 ./main.py 
+      -s /openpass 
+      -r /openpass/test 
+      -c /openpass/test/end_to_end.json 
+      --scope s602
+
+test_s603:
+  stage: test
+  dependencies:
+    - build_fmu
+  script:
+    - cd /openpass/pyOpenPASS
+    - >-
+      python3 ./main.py 
+      -s /openpass 
+      -r /openpass/test 
+      -c /openpass/test/end_to_end.json 
+      --scope s603
+
+test_s605:
+  stage: test
+  dependencies:
+    - build_fmu
+  script:
+    - cd /openpass/pyOpenPASS
+    - >-
+      python3 ./main.py 
+      -s /openpass 
+      -r /openpass/test 
+      -c /openpass/test/end_to_end.json 
+      --scope s605
+
+test_s606:
+  stage: test
+  dependencies:
+    - build_fmu
+  script:
+    - cd /openpass/pyOpenPASS
+    - >-
+      python3 ./main.py 
+      -s /openpass 
+      -r /openpass/test 
+      -c /openpass/test/end_to_end.json 
+      --scope s606
+            
+test_s701:
+  stage: test
+  dependencies:
+    - build_fmu
+  script:
+    - cd /openpass/pyOpenPASS
+    - >-
+      python3 ./main.py 
+      -s /openpass 
+      -r /openpass/test 
+      -c /openpass/test/end_to_end.json 
+      --scope s701
+      
+deploy_to_openpass:
+  stage: deploy
+  image: ubuntu:20.04
+  script: 
+    - "curl -X POST --fail -F token=eea9e0095f33e1c72b9e32c6eb390a -F ref=master https://gitlab.ika.rwth-aachen.de/api/v4/projects/1469/trigger/pipeline"
+  rules: 
+    - if: "$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH" # run job on master branch
