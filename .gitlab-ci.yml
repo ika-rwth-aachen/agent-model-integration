@@ -23,10 +23,11 @@ build_fmu:
   script: 
     - cmake -DCMAKE_BUILD_TYPE=Release .
     - make -j10
-    - cp lib/ikaDriverAgent.fmu /ikaDriverAgent.fmu
 
 test_generic:
   stage: test
+  before_script:
+    - cp lib/ikaDriverAgent.fmu /ikaDriverAgent.fmu
   script:
     - cd /openPASS/pyOpenPASS
     - >-
@@ -38,6 +39,8 @@ test_generic:
 
 test_velocity:
   stage: test
+  before_script:
+    - cp lib/ikaDriverAgent.fmu /ikaDriverAgent.fmu
   script:
     - cd /openPASS/pyOpenPASS
     - >-
@@ -49,6 +52,8 @@ test_velocity:
 
 test_reachend:
   stage: test
+  before_script:
+    - cp lib/ikaDriverAgent.fmu /ikaDriverAgent.fmu
   script:
     - cd /openPASS/pyOpenPASS
     - >-
@@ -60,6 +65,8 @@ test_reachend:
 
 test_toffset:
   stage: test
+  before_script:
+    - cp lib/ikaDriverAgent.fmu /ikaDriverAgent.fmu
   script:
     - cd /openPASS/pyOpenPASS
     - >-
