@@ -14,7 +14,7 @@ build_openpass:
   stage: build
   before_script:
   - apt update
-  - DEBIAN_FRONTEND="noninteractive" apt install -y cmake build-essential git
+  - DEBIAN_FRONTEND="noninteractive" apt install -y git
   script:
   - git clone https://$USER_AUTH_CODE@$OPENPASS_URL /openPASS
   - apt install -y libglib2.0-dev python3-pip python3-dev
@@ -26,6 +26,9 @@ build_openpass:
 
 build_fmu:
   stage: build
+  before_script:
+  - apt update
+  - DEBIAN_FRONTEND="noninteractive" apt install -y cmake build-essential
   script: 
     - cmake -DCMAKE_BUILD_TYPE=Release .
     - make -j10
