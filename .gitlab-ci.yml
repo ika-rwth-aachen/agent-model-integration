@@ -18,6 +18,9 @@ before_script:
 buildFMU2004:
   image: ubuntu:20.04
   stage: build
+  before_script:
+    - apt update
+    - DEBIAN_FRONTEND="noninteractive" apt install -y cmake build-essential git
   script: 
     - cmake . 
     - make -j10
