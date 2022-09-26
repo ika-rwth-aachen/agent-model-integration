@@ -1,5 +1,10 @@
 image: ubuntu:20.04
 
+default:
+  - before_script:
+    - apt update
+    - apt install -y libglib2.0-dev
+
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
   OPENPASS_URL: "gitlab.ika.rwth-aachen.de/setlevel/openpass.git"
@@ -14,7 +19,7 @@ build_openpass:
   stage: build
   before_script:
   - apt update
-  - DEBIAN_FRONTEND="noninteractive" apt install -y build-essential git libglib2.0-dev python3-pip python3-dev
+  - DEBIAN_FRONTEND="noninteractive" apt install -y git python3-pip python3-dev
   script:
   - git clone https://$USER_AUTH_CODE@$OPENPASS_URL /openPASS
   - pip3 install --upgrade pip
