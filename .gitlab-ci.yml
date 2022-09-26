@@ -31,7 +31,7 @@ build_fmu:
   stage: build
   before_script:
   - apt update
-  - DEBIAN_FRONTEND="noninteractive" apt install -y cmake build-essential
+  - DEBIAN_FRONTEND="noninteractive" apt install -y cmake build-essential git
   script: 
     - cmake -DCMAKE_BUILD_TYPE=Release .
     - make -j10
