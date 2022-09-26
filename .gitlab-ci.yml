@@ -24,9 +24,9 @@ build_fmu:
     - cmake -DCMAKE_BUILD_TYPE=Release .
     - make -j10
     - cp lib/ikaDriverAgent.fmu ikaDriverAgent.fmu
- artifacts:
-      paths:
-        - ikaDriverAgent.fmu
+  artifacts:
+    paths:
+      - ikaDriverAgent.fmu
 
 test_generic:
   stage: test
