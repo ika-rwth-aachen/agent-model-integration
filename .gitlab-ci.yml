@@ -2,7 +2,7 @@ image: ubuntu:20.04
 
 before_script:
   - apt update
-  - apt install -y libglib2.0-dev
+  - DEBIAN_FRONTEND="noninteractive" apt install -y libglib2.0-dev
 
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
