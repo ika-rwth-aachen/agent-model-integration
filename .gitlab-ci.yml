@@ -96,6 +96,146 @@ test_toffset:
       -c /openPASS/test/end_to_end.json 
       --scope toffset
 
+test_s103:
+  stage: test
+  dependencies:
+    - build_openpass
+    - build_fmu
+  script:
+    - cd /openPASS/pyOpenPASS
+    - >-
+      python3 ./main.py 
+      -s /openPASS 
+      -r /openPASS/test 
+      -c /openPASS/test/end_to_end.json 
+      --scope s103
+
+test_s201:
+  stage: test
+  dependencies:
+    - build_openpass
+    - build_fmu
+  script:
+    - cd /openPASS/pyOpenPASS
+    - >-
+      python3 ./main.py 
+      -s /openPASS 
+      -r /openPASS/test 
+      -c /openPASS/test/end_to_end.json 
+      --scope s201
+
+test_s501:
+  stage: test
+  dependencies:
+    - build_openpass
+    - build_fmu
+  script:
+    - cd /openPASS/pyOpenPASS
+    - >-
+      python3 ./main.py 
+      -s /openPASS 
+      -r /openPASS/test 
+      -c /openPASS/test/end_to_end.json 
+      --scope s501
+
+test_s502:
+  stage: test
+  dependencies:
+    - build_openpass
+    - build_fmu
+  script:
+    - cd /openPASS/pyOpenPASS
+    - >-
+      python3 ./main.py 
+      -s /openPASS 
+      -r /openPASS/test 
+      -c /openPASS/test/end_to_end.json 
+      --scope s502
+
+test_s601:
+  stage: test
+  dependencies:
+    - build_openpass
+    - build_fmu
+  script:
+    - cd /openPASS/pyOpenPASS
+    - >-
+      python3 ./main.py 
+      -s /openPASS 
+      -r /openPASS/test 
+      -c /openPASS/test/end_to_end.json 
+      --scope s601
+
+test_s602:
+  stage: test
+  dependencies:
+    - build_openpass
+    - build_fmu
+  script:
+    - cd /openPASS/pyOpenPASS
+    - >-
+      python3 ./main.py 
+      -s /openPASS 
+      -r /openPASS/test 
+      -c /openPASS/test/end_to_end.json 
+      --scope s602
+
+test_s603:
+  stage: test
+  dependencies:
+    - build_openpass
+    - build_fmu
+  script:
+    - cd /openPASS/pyOpenPASS
+    - >-
+      python3 ./main.py 
+      -s /openPASS 
+      -r /openPASS/test 
+      -c /openPASS/test/end_to_end.json 
+      --scope s603
+
+test_s605:
+  stage: test
+  dependencies:
+    - build_openpass
+    - build_fmu
+  script:
+    - cd /openPASS/pyOpenPASS
+    - >-
+      python3 ./main.py 
+      -s /openPASS 
+      -r /openPASS/test 
+      -c /openPASS/test/end_to_end.json 
+      --scope s605
+
+test_s606:
+  stage: test
+  dependencies:
+    - build_openpass
+    - build_fmu
+  script:
+    - cd /openPASS/pyOpenPASS
+    - >-
+      python3 ./main.py 
+      -s /openPASS 
+      -r /openPASS/test 
+      -c /openPASS/test/end_to_end.json 
+      --scope s606
+            
+test_s701:
+  stage: test
+  dependencies:
+    - build_openpass
+    - build_fmu
+  script:
+    - cd /openPASS/pyOpenPASS
+    - >-
+      python3 ./main.py 
+      -s /openPASS 
+      -r /openPASS/test 
+      -c /openPASS/test/end_to_end.json 
+      --scope s701
+      
 deploy_to_openpass:
   stage: deploy
   image: ubuntu:20.04
