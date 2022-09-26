@@ -1,3 +1,5 @@
+image: ubuntu:20.04
+
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
   OPENPASS_URL: "gitlab.ika.rwth-aachen.de/setlevel/openpass.git"
@@ -8,32 +10,35 @@ stages:
   - test
   - deploy
 
-before_script:
+build_openpass:
+  stage: build
+  before_script:
   - apt update
   - DEBIAN_FRONTEND="noninteractive" apt install -y cmake build-essential git
+  script:
   - git clone https://$USER_AUTH_CODE@$OPENPASS_URL /openPASS
   - apt install -y libglib2.0-dev python3-pip python3-dev
   - pip3 install --upgrade pip
   - pip3 install -r /openPASS/pyOpenPASS/requirements.txt
+  artifacts:
+    paths:
+      - /openPASS
 
 build_fmu:
   stage: build
-  image: ubuntu:20.04
   script: 
     - cmake -DCMAKE_BUILD_TYPE=Release .
     - make -j10
-    - cp lib/ikaDriverAgent.fmu ikaDriverAgent.fmu
+    - cp lib/ikaDriverAgent.fmu /ikaDriverAgent.fmu
   artifacts:
     paths:
-      - ikaDriverAgent.fmu
+      - /ikaDriverAgent.fmu
 
 test_generic:
   stage: test
-  image: ubuntu:20.04
   dependencies:
+    - build_openpass
     - build_fmu
-  before_script:
-    - cp ikaDriverAgent.fmu /ikaDriverAgent.fmu
   script:
     - cd /openPASS/pyOpenPASS
     - >-
@@ -45,11 +50,9 @@ test_generic:
 
 test_velocity:
   stage: test
-  image: ubuntu:20.04
   dependencies:
+    - build_openpass
     - build_fmu
-  before_script:
-    - cp ikaDriverAgent.fmu /ikaDriverAgent.fmu
   script:
     - cd /openPASS/pyOpenPASS
     - >-
@@ -61,11 +64,9 @@ test_velocity:
 
 test_reachend:
   stage: test
-  image: ubuntu:20.04
   dependencies:
+    - build_openpass
     - build_fmu
-  before_script:
-    - cp ikaDriverAgent.fmu /ikaDriverAgent.fmu
   script:
     - cd /openPASS/pyOpenPASS
     - >-
@@ -77,11 +78,9 @@ test_reachend:
 
 test_toffset:
   stage: test
-  image: ubuntu:20.04
   dependencies:
+    - build_openpass
     - build_fmu
-  before_script:
-    - cp ikaDriverAgent.fmu /ikaDriverAgent.fmu
   script:
     - cd /openPASS/pyOpenPASS
     - >-
