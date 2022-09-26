@@ -23,9 +23,6 @@ build_fmu:
   script: 
     - cmake -DCMAKE_BUILD_TYPE=Release .
     - make -j10
-  artifacts:
-      paths:
-        - lib/ikaDriverAgent.fmu
 
 test_generic:
   stage: test
@@ -75,8 +72,18 @@ test_toffset:
       -c /openPASS/test/end_to_end.json 
       --scope toffset
 
+deploy_to_aritfacts:
+  stage: deploy
+  artifacts:
+      paths:
+        - lib/ikaDriverAgent.fmu
+  rules: 
+    - if: "$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH" # run job on master branch
+    
 deploy_to_openpass:
   stage: deploy
+  dependencies: 
+  - deploy_to_aritfacts
   script: 
     - "curl -X POST --fail -F token=eea9e0095f33e1c72b9e32c6eb390a -F ref=master https://gitlab.ika.rwth-aachen.de/api/v4/projects/1469/trigger/pipeline"
   rules: 
