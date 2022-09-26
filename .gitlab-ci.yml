@@ -90,8 +90,6 @@ test_toffset:
 
 deploy_to_openpass:
   stage: deploy
-  dependencies: 
-  - deploy_to_artifacts
   script: 
     - "curl -X POST --fail -F token=eea9e0095f33e1c72b9e32c6eb390a -F ref=master https://gitlab.ika.rwth-aachen.de/api/v4/projects/1469/trigger/pipeline"
   rules: 
