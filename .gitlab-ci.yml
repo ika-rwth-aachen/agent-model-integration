@@ -1,9 +1,8 @@
 image: ubuntu:20.04
 
-default:
-  - before_script:
-    - apt update
-    - apt install -y libglib2.0-dev
+before_script:
+  - apt update
+  - apt install -y libglib2.0-dev
 
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
