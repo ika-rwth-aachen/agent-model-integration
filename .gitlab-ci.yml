@@ -23,11 +23,11 @@ build_fmu:
   script: 
     - cmake -DCMAKE_BUILD_TYPE=Release .
     - make -j10
+    - cp lib/ikaDriverAgent.fmu /ikaDriverAgent.fmu
 
 test_generic:
   stage: test
   script:
-    - cp lib/ikaDriverAgent.fmu /ikaDriverAgent.fmu
     - cd /openPASS/pyOpenPASS
     - >-
       python3 ./main.py 
@@ -39,7 +39,6 @@ test_generic:
 test_velocity:
   stage: test
   script:
-    - cp lib/ikaDriverAgent.fmu /ikaDriverAgent.fmu
     - cd /openPASS/pyOpenPASS
     - >-
       python3 ./main.py 
@@ -51,7 +50,6 @@ test_velocity:
 test_reachend:
   stage: test
   script:
-    - cp lib/ikaDriverAgent.fmu /ikaDriverAgent.fmu
     - cd /openPASS/pyOpenPASS
     - >-
       python3 ./main.py 
@@ -63,7 +61,6 @@ test_reachend:
 test_toffset:
   stage: test
   script:
-    - cp lib/ikaDriverAgent.fmu /ikaDriverAgent.fmu
     - cd /openPASS/pyOpenPASS
     - >-
       python3 ./main.py 
@@ -72,7 +69,7 @@ test_toffset:
       -c /openPASS/test/end_to_end.json 
       --scope toffset
 
-deploy_to_aritfacts:
+deploy_to_artifacts:
   stage: deploy
   artifacts:
       paths:
@@ -83,7 +80,7 @@ deploy_to_aritfacts:
 deploy_to_openpass:
   stage: deploy
   dependencies: 
-  - deploy_to_aritfacts
+  - deploy_to_artifacts
   script: 
     - "curl -X POST --fail -F token=eea9e0095f33e1c72b9e32c6eb390a -F ref=master https://gitlab.ika.rwth-aachen.de/api/v4/projects/1469/trigger/pipeline"
   rules: 
