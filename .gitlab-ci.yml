@@ -2,7 +2,10 @@ image: ubuntu:20.04
 
 before_script:
   - apt update
-  - DEBIAN_FRONTEND="noninteractive" apt install -y libglib2.0-dev
+  - DEBIAN_FRONTEND="noninteractive" apt install -y git python3-pip python3-dev libglib2.0-dev
+  - git clone https://$USER_AUTH_CODE@$OPENPASS_URL /openPASS
+  - pip3 install --upgrade pip
+  - pip3 install -r /openPASS/pyOpenPASS/requirements.txt
 
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
@@ -14,19 +17,6 @@ stages:
   - test
   - deploy
 
-build_openpass:
-  stage: build
-  before_script:
-  - apt update
-  - DEBIAN_FRONTEND="noninteractive" apt install -y git python3-pip python3-dev
-  script:
-  - git clone https://$USER_AUTH_CODE@$OPENPASS_URL /openPASS
-  - pip3 install --upgrade pip
-  - pip3 install -r /openPASS/pyOpenPASS/requirements.txt
-  artifacts:
-    paths:
-      - /openPASS/pyOpenPASS/
-
 build_fmu:
   stage: build
   before_script:
@@ -35,16 +25,17 @@ build_fmu:
   script: 
     - cmake -DCMAKE_BUILD_TYPE=Release .
     - make -j10
-    - cp lib/ikaDriverAgent.fmu /ikaDriverAgent.fmu
+    - cp lib/ikaDriverAgent.fmu ikaDriverAgent.fmu
   artifacts:
     paths:
-      - /ikaDriverAgent.fmu
+      - ikaDriverAgent.fmu
 
 test_generic:
   stage: test
   dependencies:
-    - build_openpass
     - build_fmu
+  before_script:
+    - cp ikaDriverAgent.fmu /ikaDriverAgent.fmu
   script:
     - cd /openPASS/pyOpenPASS
     - >-
@@ -57,8 +48,9 @@ test_generic:
 test_velocity:
   stage: test
   dependencies:
-    - build_openpass
     - build_fmu
+  before_script:
+    - cp ikaDriverAgent.fmu /ikaDriverAgent.fmu
   script:
     - cd /openPASS/pyOpenPASS
     - >-
@@ -71,8 +63,9 @@ test_velocity:
 test_reachend:
   stage: test
   dependencies:
-    - build_openpass
     - build_fmu
+  before_script:
+    - cp ikaDriverAgent.fmu /ikaDriverAgent.fmu
   script:
     - cd /openPASS/pyOpenPASS
     - >-
@@ -85,8 +78,9 @@ test_reachend:
 test_toffset:
   stage: test
   dependencies:
-    - build_openpass
-    - build_fmu
+    - build_fmu  
+  before_script:
+    - cp ikaDriverAgent.fmu /ikaDriverAgent.fmu
   script:
     - cd /openPASS/pyOpenPASS
     - >-
@@ -99,8 +93,9 @@ test_toffset:
 test_s103:
   stage: test
   dependencies:
-    - build_openpass
     - build_fmu
+  before_script:
+    - cp ikaDriverAgent.fmu /ikaDriverAgent.fmu
   script:
     - cd /openPASS/pyOpenPASS
     - >-
@@ -113,8 +108,9 @@ test_s103:
 test_s201:
   stage: test
   dependencies:
-    - build_openpass
     - build_fmu
+  before_script:
+    - cp ikaDriverAgent.fmu /ikaDriverAgent.fmu
   script:
     - cd /openPASS/pyOpenPASS
     - >-
@@ -127,8 +123,9 @@ test_s201:
 test_s501:
   stage: test
   dependencies:
-    - build_openpass
     - build_fmu
+  before_script:
+    - cp ikaDriverAgent.fmu /ikaDriverAgent.fmu
   script:
     - cd /openPASS/pyOpenPASS
     - >-
@@ -141,8 +138,9 @@ test_s501:
 test_s502:
   stage: test
   dependencies:
-    - build_openpass
     - build_fmu
+  before_script:
+    - cp ikaDriverAgent.fmu /ikaDriverAgent.fmu
   script:
     - cd /openPASS/pyOpenPASS
     - >-
@@ -155,8 +153,9 @@ test_s502:
 test_s601:
   stage: test
   dependencies:
-    - build_openpass
     - build_fmu
+  before_script:
+    - cp ikaDriverAgent.fmu /ikaDriverAgent.fmu
   script:
     - cd /openPASS/pyOpenPASS
     - >-
@@ -169,8 +168,9 @@ test_s601:
 test_s602:
   stage: test
   dependencies:
-    - build_openpass
     - build_fmu
+  before_script:
+    - cp ikaDriverAgent.fmu /ikaDriverAgent.fmu
   script:
     - cd /openPASS/pyOpenPASS
     - >-
@@ -183,8 +183,9 @@ test_s602:
 test_s603:
   stage: test
   dependencies:
-    - build_openpass
     - build_fmu
+  before_script:
+    - cp ikaDriverAgent.fmu /ikaDriverAgent.fmu
   script:
     - cd /openPASS/pyOpenPASS
     - >-
@@ -197,8 +198,9 @@ test_s603:
 test_s605:
   stage: test
   dependencies:
-    - build_openpass
     - build_fmu
+  before_script:
+    - cp ikaDriverAgent.fmu /ikaDriverAgent.fmu
   script:
     - cd /openPASS/pyOpenPASS
     - >-
@@ -211,8 +213,9 @@ test_s605:
 test_s606:
   stage: test
   dependencies:
-    - build_openpass
     - build_fmu
+  before_script:
+    - cp ikaDriverAgent.fmu /ikaDriverAgent.fmu
   script:
     - cd /openPASS/pyOpenPASS
     - >-
@@ -225,8 +228,9 @@ test_s606:
 test_s701:
   stage: test
   dependencies:
-    - build_openpass
     - build_fmu
+  before_script:
+    - cp ikaDriverAgent.fmu /ikaDriverAgent.fmu
   script:
     - cd /openPASS/pyOpenPASS
     - >-
