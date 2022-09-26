@@ -2,7 +2,7 @@ image: ubuntu:20.04
 
 before_script:
   - apt update
-  - DEBIAN_FRONTEND="noninteractive" apt install -y git python3-pip python3-dev libglib2.0-dev
+  - DEBIAN_FRONTEND="noninteractive" apt install -y git python3-pip python3-dev curl libglib2.0-dev
   - git clone https://$USER_AUTH_CODE@$OPENPASS_URL /openpass
   - pip3 install --upgrade pip
   - pip3 install -r /openpass/pyOpenPASS/requirements.txt
