@@ -82,8 +82,6 @@ message("Protobuf installation directory " ${PROTOBUF})
 
 # Json library for debug files
 set(JSON_LIB lib/json/include)
-# Debug output directory
-add_definitions(-DDEBUG_OUTDIR="${CMAKE_SOURCE_DIR}/debug")
 
 # Setup osi wrapper library
 add_library(${PROJECT_NAME} STATIC 

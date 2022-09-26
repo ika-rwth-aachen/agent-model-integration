@@ -23,7 +23,7 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 
 # FMU output directory
-set(FMU_OUTDIR "${CMAKE_SOURCE_DIR}/lib" CACHE STRING "Fmu output directory")
+set(FMU_OUTDIR "${CMAKE_SOURCE_DIR}/../openPASS" CACHE STRING "Fmu output directory")
 
 # Logging
 set(PUBLIC_LOGGING OFF CACHE BOOL "Enable logging via FMI logger")
@@ -59,7 +59,7 @@ elseif(UNIX)
 		)
 endif()
 
-# Compile defitions
+# Compile definitions
 set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")
 target_compile_definitions(${PROJECT_NAME} PRIVATE "FMU_SHARED_OBJECT")
 target_compile_definitions(${PROJECT_NAME} PRIVATE "FMU_GUID=\"${FMUGUID}\"")

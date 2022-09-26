@@ -255,7 +255,7 @@ template <>
 void COSMPTrafficAgent::setAgentParameter(size_t vr, fmi2Boolean param) {
   switch (vr) {
     case FMI_BOOLEAN_DEBUG_IDX:
-      agentModel.debug_ = param;
+      agentModel.fmu_debug_ = param;
       return;
     default:
       assert(false);

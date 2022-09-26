@@ -1,7 +1,7 @@
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
-  USER_AUTH_CODE: "geller:glpat-q8KxApwGqCAMWNaak2qW"
   OPENPASS_URL: "gitlab.ika.rwth-aachen.de/setlevel/openpass.git"
+  USER_AUTH_CODE: "geller:glpat-q8KxApwGqCAMWNaak2qW"
 
 stages:
   - build
@@ -19,7 +19,7 @@ buildFMU2004:
   image: ubuntu:20.04
   stage: build
   script: 
-    - cmake . 
+    - cmake -DCMAKE_BUILD_TYPE=Release .
     - make -j10
   artifacts:
       paths:
