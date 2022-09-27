@@ -109,6 +109,7 @@ test_s601:
       -r /openpass/test 
       -c /openpass/test/end_to_end.json 
       --scope s601
+  allow_failure: true
 
 test_s602:
   stage: test
@@ -122,6 +123,7 @@ test_s602:
       -r /openpass/test 
       -c /openpass/test/end_to_end.json 
       --scope s602
+  allow_failure: true
 
 test_s603:
   stage: test
@@ -135,6 +137,7 @@ test_s603:
       -r /openpass/test 
       -c /openpass/test/end_to_end.json 
       --scope s603
+  allow_failure: true
 
 test_s605:
   stage: test
@@ -161,6 +164,7 @@ test_s606:
       -r /openpass/test 
       -c /openpass/test/end_to_end.json 
       --scope s606
+  allow_failure: true
             
 test_s701:
   stage: test
