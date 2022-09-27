@@ -40,6 +40,7 @@ test_simple:
     - >-
       python3 ./main.py 
       -s /openpass 
+      -m /openpass/common
       -r /openpass/test 
       -c /openpass/test/end_to_end.json 
       --scope simple
@@ -53,6 +54,7 @@ test_s103:
     - >-
       python3 ./main.py 
       -s /openpass 
+      -m /openpass/common
       -r /openpass/test 
       -c /openpass/test/end_to_end.json 
       --scope s103
@@ -66,6 +68,7 @@ test_s201:
     - >-
       python3 ./main.py 
       -s /openpass 
+      -m /openpass/common
       -r /openpass/test 
       -c /openpass/test/end_to_end.json 
       --scope s201
@@ -80,6 +83,7 @@ test_s501:
     - >-
       python3 ./main.py 
       -s /openpass 
+      -m /openpass/common
       -r /openpass/test 
       -c /openpass/test/end_to_end.json 
       --scope s501
@@ -93,6 +97,7 @@ test_s502:
     - >-
       python3 ./main.py 
       -s /openpass 
+      -m /openpass/common
       -r /openpass/test 
       -c /openpass/test/end_to_end.json 
       --scope s502
@@ -106,6 +111,7 @@ test_s601:
     - >-
       python3 ./main.py 
       -s /openpass 
+      -m /openpass/common
       -r /openpass/test 
       -c /openpass/test/end_to_end.json 
       --scope s601
@@ -120,6 +126,7 @@ test_s602:
     - >-
       python3 ./main.py 
       -s /openpass 
+      -m /openpass/common
       -r /openpass/test 
       -c /openpass/test/end_to_end.json 
       --scope s602
@@ -134,6 +141,7 @@ test_s603:
     - >-
       python3 ./main.py 
       -s /openpass 
+      -m /openpass/common
       -r /openpass/test 
       -c /openpass/test/end_to_end.json 
       --scope s603
@@ -148,6 +156,7 @@ test_s605:
     - >-
       python3 ./main.py 
       -s /openpass 
+      -m /openpass/common
       -r /openpass/test 
       -c /openpass/test/end_to_end.json 
       --scope s605
@@ -161,6 +170,7 @@ test_s606:
     - >-
       python3 ./main.py 
       -s /openpass 
+      -m /openpass/common
       -r /openpass/test 
       -c /openpass/test/end_to_end.json 
       --scope s606
@@ -175,6 +185,7 @@ test_s701:
     - >-
       python3 ./main.py 
       -s /openpass 
+      -m /openpass/common
       -r /openpass/test 
       -c /openpass/test/end_to_end.json 
       --scope s701
