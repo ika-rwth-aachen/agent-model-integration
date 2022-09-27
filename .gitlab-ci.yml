@@ -31,46 +31,7 @@ build_fmu:
     paths:
       - ikaDriverAgent.fmu
 
-test_generic:
-  stage: test
-  dependencies:
-    - build_fmu
-  script:
-    - cd /openpass/pyOpenPASS
-    - >-
-      python3 ./main.py 
-      -s /openpass 
-      -r /openpass/test 
-      -c /openpass/test/end_to_end.json 
-      --scope generic
-
-test_velocity:
-  stage: test
-  dependencies:
-    - build_fmu
-  script:
-    - cd /openpass/pyOpenPASS
-    - >-
-      python3 ./main.py 
-      -s /openpass 
-      -r /openpass/test 
-      -c /openpass/test/end_to_end.json 
-      --scope velocity
-
-test_reachend:
-  stage: test
-  dependencies:
-    - build_fmu
-  script:
-    - cd /openpass/pyOpenPASS
-    - >-
-      python3 ./main.py 
-      -s /openpass 
-      -r /openpass/test 
-      -c /openpass/test/end_to_end.json 
-      --scope reachend
-
-test_toffset:
+test_simple:
   stage: test
   dependencies:
     - build_fmu  
@@ -81,7 +42,7 @@ test_toffset:
       -s /openpass 
       -r /openpass/test 
       -c /openpass/test/end_to_end.json 
-      --scope toffset
+      --scope simple
 
 test_s103:
   stage: test
@@ -108,6 +69,7 @@ test_s201:
       -r /openpass/test 
       -c /openpass/test/end_to_end.json 
       --scope s201
+  allow_failure: true
 
 test_s501:
   stage: test
