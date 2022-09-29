@@ -199,4 +199,4 @@ deploy_to_openpass:
   script: 
     - "curl -X POST --fail -F token=eea9e0095f33e1c72b9e32c6eb390a -F ref=master https://gitlab.ika.rwth-aachen.de/api/v4/projects/1469/trigger/pipeline"
   rules: 
-    - if: "$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH" # run job on master branch
+    - if: "$CI_COMMIT_BRANCH == 'master'" # run job on master branch
