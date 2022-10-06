@@ -1,6 +1,6 @@
 # Driver model for SET Level 4to5
 > CI pipeline results:  
-> * [**Latest FMU** (Ubuntu 20.04 LTS)](https://gitlab.ika.rwth-aachen.de/setlevel/ika-driver/-/jobs/artifacts/master/raw/lib/ikaDriverAgent.fmu?job=deploy_to_artifacts) 
+> * [**Latest FMU** (Ubuntu 20.04 LTS)](../-/jobs/artifacts/master/raw/lib/ikaDriverAgent.fmu?job=deploy_to_artifacts) 
 
 This driver model is a closed loop agent model that reacts on other traffic participants and is able to perform basic maneuvers. 
 The model is based on the work done by [1] and got extended with an OSI adapter. The model described in [1] is available on [GitHub](https://github.com/ika-rwth-aachen/SimDriver).
