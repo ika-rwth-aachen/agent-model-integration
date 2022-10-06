@@ -1,6 +1,6 @@
 [submodule "open-simulation-interface"]
 	path = lib/osiWrapper/lib/open-simulation-interface
-	url = ../open-simulation-interface.git
+	url = https://gitlab.setlevel.de/open/osi.git
 	#url = ../../../architecture/open-simulation-interface.git
 [submodule "SimDriver"]
 	path = lib/osiWrapper/lib/SimDriver
