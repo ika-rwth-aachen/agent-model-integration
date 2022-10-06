@@ -1,4 +1,7 @@
-# Driver Model with OSI 
+# Driver model for SET Level 4to5
+> CI pipeline results:  
+> * [**Latest FMU** (Ubuntu 20.04 LTS)](../-/jobs/artifacts/master/raw/lib/ikaDriverAgent.fmu?job=deploy_to_artifacts) 
+
 This driver model is a closed loop agent model that reacts on other traffic participants and is able to perform basic maneuvers. 
 The model is based on the work done by [1] and got extended with an OSI adapter. The model described in [1] is available on [GitHub](https://github.com/ika-rwth-aachen/SimDriver).
 The driver model was developed by the institute for automotive engineering, RWTH Aachen University within the scope of the SET Level project.
@@ -12,7 +15,7 @@ The implementation uses the [OSI Sensor Model Packaging (OSMP)](https://github.c
 Fig. 1 illustrates the wrapping around the actual behavior model to end up with an encapsulated FMU. The input of the FMU consists of an `osi3::SensorView`  for the environment representation and an `osi3::TrafficCommand` which holds information on the agent's task in the simulation run. On the output side the simulator can either use the provided `osi3::TrafficUpdate` to manage the updated pose of the agent or forward the generated `sl4to5::DynamicsRequest` message to another module that then calculates an `osi3::TrafficUpdate` from that.  
 Inside the FMU, internal interfaces are used to feed the ika behavior model and then calculate its new position with a simple vehicle model and controllers for pedal values and the steering angle.
 
-![osmp](doc/drivermodel_osmp.png)  
+![osmp](Documentation/drivermodel_osmp.png)  
 Fig. 1: OSMP wrapping of the driver model  
 
 ### Behavior Model
@@ -23,13 +26,13 @@ On the left side of Fig. 2 the input interface is shown. It consists of informat
 The *Processing* layer takes the environment and traffic data and enriches them, e.g., with TTC or THW measures. Then, the most suitable maneuver is selected and modeled by conscious guiding variables (e.g. a time headway to a leading vehicle that should be maintained). Conscious variables are controlled by the sub-conscious variables acceleration and curvature (*Note:* `Z-micro` corresponds to the `sl4to5::DynamicsRequest` message here).  
 The *Action* column is actually located outside the "ika Agent Model" block from Fig. 1, but modeled in the most right block of Fig. 1.
 
-![architecutre](doc/04_architecture-en.svg)  
+![architecutre](Documentation/04_architecture-en.svg)  
 Fig. 2: Behavior model architecture (taken from [2])  
 
 #### Basic Maneuvers
 This section should help enlighten some blocks within the *Processing* column of Fig. 2. The driver model is implemented such that basic driving maneuvers are modeled which enables the model to perform most driving tasks that are required in urban scenarios (cf. [1]). Those capabilities or basic maneuvers are illustrated as a state diagram in Fig. 3.
 
-![states](doc/states-original.svg)  
+![states](Documentation/states-original.svg)  
 Fig. 3: Behavior model basic maneuvers (taken from [2])  
 
 **TODO: brief description of state diagram**
@@ -122,17 +125,66 @@ setlevel4to5
     curvature_target
     longitudinal_acceleration_target
 ```
-
-## Building Instructions
-The model can be build on Linux with `cmake` quite straight forward 
+## Build
+Brief build instructions for compilation with `MSYS2 MinGW 64-bit` on Windows.  
+### Initialize Repository
+Befor starting the build process, the repositorie's submodules need to be downloaded
 ```
-mkdir build 
-cd build
-cmake .. 
-cmake --build
+git submodule update --init --recursive
 ```
-If desired, the `cmake` parameter `FMU_OUTDIR` which specifies the location of the resulting FMU can be set. If not, the FMU is placed in `/lib`.
 
+### Protobuf dependency
+Due to the usage of the CMake feature 'ExternalProject_Add()', there is no need to download and build protobuf from source source anymore. 
+  
+### Windows Build FMU
+1. Start `MSYS2 MinGW 64-bit` shell
+1. Create a `build` directory and enter it:
+    ```
+    mkdir build && cd build
+    ```  
+
+2. Execute CMake:
+    ```
+    cmake -G "MSYS Makefiles" -DCMAKE_BUILD_TYPE=Release ..
+    ```  
+
+    Please note: The default build directory for the `FMU` is the subfolder `lib/`. If a specific `FMU` output dir shall be used, set the variable `FMU_OUTDIR`, e.g.
+    ```
+    cmake -G "MSYS Makefiles" -DCMAKE_BUILD_TYPE=Release -DFMU_OUTDIR=<dir> ..
+    ```  
+
+3. Compile the library:
+    ```
+    make.exe
+    ```
+    Optional: `make.exe -j4` for building on multiple cores (replace `4` with an arbitrary number).
+
+### Linux Build FMU
+1. Create a `build` directory and enter it:
+    ```
+    mkdir build && cd build
+    ```  
+
+2. Execute CMake:
+    ```
+    cmake -DCMAKE_BUILD_TYPE=Release ..
+    ```  
+
+    Please note: The default build directory for the `FMU` is the subfolder `lib/`. If a specific `FMU` output dir shall be used, set the variable `FMU_OUTDIR`, e.g.
+    ```
+    cmake -DCMAKE_BUILD_TYPE=Release -DFMU_OUTDIR=<dir> ..
+    ```  
+
+3. Compile the library:
+    ```
+    make
+    ```
+    Optional: `make -j4` for building on multiple cores (replace `4` with an arbitrary number).
+
+## Debugging
+The external FMU parameter `debug` enables debugging log information in the `${workspace}/debug` folder as `json` file and holds information about `horizon`, `vehicle_state` and `driver_state` at each timestep.
+
+In addition the plot python scripts in [scripts](scripts) can be used to visualize the debug information with `matplotlib`.
 ## Licensing
 **Distributed under the [MIT License](LICENSE).**
 
@@ -148,3 +200,4 @@ Ministry for Economic Affairs and Energy based on a decision of the German Bunde
 [1] *System Design of an Agent Model for the Closed-Loop Simulation of Relevant Scenarios in the Development of ADS*, 29th Aachen Colloquium 2020, 07.10.2020, Aachen. Jens Klimke, E.Go Moove GmbH; Daniel Becker, Institut für Kraftfahrzeuge (ika); Univ.-Prof. Dr.-Ing. Lutz Eckstein, Insitut für Kraftfahrzeuge (ika)
 
 [2] *Agentenmodell für die Closed-Loop-Simulation von Verkehrszenarien*, ATZelektronik 05 Mai 2021, 16. Jahrgang, S.42-46. Daniel Becker, Jens Klimke, Lutz Eckstein. Link: https://www.springerprofessional.de/agentenmodell-fuer-die-closed-loop-simulation-von-verkehrsszenar/19141908
+
