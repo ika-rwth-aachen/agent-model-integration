@@ -36,7 +36,12 @@ void OsiConverter::extractEgoInformation(osi3::SensorView &sensor_view,
   osi3::GroundTruth *ground_truth = sensor_view.mutable_global_ground_truth();
 
   // find ego object
-  ego_id_ = sensor_view.host_vehicle_id().value();
+  try{
+    ego_id_ = sensor_view.host_vehicle_id().value();
+  }
+  catch(...){
+    spdlog::warn("ego_id could not be fetched from the sensor view");
+  }
 
   for (int i = 0; i < ground_truth->moving_object_size(); i++) {
     if (ground_truth->moving_object(i).id().value() == ego_id_) {

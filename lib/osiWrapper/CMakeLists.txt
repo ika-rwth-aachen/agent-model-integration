@@ -84,6 +84,8 @@ message("Protobuf installation directory " ${PROTOBUF})
 set(JSON_LIB lib/json/include)
 # Debug output directory
 add_definitions(-DDEBUG_OUTDIR="${CMAKE_SOURCE_DIR}/debug")
+# Log output directory
+add_definitions(-DLOG_OUTDIR="${CMAKE_SOURCE_DIR}/logs")
 
 # Setup osi wrapper library
 add_library(${PROJECT_NAME} STATIC 
@@ -92,6 +94,7 @@ add_library(${PROJECT_NAME} STATIC
 	src/Logger.cpp 
 	src/VehicleModel.cpp
 	src/PrimaryController.cpp
+	src/Spdlogger.cpp
     )
 set_target_properties(${PROJECT_NAME} PROPERTIES
     POSITION_INDEPENDENT_CODE ON)

@@ -127,8 +127,8 @@ int IkaAgent::step(double time, double step_size, osi3::SensorView &sensor_view,
                    setlevel4to5::DynamicsRequest &dynamic_request) {
   uint64_t id = sensor_view.host_vehicle_id().value();
 
-  std::cout << "---------- time: " << time << " ---------- id: " << id << " ----------" << std::endl;
-  
+  //std::cout << "---------- time: " << time << " ---------- id: " << id << " ----------" << std::endl;
+
 
   // in the first step, the desired curvature should be zero
   bool firstStep = false;
@@ -138,9 +138,14 @@ int IkaAgent::step(double time, double step_size, osi3::SensorView &sensor_view,
     
     IkaAgent::init(host);
     logger.init(id);
+
+    spdlogger.init();
+
     firstStep = true;
     initialized_ = true;
   }
+  
+  spdlog::info("---------- time: {} ---------- id: {} ----------", time, id);
 
   // converter converts from osi to agent_model::input
   converter_.convert(sensor_view, traffic_command, _input, _param, _memory);

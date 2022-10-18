@@ -14,6 +14,7 @@
 
 #include "AgentModel.h"
 #include "Interface.h"
+#include "Spdlogger.h"
 
 #include "osi_sensorview.pb.h"
 #include "osi_trafficcommand.pb.h"

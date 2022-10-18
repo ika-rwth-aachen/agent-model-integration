@@ -18,6 +18,7 @@
 #include "Logger.h"
 #include "PrimaryController.h"
 #include "VehicleModel.h"
+#include "Spdlogger.h"
 
 class IkaAgent : public AgentModel {
  public:
@@ -50,6 +51,7 @@ class IkaAgent : public AgentModel {
 
   // logger
   Logger logger;
+  Spdlogger spdlogger;
 
   // pointers
   agent_model::State *driver_state_;
