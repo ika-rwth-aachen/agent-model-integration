@@ -25,15 +25,10 @@ void Spdlogger::init() {
   // create sink to write to file
   auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(path_ + "/logfile - " + time_string + ".txt", true);
   file_sink->set_level(spdlog::level::trace);
-
-  spdlog::sinks_init_list sink_list = { file_sink, console_sink };
-
-  // combine sinks
-  spdlog::logger spdlogger("multi_sink", sink_list.begin(), sink_list.end());
-  spdlogger.set_level(spdlog::level::debug);
-  spdlogger.set_pattern("[%^%l%$] %v [Thread: %t] [Time: %H:%M:%S::%e]");
+  file_sink->set_pattern("[%^%l%$] %v [Thread: %t] [Time: %H:%M:%S::%e]");
 
   // set configuration as default logger
-  spdlog::set_default_logger(std::make_shared<spdlog::logger>("multi_sink", spdlog::sinks_init_list({console_sink, file_sink})));
+  std::shared_ptr<spdlog::logger> spdlogger = std::make_shared<spdlog::logger>("multi_sink", spdlog::sinks_init_list({console_sink, file_sink}));
+  spdlog::set_default_logger(spdlogger);
 
 }
