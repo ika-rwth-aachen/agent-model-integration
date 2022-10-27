@@ -139,8 +139,6 @@ int IkaAgent::step(double time, double step_size, osi3::SensorView &sensor_view,
     IkaAgent::init(host);
     logger.init(id);
 
-    spdlogger.init();
-
     firstStep = true;
     initialized_ = true;
   }

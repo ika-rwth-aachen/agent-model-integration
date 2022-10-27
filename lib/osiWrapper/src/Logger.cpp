@@ -12,13 +12,37 @@
 void Logger::init(uint64_t ego_id) {
 
   ego_id_ = ego_id;
-  path_ = DEBUG_OUTDIR;
+  path_debug_ = DEBUG_OUTDIR;
+  path_log_ = LOG_OUTDIR;
 
-  // create new directory if not exist
+  // create new directories if not exist
   struct stat buffer;
-  if (stat (path_.c_str(), &buffer) != 0) {
-    fs::create_directories(path_); 
+  if (stat (path_debug_.c_str(), &buffer) != 0) {
+    fs::create_directories(path_debug_); 
   }
+  if (stat (path_log_.c_str(), &buffer) != 0) {
+    fs::create_directories(path_log_); 
+  }
+
+  // get time string
+  auto time = std::chrono::system_clock::now();
+  auto time_c = std::chrono::system_clock::to_time_t(time);
+  auto time_tm = *std::localtime(&time_c);
+  auto time_string = std::asctime(&time_tm);
+
+  // create sink to write to console
+  auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+  console_sink->set_level(spdlog::level::trace);
+  console_sink->set_pattern("[%^%l%$] %v [Thread: %t] [Time: %H:%M:%S::%e]");
+
+  // create sink to write to file
+  auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(path_log_ + "/Logfile - " + time_string + ".txt", true);
+  file_sink->set_level(spdlog::level::trace);
+  file_sink->set_pattern("[%^%l%$] %v [Thread: %t] [Time: %H:%M:%S::%e]");
+
+  // set configuration as default logger
+  std::shared_ptr<spdlog::logger> spd_logger = std::make_shared<spdlog::logger>("multi_sink", spdlog::sinks_init_list({console_sink, file_sink}));
+  spdlog::set_default_logger(spd_logger);
 }
 
 void Logger::saveOSI(osi3::SensorView &sensor_view,
@@ -28,7 +52,7 @@ void Logger::saveOSI(osi3::SensorView &sensor_view,
   sensor_view.SerializeToString(&sensor_view_string);
 
   std::ofstream file_sensor_view;
-  file_sensor_view.open(path_ + "/sensor_view.osi", std::ofstream::app|std::ofstream::binary);
+  file_sensor_view.open(path_debug_ + "/sensor_view.osi", std::ofstream::app|std::ofstream::binary);
   file_sensor_view.imbue(std::locale::classic());
 
   uint32_t val_sv = (uint32_t) sensor_view.ByteSizeLong();
@@ -42,7 +66,7 @@ void Logger::saveOSI(osi3::SensorView &sensor_view,
   traffic_command.SerializeToString(&traffic_command_string);
 
   std::ofstream file_traffic_command;
-  file_traffic_command.open(path_ + "/traffic_command.osi", std::ofstream::app|std::ofstream::binary);
+  file_traffic_command.open(path_debug_ + "/traffic_command.osi", std::ofstream::app|std::ofstream::binary);
   file_traffic_command.imbue(std::locale::classic());
 
   uint32_t val_tc = (uint32_t) traffic_command.ByteSizeLong();
@@ -53,13 +77,13 @@ void Logger::saveOSI(osi3::SensorView &sensor_view,
 
 
   std::string debug_sensorview_string = sensor_view.DebugString();
-  std::ofstream debug_sensorview (path_ + "/sensor_view.txt",  std::ofstream::app);
+  std::ofstream debug_sensorview (path_debug_ + "/sensor_view.txt",  std::ofstream::app);
   debug_sensorview << debug_sensorview_string;
   debug_sensorview.close();
 
 
   std::string debug_trafficcommand_string = traffic_command.DebugString();
-  std::ofstream debug_trafficcommand (path_ + "/traffic_command.txt",  std::ofstream::app);
+  std::ofstream debug_trafficcommand (path_debug_ + "/traffic_command.txt",  std::ofstream::app);
   debug_trafficcommand << debug_trafficcommand_string;
   debug_trafficcommand.close();
 }
@@ -157,7 +181,7 @@ void Logger::saveDebugInformation(double time, agent_model::Input input, agent_m
 
   // save debug file
   if (uint64_t(1000*time + 0.5) % uint64_t(1000*dt_save_ + 0.5) == 0) {
-    std::ofstream output(path_ + "/vehicle_" + std::to_string(ego_id_) + ".json", std::ofstream::out);
+    std::ofstream output(path_debug_ + "/vehicle_" + std::to_string(ego_id_) + ".json", std::ofstream::out);
     output << json_logger_.dump(4);
     output.close();
   }

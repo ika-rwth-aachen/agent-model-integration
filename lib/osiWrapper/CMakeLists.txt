@@ -96,7 +96,6 @@ add_library(${PROJECT_NAME} STATIC
 	src/Logger.cpp 
 	src/VehicleModel.cpp
 	src/PrimaryController.cpp
-	src/Spdlogger.cpp
     )
 set_target_properties(${PROJECT_NAME} PROPERTIES
     POSITION_INDEPENDENT_CODE ON)
