@@ -1,4 +1,7 @@
 # Driver model for SET Level 4to5
+
+<img src="Documentation/logo.png" height=75 align="right">
+
 > CI pipeline results:  
 > * [**Latest FMU** (Ubuntu 20.04 LTS)](../-/jobs/artifacts/master/raw/lib/ikaDriverAgent.fmu?job=deploy_to_artifacts) 
 
