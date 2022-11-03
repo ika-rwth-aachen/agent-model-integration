@@ -36,9 +36,8 @@ uint64_t closestLane(osi3::GroundTruth* ground_truth, const Point2D point) {
     osi3::Lane cur_lane;
     cur_lane.CopyFrom(ground_truth->lane(i));
 
-    // skip free lane boundary lanes 
-    //    (no distance calculation due to arbitrary sorted points)
-    if (cur_lane.classification().free_lane_boundary_id_size() > 0)
+    // skip intersections without centerlines
+    if (cur_lane.classification().centerline_size() == 0 && cur_lane.classification().type() == osi3::Lane_Classification_Type_TYPE_INTERSECTION)
       continue;
       
     getXY(&cur_lane, centerline);
@@ -314,6 +313,7 @@ std::vector<std::vector<int>> createAdjacencyMatrix(osi3::GroundTruth* ground_tr
       uint64_t suc_id = cls.lane_pairing(j).successor_lane_id().value();
 
       // in driving direction:
+      // TODO intersection without centerline
       if (cls.centerline_is_driving_direction()) {
         if (suc_id == -1) continue;
         
