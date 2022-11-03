@@ -299,6 +299,7 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view) {
 
   // clear path variable when new path is generated
   path_centerline_.clear();
+  path_intersection_.clear();
   path_s_.clear();
   path_psi_.clear();
   path_kappa_.clear();
