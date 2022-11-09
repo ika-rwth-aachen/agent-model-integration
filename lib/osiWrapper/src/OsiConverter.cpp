@@ -98,7 +98,7 @@ void OsiConverter::preprocess(osi3::SensorView &sensor_view,
 {
   // analyize traffic commands
   processTrafficCommand(traffic_command, param);
-
+ 
   // if lane changed 
   if (memory.laneChange.switchLane != 0)
   {
@@ -448,7 +448,7 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view) {
     path_centerline_.insert(path_centerline_.begin() + gap_idx, path_intersection_.begin(), path_intersection_.end());
 
     path_intersection_centerline_ = path_intersection_;
-    
+
     std::vector<double> dummy_width (path_intersection_.size(), -1);
     path_width_.insert(path_width_.begin() + gap_idx, dummy_width.begin(), dummy_width.end());
 
@@ -457,6 +457,7 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view) {
     path_toff_right_.insert(path_toff_right_.begin() + gap_idx, dummy_toff.begin(), dummy_toff.end());
   }
 
+  removeDuplicates(path_centerline_);
 
   // calculate s, psi, kappa from centerline
   xy2Curv(path_centerline_, path_s_, path_psi_, path_kappa_);
@@ -1241,7 +1242,14 @@ void OsiConverter::fillLanes(osi3::SensorView &sensor_view,
 
   // get ego lane points
   std::vector<Point2D> ego_lane_points;
-  getXY(ego_lane_ptr_, ego_lane_points);
+  if (ego_lane_ptr_->classification().type() ==
+          osi3::Lane_Classification_Type_TYPE_INTERSECTION && ego_lane_ptr_->classification().centerline_size() == 0) 
+  {
+    ego_lane_points = path_intersection_centerline_;
+  } else {
+    getXY(ego_lane_ptr_, ego_lane_points);
+  }
+  
 
   // get ego lane group information
   LaneGroup ego_lane_group = findLaneGroup(lane_groups_, ego_lane_group_id_);
