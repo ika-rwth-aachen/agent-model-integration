@@ -447,6 +447,8 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view) {
 
     path_centerline_.insert(path_centerline_.begin() + gap_idx, path_intersection_.begin(), path_intersection_.end());
 
+    path_intersection_centerline_ = path_intersection_;
+    
     std::vector<double> dummy_width (path_intersection_.size(), -1);
     path_width_.insert(path_width_.begin() + gap_idx, dummy_width.begin(), dummy_width.end());
 
@@ -1320,8 +1322,15 @@ void OsiConverter::fillLanes(osi3::SensorView &sensor_view,
 
         // get ds of current lane
         std::vector<Point2D> lane_points;
-        getXY(findLane(cur_lane_id, ground_truth), lane_points);
-        
+        osi3::Lane* cur_lane = findLane(cur_lane_id, ground_truth);
+        if (cur_lane->classification().type() ==
+          osi3::Lane_Classification_Type_TYPE_INTERSECTION && cur_lane->classification().centerline_size() == 0) 
+        {
+          lane_points = path_intersection_centerline_;
+        } else {
+          getXY(cur_lane, lane_points);
+        }
+
         // calculate lane_ds
         double start_psi = atan2(lane_points[1].y - lane_points[0].y, lane_points[1].x - lane_points[0].x);
         double lane_ds = xy2s(lane_points.front(), lane_points.back(), lane_points, start_psi);
