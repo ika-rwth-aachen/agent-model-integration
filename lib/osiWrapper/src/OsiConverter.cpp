@@ -38,9 +38,12 @@ void OsiConverter::extractEgoInformation(osi3::SensorView &sensor_view,
   // find ego object
   try{
     ego_id_ = sensor_view.host_vehicle_id().value();
+    if (typeid(ego_id_) != typeid(uint64_t) || ego_id_ < 0){
+      throw -1;
+    }
   }
-  catch(...){
-    spdlog::warn("error with fetching value from sensor_view.host_vehicle_id()");
+  catch(int){
+    SPDLOG_ERROR("error with value from sensor_view.host_vehicle_id()");
   }
 
   for (int i = 0; i < ground_truth->moving_object_size(); i++) {

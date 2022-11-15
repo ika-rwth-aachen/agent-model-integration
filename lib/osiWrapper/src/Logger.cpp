@@ -9,11 +9,6 @@
  */
 #include "Logger.h"
 
-#ifdef __linux__
-#define  __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
-#elif _WIN32
-#define  __FILENAME__ (strrchr(__FILE__, '\\') ? strrchr(__FILE__, '\\') + 1 : __FILE__)
-#endif
 
 void Logger::init(uint64_t ego_id) {
 
@@ -43,20 +38,12 @@ void Logger::init(uint64_t ego_id) {
 
   // create sink to write to file
   auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(path_log_ + "/Logfile - " + time_string + ".txt", true);
-  file_sink->set_level(spdlog::level::trace);
-  std::string file_string = "[%^%l%$] %v [";
-  file_string.append(__FILENAME__);
-  file_string.append(" #");
-  file_string.append(std::to_string(__LINE__));
-  file_string.append(" Function: ");
-  file_string.append(fmt::format(__FUNCTION__));
-  file_string.append("] [Thread: %t] [Time: %H:%M:%S::%e]");
-  file_sink->set_pattern(file_string);
+  file_sink->set_level(spdlog::level::err); // only write errors into file
+  file_sink->set_pattern("[%^%l%$] %v [%s #%# Function: %!] [Thread: %t] [Time: %H:%M:%S::%e]");
 
   // set configuration as default logger
   std::shared_ptr<spdlog::logger> spd_logger = std::make_shared<spdlog::logger>("multi_sink", spdlog::sinks_init_list({console_sink, file_sink}));
   spdlog::set_default_logger(spd_logger);
-  // spdlog::register_logger(spd_logger); cant register logger without error for some reason
 }
 
 void Logger::saveOSI(osi3::SensorView &sensor_view,
