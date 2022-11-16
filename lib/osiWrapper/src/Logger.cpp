@@ -38,11 +38,12 @@ void Logger::init(uint64_t ego_id) {
 
   // create sink to write to file
   auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(path_log_ + "/Logfile - " + time_string + ".txt", true);
-  file_sink->set_level(spdlog::level::err); // only write errors into file
-  file_sink->set_pattern("[%^%l%$] %v [%s #%# Function: %!] [Thread: %t] [Time: %H:%M:%S::%e]");
+  file_sink->set_level(spdlog::level::trace);
+  file_sink->set_pattern("[%^%l%$] %v [%s #%# Function: %!] [Time: %H:%M:%S::%e]");
 
   // set configuration as default logger
   std::shared_ptr<spdlog::logger> spd_logger = std::make_shared<spdlog::logger>("multi_sink", spdlog::sinks_init_list({console_sink, file_sink}));
+  spd_logger->flush_on(spdlog::level::err);
   spdlog::set_default_logger(spd_logger);
 }
 

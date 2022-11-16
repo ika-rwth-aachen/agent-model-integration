@@ -83,6 +83,7 @@ void OsiConverter::extractEgoInformation(osi3::SensorView &sensor_view,
     Point2D ego_position =
       Point2D(ego_base_.position().x(), ego_base_.position().y());
     ego_lane_id_ = closestLane(ground_truth, ego_position);
+    SPDLOG_INFO("no lane assignment possible for ego_lane_id, took closest lanes id: {}", ego_lane_id_);
   }
 
   // find lane pointer
@@ -284,12 +285,14 @@ void OsiConverter::newLanes(osi3::SensorView &sensor_view) {
   lanes_changeable_ = lane_group.lanes_changeable;
     
   // print lanes
-  std::cout << "Destination at: " << dest_point_.x <<","<< dest_point_.y <<"\n";
-  std::cout << "With lanes to pass: ";
-  for (auto &lane : lanes_) std::cout << lane << " ";
-  std::cout << std::endl;
+  SPDLOG_INFO("Destination at: {}, {}", dest_point_.x, dest_point_.y);
+  lanes_str = "";
+  for (auto &lane : lanes_){
+    lanes_str.append(" " + std::to_string(lane));
+  }
+  SPDLOG_INFO("With lanes to pass:{}", lanes_str);
   if (lane_group.change_amount != 0) {
-    std::cout << "Note: " << lane_group.change_amount << " lane changes are required to reach the destination!" << std::endl;
+    SPDLOG_INFO("Note: {} lane changes are required to reach the destination", lane_group.change_amount);
   }
 }
 

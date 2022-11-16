@@ -63,6 +63,7 @@ osi3::Lane* findLane(uint64_t id, osi3::GroundTruth* ground_truth) {
     if (ground_truth->lane(i).id().value() == id)
       return (ground_truth->mutable_lane(i));
   }
+  SPDLOG_ERROR("lane with id ({}) could not be found in ground truth", id);
   return nullptr;
 }
 
@@ -78,6 +79,7 @@ int findLaneIdx(osi3::GroundTruth* ground_truth, uint64_t id) {
   for (int i = 0; i < ground_truth->lane_size(); i++) {
     if (ground_truth->lane(i).id().value() == id) return i;
   }
+  SPDLOG_ERROR("lane idx of id ({}) could not be found in ground truth", id);
   return -1;
 }
 
@@ -87,7 +89,7 @@ int findLaneIdx(osi3::GroundTruth* ground_truth, uint64_t id) {
  *
  * @param ID
  * @param ground_truth
- * @return osi3::LaneBounddary* pointer to desired lane boundary
+ * @return osi3::LaneBoundary* pointer to desired lane boundary
  */
 osi3::LaneBoundary* findLaneBoundary(uint64_t id, osi3::GroundTruth* ground_truth) {
 
@@ -95,6 +97,7 @@ osi3::LaneBoundary* findLaneBoundary(uint64_t id, osi3::GroundTruth* ground_trut
     if (ground_truth->lane_boundary(i).id().value() == id)
       return (ground_truth->mutable_lane_boundary(i));
   }
+  SPDLOG_ERROR("lane boundary with id ({}) could not be found in ground truth", id);
   return nullptr;
 }
 
@@ -113,6 +116,7 @@ LaneGroup findLaneGroup(std::vector<LaneGroup> lane_groups, int id) {
   for (int i = 0; i < lane_groups.size(); i++) {
     if (lane_groups[i].id == id) return lane_groups[i];
   }
+  SPDLOG_ERROR("lane group with id ({}) could not be found", id);
   return tmp;
 }
 

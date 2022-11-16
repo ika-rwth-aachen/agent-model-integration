@@ -77,6 +77,7 @@ class OsiConverter {
   std::vector<uint64_t> lanes_changeable_;
   std::vector<uint64_t> intersection_lanes_;
   std::vector<JunctionPath> junction_paths_;
+  std::string lanes_str;
 
   // last action id's
   uint64_t lc_action_id_ = -1;
