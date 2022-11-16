@@ -457,7 +457,7 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view) {
     path_toff_right_.insert(path_toff_right_.begin() + gap_idx, dummy_toff.begin(), dummy_toff.end());
   }
 
-  removeDuplicates(path_centerline_,0.0001);
+  removeDuplicates(path_centerline_);
 
   // calculate s, psi, kappa from centerline
   xy2Curv(path_centerline_, path_s_, path_psi_, path_kappa_);
