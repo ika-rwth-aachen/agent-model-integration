@@ -83,7 +83,7 @@ void OsiConverter::extractEgoInformation(osi3::SensorView &sensor_view,
     Point2D ego_position =
       Point2D(ego_base_.position().x(), ego_base_.position().y());
     ego_lane_id_ = closestLane(ground_truth, ego_position);
-    SPDLOG_INFO("no lane assignment possible for ego_lane_id, took closest lanes id: {}", ego_lane_id_);
+    SPDLOG_INFO("no lane assignment possible for ego_lane_id_, took closest lanes id: {}", ego_lane_id_);
   }
 
   // find lane pointer

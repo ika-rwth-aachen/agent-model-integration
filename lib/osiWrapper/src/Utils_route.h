@@ -423,11 +423,10 @@ void computeDijkstra (std::vector<std::vector<int>> adj_matrix, std::vector<int>
 		}
 	}
   if (debug){
-    std::cout << "Reachability:" << std::endl;
+    SPDLOG_INFO("Reachability:");
     for (int i = 0; i < num_of_vertices; i++){
-      std::cout << "Distance ("<< i <<") = " << dist[i] << std::endl;
+      SPDLOG_INFO("Distance ({}) = {}", i, dist[i]);
     }
-    std::cout << std::endl;
   }
 }
 

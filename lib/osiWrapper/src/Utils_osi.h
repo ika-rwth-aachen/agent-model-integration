@@ -164,6 +164,10 @@ std::vector<int> findAdjacentLanes(osi3::GroundTruth* ground_truth, int lane_idx
         // skip if wrong type
         if (findLane(adjacent_id, ground_truth)->classification().type() != osi3::Lane_Classification_Type_TYPE_DRIVING && findLane(adjacent_id, ground_truth)->classification().type() != osi3::Lane_Classification_Type_TYPE_INTERSECTION) continue;
 
+        if (typeid(adjacent_id) != typeid(uint64_t) || adjacent_id < 0 || adjacent_id > 10000000){
+          SPDLOG_ERROR("adjacent_id of straight adjacent lane pairing {} could not be retrieved", j);
+        }
+
         lanes.push_back(findLaneIdx(ground_truth, adjacent_id));
       }
     }
@@ -186,6 +190,10 @@ std::vector<int> findAdjacentLanes(osi3::GroundTruth* ground_truth, int lane_idx
           // skip if opposite driving direction (assume same reference line)
           if (findLane(adjacent_id, ground_truth)->classification().centerline_is_driving_direction() != is_driving_direction) continue;
           
+          if (typeid(adjacent_id) != typeid(uint64_t) || adjacent_id < 0 || adjacent_id > 10000000){
+            SPDLOG_ERROR("adjacent_id of left adjacent lane pairing {} could not be retrieved", i);
+          }
+
           lanes.push_back(findLaneIdx(ground_truth, adjacent_id));
         }
       }
@@ -203,6 +211,10 @@ std::vector<int> findAdjacentLanes(osi3::GroundTruth* ground_truth, int lane_idx
           // skip if opposite driving direction (assume same reference line)
           if (findLane(adjacent_id, ground_truth)->classification().centerline_is_driving_direction() != is_driving_direction) continue;
           
+          if (typeid(adjacent_id) != typeid(uint64_t) || adjacent_id < 0 || adjacent_id > 10000000){
+            SPDLOG_ERROR("adjacent_id of right adjacent lane pairing {} could not be retrieved", i);
+          }
+
           lanes.push_back(findLaneIdx(ground_truth, adjacent_id));
         }
       }
