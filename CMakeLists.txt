@@ -59,7 +59,7 @@ elseif(UNIX)
 		)
 endif()
 
-# Compile defitions
+# Compile definitions
 set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")
 target_compile_definitions(${PROJECT_NAME} PRIVATE "FMU_SHARED_OBJECT")
 target_compile_definitions(${PROJECT_NAME} PRIVATE "FMU_GUID=\"${FMUGUID}\"")

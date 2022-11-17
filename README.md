@@ -1,7 +1,9 @@
 # Driver model for SET Level 4to5
+
+<img src="Documentation/logo.png" height=75 align="right">
+
 > CI pipeline results:  
-> * [**Latest FMU** (Ubuntu 18.04 LTS)](https://gitlab.sl4to5.de/deliverables/model/traffic-agents/ika-driver/-/jobs/artifacts/master/raw/lib/ikaDriverAgent.fmu?job=buildFMU1804) 
-> * [**Latest FMU** (Ubuntu 20.04 LTS)](https://gitlab.sl4to5.de/deliverables/model/traffic-agents/ika-driver/-/jobs/artifacts/master/raw/lib/ikaDriverAgent.fmu?job=buildFMU2004) 
+> * [**Latest FMU** (Ubuntu 20.04 LTS)](../-/jobs/artifacts/master/raw/ikaDriverAgent.fmu?job=build_fmu) 
 
 This driver model is a closed loop agent model that reacts on other traffic participants and is able to perform basic maneuvers. 
 The model is based on the work done by [1] and got extended with an OSI adapter. The model described in [1] is available on [GitHub](https://github.com/ika-rwth-aachen/SimDriver).
@@ -195,7 +197,7 @@ This work received funding from the research project
 Ministry for Economic Affairs and Energy based on a decision of the German Bundestag.
 | SET Level | PEGASUS Family | BMWi |
 |-----------|----------------|------|
-| <a href="https://setlevel.de"><img src="https://setlevel.de/assets/logo-setlevel.svg" width="100" /></a> | <a href="https://pegasus-family.de"><img src="https://setlevel.de/assets/logo-pegasus-family.svg" width="100" /></a> | <a href="https://www.bmwi.de/Redaktion/DE/Textsammlungen/Technologie/fahrzeug-und-systemtechnologien.html"><img src="https://setlevel.de/assets/logo-bmwi-en.svg" width="100" /></a> |
+| <a href="https://setlevel.de"><img src="https://setlevel.de/assets/logo-setlevel.svg" width="100" /></a> | <a href="https://pegasus-family.de"><img src="https://setlevel.de/assets/logo-pegasus-family.svg" width="100" /></a> | <a href="https://www.bmwi.de/Redaktion/DE/Textsammlungen/Technologie/fahrzeug-und-systemtechnologien.html"><img src="https://setlevel.de/assets/logo-bmwk-en.svg" width="100" /></a> |
 
 ## References
 [1] *System Design of an Agent Model for the Closed-Loop Simulation of Relevant Scenarios in the Development of ADS*, 29th Aachen Colloquium 2020, 07.10.2020, Aachen. Jens Klimke, E.Go Moove GmbH; Daniel Becker, Institut für Kraftfahrzeuge (ika); Univ.-Prof. Dr.-Ing. Lutz Eckstein, Insitut für Kraftfahrzeuge (ika)

@@ -258,23 +258,25 @@ double xy2s(const Point2D start, const Point2D end,
 
   double s = 0;
 
-  // calculate distance
-  int dir = 0;
-  double start_end_psi = atan2(end.y - start.y, end.x - start.x);
-    
-  if (abs(start_end_psi - start_psi) > M_PI/2) {
-    dir = -1;
-  }
-  else {
-    dir = 1;
-  }
-
   Point2D start_centerline, end_centerline;
   int start_idx = closestCenterlinePoint(start, cl, start_centerline);
   int end_idx = closestCenterlinePoint(end, cl, end_centerline);
 
   // if start and end in same interval 
   if (start_idx == end_idx) {
+
+    start_psi = wrapAngle(start_psi);
+    double start_end_psi = atan2(end.y - start.y, end.x - start.x);
+    
+    // check direction
+    int dir = 0;
+    if (abs(wrapAngle(start_end_psi - start_psi)) > M_PI/2) {
+      dir = -1;
+    }
+    else {
+      dir = 1;
+    }
+    
     return dir * sqrt(pow(start_centerline.x - end_centerline.x, 2) 
               + pow(start_centerline.y - end_centerline.y, 2));
   }

@@ -1,0 +1,8 @@
+# set parameters here to fit your style
+figure.titlesize: 30
+axes.titlesize: 20
+axes.labelsize: 15
+xtick.labelsize: 12
+ytick.labelsize: 12
+text.usetex: False
+axes.formatter.use_mathtext: True
