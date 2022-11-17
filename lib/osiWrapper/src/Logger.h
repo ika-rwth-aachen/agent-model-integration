@@ -7,9 +7,9 @@
 #include "osi_sensorview.pb.h"
 #include "osi_trafficcommand.pb.h"
 
-#include "../lib/spdlog/include/spdlog/spdlog.h"
-#include "../lib/spdlog/include/spdlog/sinks/basic_file_sink.h"
-#include "../lib/spdlog/include/spdlog/sinks/stdout_color_sinks.h"
+#include "spdlog/spdlog.h"
+#include "spdlog/sinks/basic_file_sink.h"
+#include "spdlog/sinks/stdout_color_sinks.h"
 
 #include "AgentModel.h"
 #include "Interface.h"

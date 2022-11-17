@@ -52,7 +52,8 @@ std::vector<double> gradient(std::vector<double> x, std::vector<double> y,
                  ((y[n - 1] - y[n - 2]) / h1 - (y[n - 2] - y[n - 3]) / h2);
   }
   if (order > 2) {
-    SPDLOG_INFO("Orders of higher degrees are not yet implemented");
+    SPDLOG_ERROR("Orders of higher degrees are not yet implemented");
+    exit(EXIT_FAILURE);
   }
 
   return res;
@@ -138,7 +139,6 @@ int xy2Curv(std::vector<Point2D> pos, std::vector<double>& s,
 int closestCenterlinePoint(const Point2D point, const std::vector<Point2D>& cl,
                            Point2D& closest, bool extrap=true) {
 
-  assert(cl.size() > 1);
   if (cl.size() <= 1){
     SPDLOG_ERROR("the centerline path does not have multiple entries: cl.size() = {}", cl.size());
     exit(EXIT_FAILURE);
@@ -304,8 +304,7 @@ double xy2s(const Point2D start, const Point2D end,
             + pow(end_centerline.y - cl[end_idx].y, 2));
     return s;
   }
-  else {
-    SPDLOG_WARN("error with retrieving correct start and end idx from clostestCenterlinePoint");
+  else{
     return 0;
   }
 }

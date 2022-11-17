@@ -36,22 +36,26 @@ void OsiConverter::extractEgoInformation(osi3::SensorView &sensor_view,
   osi3::GroundTruth *ground_truth = sensor_view.mutable_global_ground_truth();
 
   // find ego object
-  try{
-    ego_id_ = sensor_view.host_vehicle_id().value();
-    if (typeid(ego_id_) != typeid(uint64_t) || ego_id_ < 0){
-      throw -1;
-    }
+  ego_id_ = sensor_view.host_vehicle_id().value();
+  if (typeid(ego_id_) != typeid(uint64_t)){
+    SPDLOG_ERROR("ego_id_ from sensor_view.host_vehicle_id() is not of type uint64_t");
   }
-  catch(int){
-    SPDLOG_ERROR("error with value from sensor_view.host_vehicle_id()");
+  if (ego_id_ < 0){
+    SPDLOG_ERROR("ego_id_ from sensor_view.host_vehicle_id() is < 0");
   }
 
+  bool found_ego_ = false;
   for (int i = 0; i < ground_truth->moving_object_size(); i++) {
     if (ground_truth->moving_object(i).id().value() == ego_id_) {
       ego_ = ground_truth->moving_object(i);
       ego_base_ = ego_.base();
+      found_ego_ = true;
       break;
     }
+  }
+  if (!found_ego_){
+    SPDLOG_ERROR("ego_ not found in ground_truth as a moving object");
+    exit(EXIT_FAILURE);
   }
 
   // find ego_lane_id_
@@ -80,10 +84,8 @@ void OsiConverter::extractEgoInformation(osi3::SensorView &sensor_view,
   }
   // no lane assignment possible, take closest lane
   else {
-    Point2D ego_position =
-      Point2D(ego_base_.position().x(), ego_base_.position().y());
-    ego_lane_id_ = closestLane(ground_truth, ego_position);
-    SPDLOG_INFO("no lane assignment possible for ego_lane_id_, took closest lanes id: {}", ego_lane_id_);
+    SPDLOG_ERROR("no lane assignment possible for ego_lane_id_, took closest lanes id: {}", ego_lane_id_);
+    exit(EXIT_FAILURE);
   }
 
   // find lane pointer
@@ -286,7 +288,7 @@ void OsiConverter::newLanes(osi3::SensorView &sensor_view) {
     
   // print lanes
   SPDLOG_INFO("Destination at: {}, {}", dest_point_.x, dest_point_.y);
-  lanes_str = "";
+  std::string lanes_str = "";
   for (auto &lane : lanes_){
     lanes_str.append(" " + std::to_string(lane));
   }
@@ -605,7 +607,6 @@ void OsiConverter::generateJunctionPaths(osi3::SensorView &sensor_view) {
          
         // get next_lane if exist
         auto* next_lane = findLane(lane_id, ground_truth);
-        if (next_lane == nullptr) continue;
 
         // check if next_lane is of type driving
         if (next_lane->classification().type() !=

@@ -64,6 +64,7 @@ osi3::Lane* findLane(uint64_t id, osi3::GroundTruth* ground_truth) {
       return (ground_truth->mutable_lane(i));
   }
   SPDLOG_ERROR("lane with id ({}) could not be found in ground truth", id);
+  exit(EXIT_FAILURE);
   return nullptr;
 }
 
@@ -80,6 +81,7 @@ int findLaneIdx(osi3::GroundTruth* ground_truth, uint64_t id) {
     if (ground_truth->lane(i).id().value() == id) return i;
   }
   SPDLOG_ERROR("lane idx of id ({}) could not be found in ground truth", id);
+  exit(EXIT_FAILURE);
   return -1;
 }
 
@@ -164,8 +166,13 @@ std::vector<int> findAdjacentLanes(osi3::GroundTruth* ground_truth, int lane_idx
         // skip if wrong type
         if (findLane(adjacent_id, ground_truth)->classification().type() != osi3::Lane_Classification_Type_TYPE_DRIVING && findLane(adjacent_id, ground_truth)->classification().type() != osi3::Lane_Classification_Type_TYPE_INTERSECTION) continue;
 
-        if (typeid(adjacent_id) != typeid(uint64_t) || adjacent_id < 0 || adjacent_id > 10000000){
-          SPDLOG_ERROR("adjacent_id of straight adjacent lane pairing {} could not be retrieved", j);
+        if (typeid(adjacent_id) != typeid(uint64_t)){
+          SPDLOG_ERROR("adjacent_id of straight adjacent lane pairing {} is not of type unit64_t", j);
+          exit(EXIT_FAILURE);
+        }
+        if (adjacent_id < 0){
+          SPDLOG_ERROR("adjacent_id of straight adjacent lane pairing {} is < 0", j);
+          exit(EXIT_FAILURE);
         }
 
         lanes.push_back(findLaneIdx(ground_truth, adjacent_id));
@@ -190,8 +197,13 @@ std::vector<int> findAdjacentLanes(osi3::GroundTruth* ground_truth, int lane_idx
           // skip if opposite driving direction (assume same reference line)
           if (findLane(adjacent_id, ground_truth)->classification().centerline_is_driving_direction() != is_driving_direction) continue;
           
-          if (typeid(adjacent_id) != typeid(uint64_t) || adjacent_id < 0 || adjacent_id > 10000000){
-            SPDLOG_ERROR("adjacent_id of left adjacent lane pairing {} could not be retrieved", i);
+          if (typeid(adjacent_id) != typeid(uint64_t)){
+            SPDLOG_ERROR("adjacent_id of left adjacent lane pairing {} is not of type unit64_t", i);
+            exit(EXIT_FAILURE);
+          }
+          if (adjacent_id < 0){
+            SPDLOG_ERROR("adjacent_id of left adjacent lane pairing {} is < 0", i);
+            exit(EXIT_FAILURE);
           }
 
           lanes.push_back(findLaneIdx(ground_truth, adjacent_id));
@@ -211,8 +223,11 @@ std::vector<int> findAdjacentLanes(osi3::GroundTruth* ground_truth, int lane_idx
           // skip if opposite driving direction (assume same reference line)
           if (findLane(adjacent_id, ground_truth)->classification().centerline_is_driving_direction() != is_driving_direction) continue;
           
-          if (typeid(adjacent_id) != typeid(uint64_t) || adjacent_id < 0 || adjacent_id > 10000000){
-            SPDLOG_ERROR("adjacent_id of right adjacent lane pairing {} could not be retrieved", i);
+          if (typeid(adjacent_id) != typeid(uint64_t)){
+            SPDLOG_ERROR("adjacent_id of right adjacent lane pairing {} is not of type unit64_t", i);
+          }
+          if (adjacent_id < 0){
+            SPDLOG_ERROR("adjacent_id of right adjacent lane pairing {} is < 0", i);
           }
 
           lanes.push_back(findLaneIdx(ground_truth, adjacent_id));
