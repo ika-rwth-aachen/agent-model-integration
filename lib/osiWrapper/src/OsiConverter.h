@@ -61,7 +61,6 @@ class OsiConverter {
   // path variables
   std::vector<Point2D> path_centerline_;
   std::vector<Point2D> path_intersection_;
-  std::vector<Point2D> path_intersection_centerline_;
   std::vector<double> path_s_;
   std::vector<double> path_kappa_;
   std::vector<double> path_psi_;
