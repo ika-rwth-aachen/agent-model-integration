@@ -37,9 +37,11 @@ using std::filesystem::current_path;
 class Logger {
   public:
     Logger(){};
-    ~Logger(){};
+    ~Logger(){
+      spdlog::drop_all();
+    };
 
-    void init(uint64_t ego_id);
+    void init_id(uint64_t ego_id);
     void saveDebugInformation(double time, agent_model::Input input, agent_model::State *driver_state, VehicleModel::State *vehicle_state);
 
     void saveOSI(osi3::SensorView &sensor_view,

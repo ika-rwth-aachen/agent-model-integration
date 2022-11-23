@@ -287,14 +287,15 @@ void OsiConverter::newLanes(osi3::SensorView &sensor_view) {
   lanes_changeable_ = lane_group.lanes_changeable;
     
   // print lanes
-  SPDLOG_INFO("Destination at: {}, {}", dest_point_.x, dest_point_.y);
+  auto spd_logger = spdlog::get("multi_sink_"+std::to_string(ego_id_));
+  SPDLOG_LOGGER_INFO(spd_logger, "Destination at: {}, {}", dest_point_.x, dest_point_.y);
   std::string lanes_str = "";
   for (auto &lane : lanes_){
     lanes_str.append(" " + std::to_string(lane));
   }
-  SPDLOG_INFO("With lanes to pass:{}", lanes_str);
+  SPDLOG_LOGGER_INFO(spd_logger, "With lanes to pass:{}", lanes_str);
   if (lane_group.change_amount != 0) {
-    SPDLOG_INFO("Note: {} lane changes are required to reach the destination", lane_group.change_amount);
+    SPDLOG_LOGGER_INFO(spd_logger, "Note: {} lane changes are required to reach the destination", lane_group.change_amount);
   }
 }
 

@@ -9,14 +9,12 @@
  */
 #include "Logger.h"
 
-
-void Logger::init(uint64_t ego_id) {
+void Logger::init_id(uint64_t ego_id) {
   
   active = true;
   ego_id_ = ego_id;
   path_debug_ = DEBUG_OUTDIR;
   path_log_ = LOG_OUTDIR;
-  SPDLOG_INFO("Debugging is enabled and files are stored in: {}", path_debug_);
 
   // create new directories if not exist
   struct stat buffer;
@@ -28,10 +26,13 @@ void Logger::init(uint64_t ego_id) {
   }
 
   // get time string
-  auto time = std::chrono::system_clock::now();
-  auto time_c = std::chrono::system_clock::to_time_t(time);
-  auto time_tm = *std::localtime(&time_c);
-  auto time_string = std::asctime(&time_tm);
+  time_t rawtime;
+  struct tm * timeinfo;
+  time ( &rawtime );
+  timeinfo = localtime ( &rawtime );
+  char output[20];
+  strftime(output, 20, "%Y-%m-%d_%H-%M-%S", timeinfo);
+  auto time_string = std::string(output);
 
   // create sink to write to console
   auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
@@ -39,14 +40,15 @@ void Logger::init(uint64_t ego_id) {
   console_sink->set_pattern("[%^%l%$] %v");
 
   // create sink to write to file
-  auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(path_log_ + "/Logfile - " + time_string + ".txt", true);
-  file_sink->set_level(spdlog::level::trace);
+  auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(path_log_ + "/log_" + "vehicle_" + std::to_string(ego_id_) + "_" + time_string + ".txt", true);
   file_sink->set_pattern("[%^%l%$] %v [%s #%# Function: %!] [Time: %H:%M:%S::%e]");
 
   // set configuration as default logger
-  std::shared_ptr<spdlog::logger> spd_logger = std::make_shared<spdlog::logger>("multi_sink", spdlog::sinks_init_list({console_sink, file_sink}));
-  spd_logger->flush_on(spdlog::level::err);
-  spdlog::set_default_logger(spd_logger);
+  std::shared_ptr<spdlog::logger> spd_logger = std::make_shared<spdlog::logger>("multi_sink_"+std::to_string(ego_id_), spdlog::sinks_init_list({console_sink, file_sink}));
+  spd_logger->flush_on(spdlog::level::trace);
+  spdlog::register_logger(spd_logger);
+
+  SPDLOG_LOGGER_INFO(spd_logger, "Debugging is enabled for id {} and files are stored in: {}", ego_id_, path_debug_);
 }
 
 void Logger::saveOSI(osi3::SensorView &sensor_view,
