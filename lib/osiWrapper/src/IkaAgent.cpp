@@ -141,7 +141,7 @@ int IkaAgent::step(double time, double step_size, osi3::SensorView &sensor_view,
     firstStep = true;
     initialized_ = true;
   }
-  //
+  
   auto spd_logger = spdlog::get("multi_sink_"+std::to_string(id));
   SPDLOG_LOGGER_INFO(spd_logger, "---------- time: {} ---------- id: {} ----------", time, id);
 
