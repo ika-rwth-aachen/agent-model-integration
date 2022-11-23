@@ -144,8 +144,6 @@ int IkaAgent::step(double time, double step_size, osi3::SensorView &sensor_view,
     initialized_ = true;
   }
 
-  // logger.saveOSI(sensor_view, traffic_command);
-  
   // converter converts from osi to agent_model::input
   converter_.convert(sensor_view, traffic_command, _input, _param, _memory);
 
@@ -168,7 +166,8 @@ int IkaAgent::step(double time, double step_size, osi3::SensorView &sensor_view,
   dynamic_request.set_curvature_target(driver_state_->subconscious.kappa);
   this->buildTrafficUpdate(traffic_update);
 
-  // logger.saveDebugInformation(time, _input, driver_state_, vehicle_state_);
+  logger.saveOSI(sensor_view, traffic_command);
+  logger.saveDebugInformation(time, _input, driver_state_, vehicle_state_);
 
   return 0;
 }
