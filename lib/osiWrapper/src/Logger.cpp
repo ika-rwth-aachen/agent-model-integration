@@ -17,7 +17,7 @@ void Logger::init(uint64_t ego_id) {
   // get debug folder
   path_ = std::string(get_current_dir_name()) + "/debug";
   std::cout << "Debugging is enabled and files are stored in: " << path_ << std::endl;
-
+  fs::remove_all(path_);
   // create new directory if not exist
   struct stat buffer;
   if (stat (path_.c_str(), &buffer) != 0) {

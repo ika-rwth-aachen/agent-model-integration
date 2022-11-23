@@ -354,7 +354,9 @@ int interpolateXY2Value(std::vector<double> y, std::vector<Point2D> xy,
  * @return length of inserted gap vector
  */
 
-int calcGap(std::vector<Point2D> p1_p2, std::vector<Point2D>& pos, int idx) {
+std::vector<Point2D> calcGap(std::vector<Point2D> p1_p2) {
+
+  std::vector<Point2D> gap;
 
   // gap start/end plus second last point, respectively
   double x1 = p1_p2[1].x;
@@ -385,7 +387,6 @@ int calcGap(std::vector<Point2D> p1_p2, std::vector<Point2D>& pos, int idx) {
   double cc_y = sin(ang1);
   double cd_y = y1;
 
-  std::vector<Point2D> gapXY;
   int N = 30;  // number of interpolated points
   double ddx = dx / (N - 1);
   double ddy = dy / (N - 1);
@@ -400,13 +401,11 @@ int calcGap(std::vector<Point2D> p1_p2, std::vector<Point2D>& pos, int idx) {
     tx += ddx;
     ty += ddy;
     // add point
-    gapXY.push_back(tmp);
+    gap.push_back(tmp);
   }
 
-  pos.insert(pos.begin() + idx, gapXY.begin(), gapXY.end());
-
-  // return size of gap
-  return gapXY.size();
+  // return gap
+  return gap;
 }
 
 
