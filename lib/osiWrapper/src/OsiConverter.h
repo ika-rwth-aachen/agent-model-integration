@@ -14,6 +14,7 @@
 
 #include "AgentModel.h"
 #include "Interface.h"
+#include "Logger.h"
 
 #include "osi_sensorview.pb.h"
 #include "osi_trafficcommand.pb.h"
@@ -42,6 +43,9 @@ class OsiConverter {
  public:
   OsiConverter(){};
   ~OsiConverter(){};
+
+  void check(osi3::SensorView &sensor_view,
+               osi3::TrafficCommand &traffic_command);
 
   void convert(osi3::SensorView &sensor_view,
                osi3::TrafficCommand &traffic_command, 
@@ -104,6 +108,8 @@ class OsiConverter {
   Point2D dest_point_;
   
   // helper functions
+  void inputCheck(osi3::SensorView &sensor_view);
+
   void preprocess(osi3::SensorView &sensor_view,
                              osi3::TrafficCommand &traffic_command,
                              agent_model::Input &input,

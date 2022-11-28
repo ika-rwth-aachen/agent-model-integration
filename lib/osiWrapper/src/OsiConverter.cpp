@@ -13,12 +13,24 @@
 #include "Utils_osi.h"
 #include "Utils_geometry.h"
 #include "Utils_route.h"
+#include "Utils_checker.h"
+
+void OsiConverter::check(osi3::SensorView &sensor_view,
+                           osi3::TrafficCommand &traffic_command){
+  checkObjects(sensor_view);
+  checkLanes(sensor_view);
+  checkTrafficSignals(sensor_view);
+}
+
+
+
 
 void OsiConverter::convert(osi3::SensorView &sensor_view,
                            osi3::TrafficCommand &traffic_command,
                            agent_model::Input &input,
                            agent_model::Parameters &param,
                            agent_model::Memory &memory) {
+
   extractEgoInformation(sensor_view, input);
 
   preprocess(sensor_view, traffic_command, input, param, memory);
@@ -38,12 +50,18 @@ void OsiConverter::extractEgoInformation(osi3::SensorView &sensor_view,
   // find ego object
   ego_id_ = sensor_view.host_vehicle_id().value();
 
+  bool found_ego_ = false;
   for (int i = 0; i < ground_truth->moving_object_size(); i++) {
     if (ground_truth->moving_object(i).id().value() == ego_id_) {
       ego_ = ground_truth->moving_object(i);
       ego_base_ = ego_.base();
+      found_ego_ = true;
       break;
     }
+  }
+  if (!found_ego_){
+    SPDLOG_ERROR("ego_ not found for id({}) in ground_truth as a moving object", ego_id_);
+    exit(EXIT_FAILURE);
   }
 
   // find ego_lane_id_
@@ -72,9 +90,8 @@ void OsiConverter::extractEgoInformation(osi3::SensorView &sensor_view,
   }
   // no lane assignment possible, take closest lane
   else {
-    Point2D ego_position =
-      Point2D(ego_base_.position().x(), ego_base_.position().y());
-    ego_lane_id_ = closestLane(ground_truth, ego_position);
+    SPDLOG_ERROR("no lane assignment possible for ego_lane_id_, took closest lane id: {}", ego_lane_id_);
+    exit(EXIT_FAILURE);
   }
 
   // find lane pointer
@@ -276,12 +293,14 @@ void OsiConverter::newLanes(osi3::SensorView &sensor_view) {
   lanes_changeable_ = lane_group.lanes_changeable;
     
   // print lanes
-  std::cout << "Destination at: " << dest_point_.x <<","<< dest_point_.y <<"\n";
-  std::cout << "With lanes to pass: ";
-  for (auto &lane : lanes_) std::cout << lane << " ";
-  std::cout << std::endl;
+  SPDLOG_INFO("Destination at: {}, {}", dest_point_.x, dest_point_.y);
+  std::string lanes_str = "";
+  for (auto &lane : lanes_){
+    lanes_str.append(" " + std::to_string(lane));
+  }
+  SPDLOG_INFO("With lanes to pass:{}", lanes_str);
   if (lane_group.change_amount != 0) {
-    std::cout << "Note: " << lane_group.change_amount << " lane changes are required to reach the destination!" << std::endl;
+    SPDLOG_INFO("Info: {} lane changes are required to reach the destination", lane_group.change_amount);
   }
 }
 
@@ -617,7 +636,6 @@ void OsiConverter::generateJunctionPaths(osi3::SensorView &sensor_view) {
          
         // get next_lane if exist
         auto* next_lane = findLane(lane_id, ground_truth);
-        if (next_lane == nullptr) continue;
 
         // check if next_lane is of type driving
         if (next_lane->classification().type() !=

@@ -384,6 +384,7 @@ std::vector<std::vector<int>> createAdjacencyMatrix(osi3::GroundTruth* ground_tr
       adj_matrix[lane_idx][i] = weight_adjacent;
     }
   }
+
   return adj_matrix;
 }
 
@@ -442,11 +443,10 @@ void computeDijkstra (std::vector<std::vector<int>> adj_matrix, std::vector<int>
 		}
 	}
   if (debug){
-    std::cout << "Reachability:" << std::endl;
+    SPDLOG_INFO("Dijkstra Algorithm: Reachability of vertices:");
     for (int i = 0; i < num_of_vertices; i++){
-      std::cout << "Distance ("<< i <<") = " << dist[i] << std::endl;
+      SPDLOG_INFO("Distance ({}) = {}", i, dist[i]);
     }
-    std::cout << std::endl;
   }
 }
 
@@ -496,6 +496,7 @@ void futureLanes(osi3::GroundTruth* ground_truth, const int& start_idx,
   // add starting lane within single lane group, if no route could be found
   if (lane_groups.size() == 0)
   {
+    SPDLOG_INFO("no route could be found for id({}) and dest_id({}), add starting lane within single lane group", start_idx, dest_id);
     LaneGroup group;
     group.id = 0;
     group.change_amount = 0;

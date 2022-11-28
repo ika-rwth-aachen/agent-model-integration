@@ -18,8 +18,10 @@ std::vector<double> gradient(std::vector<double> x, std::vector<double> y,
                              int order) {
 
   std::vector<double> res;
-
-  assert(x.size() == y.size());
+  if (x.size() != y.size()){
+    SPDLOG_ERROR("x and y do not have the same size (x:{}, y:{})", x.size(), y.size());
+    exit(EXIT_FAILURE);
+  }
   int n = x.size();
   res.assign(n, 0);
 
@@ -48,6 +50,10 @@ std::vector<double> gradient(std::vector<double> x, std::vector<double> y,
     h1 = (x[n - 1] - x[n - 2]), h2 = (x[n - 2] - x[n - 3]);
     res[n - 1] = (2.0 / (h1 + h2)) *
                  ((y[n - 1] - y[n - 2]) / h1 - (y[n - 2] - y[n - 3]) / h2);
+  }
+  if (order > 2) {
+    SPDLOG_ERROR("Orders of higher degrees are not yet implemented");
+    exit(EXIT_FAILURE);
   }
 
   return res;
@@ -133,7 +139,10 @@ int xy2Curv(std::vector<Point2D> pos, std::vector<double>& s,
 int closestCenterlinePoint(const Point2D point, const std::vector<Point2D>& cl,
                            Point2D& closest, bool extrap=true) {
 
-  assert(cl.size() > 1);
+  if (cl.size() <= 1){
+    SPDLOG_ERROR("the centerline path does not have multiple entries: cl.size() = {}", cl.size());
+    exit(EXIT_FAILURE);
+  }
 
   // initialize variables
   double min_dist = INFINITY;
@@ -297,7 +306,7 @@ double xy2s(const Point2D start, const Point2D end,
             + pow(end_centerline.y - cl[end_idx].y, 2));
     return s;
   }
-  else {
+  else{
     return 0;
   }
 }

@@ -127,22 +127,23 @@ int IkaAgent::step(double time, double step_size, osi3::SensorView &sensor_view,
                    setlevel4to5::DynamicsRequest &dynamic_request) {
   uint64_t id = sensor_view.host_vehicle_id().value();
 
-  std::cout << "---------- time: " << time << " ---------- id: " << id << " ----------" << std::endl;
-  
   // initialize agent
   bool firstStep = false;
   if (!initialized_) {
+
     osi3::BaseMoving host = sensor_view.host_vehicle_data().location();
     
     IkaAgent::init(host);
 
-    if (fmu_debug_) {
-      logger.init(id);
-    }
+    logger.init(id, fmu_debug_);
+    converter_.check(sensor_view, traffic_command);
     
     firstStep = true;
     initialized_ = true;
   }
+  
+  // print time steps as info
+  SPDLOG_INFO("---------- time: {} ---------- id: {} ----------", time, id);
 
   // converter converts from osi to agent_model::input
   converter_.convert(sensor_view, traffic_command, _input, _param, _memory);
