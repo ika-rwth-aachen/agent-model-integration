@@ -4,3 +4,6 @@
 [submodule "json"]
 	path = lib/osiWrapper/lib/json
 	url = https://github.com/nlohmann/json.git
+[submodule "lib/osiWrapper/lib/open-simulation-interface"]
+	path = lib/osiWrapper/lib/open-simulation-interface
+	url = git@gitlab.setlevel.de:open/osi.git
