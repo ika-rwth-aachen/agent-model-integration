@@ -64,6 +64,7 @@ class OsiConverter {
   
   // path variables
   std::vector<Point2D> path_centerline_;
+  std::vector<Point2D> path_intersection_;
   std::vector<double> path_s_;
   std::vector<double> path_kappa_;
   std::vector<double> path_psi_;
@@ -119,8 +120,7 @@ class OsiConverter {
                             agent_model::Parameters &param);
   void newLanes(osi3::SensorView &sensor_view);
 
-  void classifyManeuver(osi3::SensorView &sensor_view,
-                        agent_model::Input &input);
+  void classifyManeuver(agent_model::Input &input);
 
   void generatePath(osi3::SensorView &sensor_view);
 

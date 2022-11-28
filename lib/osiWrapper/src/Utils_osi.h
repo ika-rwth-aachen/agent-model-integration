@@ -141,9 +141,9 @@ std::vector<int> findAdjacentLanes(osi3::GroundTruth* ground_truth, int lane_idx
   std::vector<int> lanes; 
 
   osi3::Lane lane = ground_truth->lane(lane_idx);
-
+  
   // get driving direction
-  bool is_driving_direction = lane.classification().centerline_is_driving_direction();
+  bool is_driving_direction = lane.classification().centerline_is_driving_direction() || (lane.classification().centerline_size() == 0 && lane.classification().type() == osi3::Lane_Classification_Type_TYPE_INTERSECTION);
   
   for(int k = 0; k < mode.length(); k++)
   {  
