@@ -90,7 +90,7 @@ void OsiConverter::extractEgoInformation(osi3::SensorView &sensor_view,
   }
   // no lane assignment possible, take closest lane
   else {
-    SPDLOG_ERROR("no lane assignment possible for ego_lane_id_, took closest lanes id: {}", ego_lane_id_);
+    SPDLOG_ERROR("no lane assignment possible for ego_lane_id_, took closest lane id: {}", ego_lane_id_);
     exit(EXIT_FAILURE);
   }
 
@@ -300,7 +300,7 @@ void OsiConverter::newLanes(osi3::SensorView &sensor_view) {
   }
   SPDLOG_INFO("With lanes to pass:{}", lanes_str);
   if (lane_group.change_amount != 0) {
-    SPDLOG_INFO("Note: {} lane changes are required to reach the destination", lane_group.change_amount);
+    SPDLOG_INFO("Info: {} lane changes are required to reach the destination", lane_group.change_amount);
   }
 }
 

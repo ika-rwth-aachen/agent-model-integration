@@ -135,9 +135,7 @@ int IkaAgent::step(double time, double step_size, osi3::SensorView &sensor_view,
     
     IkaAgent::init(host);
 
-    if (fmu_debug_) {
-      logger.init(id);
-    }
+    logger.init(id, fmu_debug_);
     converter_.check(sensor_view, traffic_command);
     
     firstStep = true;

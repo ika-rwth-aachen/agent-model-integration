@@ -39,7 +39,7 @@ class Logger {
       spdlog::shutdown();
     };
 
-    void init(uint64_t ego_id);
+    void init(uint64_t ego_id, bool debug);
     void saveDebugInformation(double time, agent_model::Input input, agent_model::State *driver_state, VehicleModel::State *vehicle_state);
 
     void saveOSI(osi3::SensorView &sensor_view,
@@ -47,9 +47,10 @@ class Logger {
 
   private:
 
-    bool active = false;
+    bool debug_ = false;
 
     uint64_t ego_id_;
+    std::string time_string;
 
     json json_logger_;
     int json_counter_ = 0;

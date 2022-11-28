@@ -9,9 +9,9 @@
  */
 #include "Logger.h"
 
-void Logger::init(uint64_t ego_id) {
+void Logger::init(uint64_t ego_id, bool debug=false) {
   
-  active = true;
+  debug_ = debug;
   ego_id_ = ego_id;
   path_debug_ = DEBUG_OUTDIR;
   path_log_ = LOG_OUTDIR;
@@ -32,9 +32,11 @@ void Logger::init(uint64_t ego_id) {
   timeinfo = localtime ( &rawtime );
   char output[20];
   strftime(output, 20, "%Y-%m-%d_%H-%M-%S", timeinfo);
-  auto time_string = std::string(output);
+  time_string = std::string(output);
 
+  // setup logging sinks
   std::vector<spdlog::sink_ptr> sinks;
+  
   // create sink to write to console
   auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_st>();
   console_sink->set_level(spdlog::level::trace);
@@ -42,7 +44,7 @@ void Logger::init(uint64_t ego_id) {
   sinks.push_back(console_sink);
 
   // create sink to write to file
-  auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_st>(path_log_ + "/log_" + std::to_string(ego_id)+ time_string + ".txt", true);
+  auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_st>(path_log_ + "/log_" + std::to_string(ego_id) + "_" + time_string + ".txt", true);
   file_sink->set_pattern("[%^%l%$] %v [%s #%# Function: %!] [Time: %H:%M:%S::%e]");
   sinks.push_back(file_sink);
 
@@ -58,13 +60,13 @@ void Logger::init(uint64_t ego_id) {
 void Logger::saveOSI(osi3::SensorView &sensor_view,
                    osi3::TrafficCommand &traffic_command) {
   
-  if (!active) return;
+  if (!debug_) return;
   
   std::string sensor_view_string;
   sensor_view.SerializeToString(&sensor_view_string);
 
   std::ofstream file_sensor_view;
-  file_sensor_view.open(path_debug_ + "/sensor_view.osi", std::ofstream::app|std::ofstream::binary);
+  file_sensor_view.open(path_debug_ + "/sensor_view_" + time_string + ".osi", std::ofstream::app|std::ofstream::binary);
   file_sensor_view.imbue(std::locale::classic());
 
   uint32_t val_sv = (uint32_t) sensor_view.ByteSizeLong();
@@ -78,7 +80,7 @@ void Logger::saveOSI(osi3::SensorView &sensor_view,
   traffic_command.SerializeToString(&traffic_command_string);
 
   std::ofstream file_traffic_command;
-  file_traffic_command.open(path_debug_ + "/traffic_command.osi", std::ofstream::app|std::ofstream::binary);
+  file_traffic_command.open(path_debug_ + "/traffic_command_" + time_string + ".osi", std::ofstream::app|std::ofstream::binary);
   file_traffic_command.imbue(std::locale::classic());
 
   uint32_t val_tc = (uint32_t) traffic_command.ByteSizeLong();
@@ -89,13 +91,13 @@ void Logger::saveOSI(osi3::SensorView &sensor_view,
 
 
   std::string debug_sensorview_string = sensor_view.DebugString();
-  std::ofstream debug_sensorview (path_debug_ + "/sensor_view.txt",  std::ofstream::app);
+  std::ofstream debug_sensorview (path_debug_ + "/sensor_view_" + time_string + ".txt",  std::ofstream::app);
   debug_sensorview << debug_sensorview_string;
   debug_sensorview.close();
 
 
   std::string debug_trafficcommand_string = traffic_command.DebugString();
-  std::ofstream debug_trafficcommand (path_debug_ + "/traffic_command.txt",  std::ofstream::app);
+  std::ofstream debug_trafficcommand (path_debug_ + "/traffic_command_" + time_string + ".txt",  std::ofstream::app);
   debug_trafficcommand << debug_trafficcommand_string;
   debug_trafficcommand.close();
 }
@@ -103,7 +105,7 @@ void Logger::saveOSI(osi3::SensorView &sensor_view,
 
 void Logger::saveDebugInformation(double time, agent_model::Input input, agent_model::State *driver_state, VehicleModel::State *vehicle_state) {
   
-  if (!active) return;
+  if (!debug_) return;
 
   // convert time and dt_log to milliseconds (uint64_t) to allow modulo operator
   // add 0.5 for proper rounding
@@ -195,7 +197,7 @@ void Logger::saveDebugInformation(double time, agent_model::Input input, agent_m
 
   // save debug file
   if (uint64_t(1000*time + 0.5) % uint64_t(1000*dt_save_ + 0.5) == 0) {
-    std::ofstream output(path_debug_ + "/vehicle_" + std::to_string(ego_id_) + ".json", std::ofstream::out);
+    std::ofstream output(path_debug_ + "/vehicle_" + std::to_string(ego_id_) + "_" + time_string + ".json", std::ofstream::out);
     output << json_logger_.dump(4);
     output.close();
   }

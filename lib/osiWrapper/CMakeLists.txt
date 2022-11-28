@@ -105,7 +105,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
     ${OSI}/include/osi3
     ${PROTOBUF}/include
     ${JSON_LIB}
-	${SPD_LIB}
+    ${SPD_LIB}
     src)
 
 # Build ikaDriver after protobuf and osi has been downloaded and installed
