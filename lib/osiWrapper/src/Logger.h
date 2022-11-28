@@ -50,7 +50,7 @@ class Logger {
     bool debug_ = false;
 
     uint64_t ego_id_;
-    std::string time_string;
+    std::string debug_string;
 
     json json_logger_;
     int json_counter_ = 0;
