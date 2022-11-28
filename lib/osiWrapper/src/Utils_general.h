@@ -77,7 +77,7 @@ void removeDuplicates(std::vector<Point2D> &v, double eps = 0.01) {
     double dv = pow(v[i + 1].x - v[i].x, 2) + pow(v[i + 1].y - v[i].y, 2);
 
     if (dv < eps) {
-        v.erase(v.begin() + i);
+        v.erase(v.begin() + (i+1));
         i--;
     }
   }
