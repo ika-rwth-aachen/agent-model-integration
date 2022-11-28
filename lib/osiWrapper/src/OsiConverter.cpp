@@ -13,12 +13,24 @@
 #include "Utils_osi.h"
 #include "Utils_geometry.h"
 #include "Utils_route.h"
+#include "Utils_checker.h"
+
+void OsiConverter::check(osi3::SensorView &sensor_view,
+                           osi3::TrafficCommand &traffic_command){
+  checkObjects(sensor_view);
+  checkLanes(sensor_view);
+  checkTrafficSignals(sensor_view);
+}
+
+
+
 
 void OsiConverter::convert(osi3::SensorView &sensor_view,
                            osi3::TrafficCommand &traffic_command,
                            agent_model::Input &input,
                            agent_model::Parameters &param,
                            agent_model::Memory &memory) {
+
   extractEgoInformation(sensor_view, input);
 
   preprocess(sensor_view, traffic_command, input, param, memory);
@@ -37,12 +49,6 @@ void OsiConverter::extractEgoInformation(osi3::SensorView &sensor_view,
 
   // find ego object
   ego_id_ = sensor_view.host_vehicle_id().value();
-  if (typeid(ego_id_) != typeid(uint64_t)){
-    SPDLOG_ERROR("ego_id_ from sensor_view.host_vehicle_id() is not of type uint64_t");
-  }
-  if (ego_id_ < 0){
-    SPDLOG_ERROR("ego_id_ from sensor_view.host_vehicle_id() is < 0");
-  }
 
   bool found_ego_ = false;
   for (int i = 0; i < ground_truth->moving_object_size(); i++) {
@@ -54,7 +60,7 @@ void OsiConverter::extractEgoInformation(osi3::SensorView &sensor_view,
     }
   }
   if (!found_ego_){
-    SPDLOG_ERROR("ego_ not found in ground_truth as a moving object");
+    SPDLOG_ERROR("ego_ not found for id({}) in ground_truth as a moving object", ego_id_);
     exit(EXIT_FAILURE);
   }
 
@@ -287,15 +293,14 @@ void OsiConverter::newLanes(osi3::SensorView &sensor_view) {
   lanes_changeable_ = lane_group.lanes_changeable;
     
   // print lanes
-  auto spd_logger = spdlog::get("multi_sink_"+std::to_string(ego_id_));
-  SPDLOG_LOGGER_INFO(spd_logger, "Destination at: {}, {}", dest_point_.x, dest_point_.y);
+  SPDLOG_INFO("Destination at: {}, {}", dest_point_.x, dest_point_.y);
   std::string lanes_str = "";
   for (auto &lane : lanes_){
     lanes_str.append(" " + std::to_string(lane));
   }
-  SPDLOG_LOGGER_INFO(spd_logger, "With lanes to pass:{}", lanes_str);
+  SPDLOG_INFO("With lanes to pass:{}", lanes_str);
   if (lane_group.change_amount != 0) {
-    SPDLOG_LOGGER_INFO(spd_logger, "Note: {} lane changes are required to reach the destination", lane_group.change_amount);
+    SPDLOG_INFO("Note: {} lane changes are required to reach the destination", lane_group.change_amount);
   }
 }
 

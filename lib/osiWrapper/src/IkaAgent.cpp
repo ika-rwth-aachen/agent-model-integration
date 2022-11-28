@@ -130,20 +130,22 @@ int IkaAgent::step(double time, double step_size, osi3::SensorView &sensor_view,
   // initialize agent
   bool firstStep = false;
   if (!initialized_) {
+
     osi3::BaseMoving host = sensor_view.host_vehicle_data().location();
     
     IkaAgent::init(host);
 
     if (fmu_debug_) {
-      logger.init_id(id);
+      logger.init(id);
     }
+    converter_.check(sensor_view, traffic_command);
     
     firstStep = true;
     initialized_ = true;
   }
   
-  auto spd_logger = spdlog::get("multi_sink_"+std::to_string(id));
-  SPDLOG_LOGGER_INFO(spd_logger, "---------- time: {} ---------- id: {} ----------", time, id);
+  // print time steps as info
+  SPDLOG_INFO("---------- time: {} ---------- id: {} ----------", time, id);
 
   // converter converts from osi to agent_model::input
   converter_.convert(sensor_view, traffic_command, _input, _param, _memory);

@@ -36,9 +36,10 @@ class Logger {
     Logger(){};
     ~Logger(){
       spdlog::drop_all();
+      spdlog::shutdown();
     };
 
-    void init_id(uint64_t ego_id);
+    void init(uint64_t ego_id);
     void saveDebugInformation(double time, agent_model::Input input, agent_model::State *driver_state, VehicleModel::State *vehicle_state);
 
     void saveOSI(osi3::SensorView &sensor_view,
@@ -57,6 +58,4 @@ class Logger {
     std::string path_log_;
     double dt_log_ = 0.1;
     double dt_save_ = 1.0;
-
-    std::shared_ptr<spdlog::logger> spd_logger;
 };

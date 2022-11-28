@@ -60,8 +60,9 @@ int getXY(osi3::LaneBoundary* l, std::vector<Point2D>& pos) {
 osi3::Lane* findLane(uint64_t id, osi3::GroundTruth* ground_truth) {
 
   for (int i = 0; i < ground_truth->lane_size(); i++) {
-    if (ground_truth->lane(i).id().value() == id)
+    if (ground_truth->lane(i).id().value() == id){
       return (ground_truth->mutable_lane(i));
+    }
   }
   SPDLOG_ERROR("lane with id ({}) could not be found in ground truth", id);
   exit(EXIT_FAILURE);
@@ -100,6 +101,7 @@ osi3::LaneBoundary* findLaneBoundary(uint64_t id, osi3::GroundTruth* ground_trut
       return (ground_truth->mutable_lane_boundary(i));
   }
   SPDLOG_ERROR("lane boundary with id ({}) could not be found in ground truth", id);
+  exit(EXIT_FAILURE);
   return nullptr;
 }
 

@@ -44,6 +44,9 @@ class OsiConverter {
   OsiConverter(){};
   ~OsiConverter(){};
 
+  void check(osi3::SensorView &sensor_view,
+               osi3::TrafficCommand &traffic_command);
+
   void convert(osi3::SensorView &sensor_view,
                osi3::TrafficCommand &traffic_command, 
                agent_model::Input &input,
@@ -102,8 +105,13 @@ class OsiConverter {
   
   // where to end the simulation
   Point2D dest_point_;
+
+  // spdlogger pointer
+  std::shared_ptr<spdlog::logger> spd_logger;
   
   // helper functions
+  void inputCheck(osi3::SensorView &sensor_view);
+
   void preprocess(osi3::SensorView &sensor_view,
                              osi3::TrafficCommand &traffic_command,
                              agent_model::Input &input,

@@ -9,7 +9,7 @@
  */
 #include "Logger.h"
 
-void Logger::init_id(uint64_t ego_id) {
+void Logger::init(uint64_t ego_id) {
   
   active = true;
   ego_id_ = ego_id;
@@ -34,21 +34,25 @@ void Logger::init_id(uint64_t ego_id) {
   strftime(output, 20, "%Y-%m-%d_%H-%M-%S", timeinfo);
   auto time_string = std::string(output);
 
+  std::vector<spdlog::sink_ptr> sinks;
   // create sink to write to console
-  auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+  auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_st>();
   console_sink->set_level(spdlog::level::trace);
   console_sink->set_pattern("[%^%l%$] %v");
+  sinks.push_back(console_sink);
 
   // create sink to write to file
-  auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(path_log_ + "/log_" + "vehicle_" + std::to_string(ego_id_) + "_" + time_string + ".txt", true);
+  auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_st>(path_log_ + "/log_" + std::to_string(ego_id)+ time_string + ".txt", true);
   file_sink->set_pattern("[%^%l%$] %v [%s #%# Function: %!] [Time: %H:%M:%S::%e]");
+  sinks.push_back(file_sink);
 
   // set configuration as default logger
-  std::shared_ptr<spdlog::logger> spd_logger = std::make_shared<spdlog::logger>("multi_sink_"+std::to_string(ego_id_), spdlog::sinks_init_list({console_sink, file_sink}));
+  std::shared_ptr<spdlog::logger> spd_logger = std::make_shared<spdlog::logger>("logger", begin(sinks), end(sinks));
   spd_logger->flush_on(spdlog::level::trace);
-  spdlog::register_logger(spd_logger);
 
-  SPDLOG_LOGGER_INFO(spd_logger, "Debugging is enabled for id {} and files are stored in: {}", ego_id_, path_debug_);
+  spdlog::set_default_logger(spd_logger);
+
+  SPDLOG_INFO("Debugging is enabled for id {} and files are stored in: {}", ego_id_, path_debug_);
 }
 
 void Logger::saveOSI(osi3::SensorView &sensor_view,
