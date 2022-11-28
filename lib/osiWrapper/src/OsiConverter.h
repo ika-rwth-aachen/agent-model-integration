@@ -105,9 +105,6 @@ class OsiConverter {
   
   // where to end the simulation
   Point2D dest_point_;
-
-  // spdlogger pointer
-  std::shared_ptr<spdlog::logger> spd_logger;
   
   // helper functions
   void inputCheck(osi3::SensorView &sensor_view);
