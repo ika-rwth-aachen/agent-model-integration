@@ -6,11 +6,11 @@ before_script:
   - git clone https://$USER_AUTH_CODE@$OPENPASS_URL /openpass
   - pip3 install --upgrade pip
   - pip3 install -r /openpass/pyOpenPASS/requirements.txt
-  - cp ikaDriverAgent.fmu /ikaDriverAgent.fmu
+  - cp ikaAgentModel.fmu /ikaAgentModel.fmu
 
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
-  OPENPASS_URL: "gitlab.ika.rwth-aachen.de/setlevel/openpass.git"
+  OPENPASS_URL: "gitlab.ika.rwth-aachen.de/fb-fi/simulation/openpass/agent-model-integration.git"
   USER_AUTH_CODE: "geller:glpat-q8KxApwGqCAMWNaak2qW"
 
 stages:
@@ -26,10 +26,10 @@ build_fmu:
   script: 
     - cmake -DCMAKE_BUILD_TYPE=Release .
     - make -j10
-    - cp lib/ikaDriverAgent.fmu ikaDriverAgent.fmu
+    - cp lib/ikaAgentModel.fmu ikaAgentModel.fmu
   artifacts:
     paths:
-      - ikaDriverAgent.fmu
+      - ikaAgentModel.fmu
 
 test_simple:
   stage: test

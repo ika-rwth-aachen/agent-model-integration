@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(ikaDriverAgent)
+project(ikaAgentModel)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -14,7 +14,7 @@ endif()
 
 # configure build version
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-  message(STATUS "Setting ikaDriverAgent build type to '${default_build_type}' as none was specified.")
+  message(STATUS "Setting ikaAgentModel build type to '${default_build_type}' as none was specified.")
   set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE
       STRING "Choose the type of build." FORCE)
   # Set the possible values of build type for cmake-gui
@@ -23,7 +23,7 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 
 # FMU output directory
-set(FMU_OUTDIR "${CMAKE_SOURCE_DIR}/lib" CACHE STRING "Fmu output directory")
+set(FMU_OUTDIR "${CMAKE_SOURCE_DIR}/../openpass" CACHE STRING "Fmu output directory")
 
 # Logging
 set(PUBLIC_LOGGING OFF CACHE BOOL "Enable logging via FMI logger")
