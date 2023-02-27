@@ -23,7 +23,7 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 
 # FMU output directory
-set(FMU_OUTDIR "${CMAKE_SOURCE_DIR}/../openpass" CACHE STRING "Fmu output directory")
+set(FMU_OUTDIR "${CMAKE_SOURCE_DIR}/lib" CACHE STRING "Fmu output directory")
 
 # Logging
 set(PUBLIC_LOGGING OFF CACHE BOOL "Enable logging via FMI logger")
@@ -40,7 +40,7 @@ string(TIMESTAMP FMUTIMESTAMP UTC)
 string(MD5 FMUGUID modelDescription.in.xml)
 configure_file(modelDescription.xml modelDescription.xml @ONLY)
 
-# Define target library ikaDriver
+# Define target library ikaAgentModel
 add_library(${PROJECT_NAME} SHARED 
 	src/OSMPTrafficAgent.cpp 
 	)
