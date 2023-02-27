@@ -37,6 +37,8 @@ test_simple:
     - build_fmu  
   script:
     - cd /openpass/pyOpenPASS
+    - ls /openpass
+    - ls /openpass/test
     - >-
       python3 ./main.py 
       -s /openpass 
