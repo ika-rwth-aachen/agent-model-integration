@@ -10,7 +10,7 @@
   generationDateAndTime="@FMUTIMESTAMP@"
   variableNamingConvention="structured">
   <CoSimulation
-    modelIdentifier="ikaDriverAgent"
+    modelIdentifier="ikaAgentModel"
     canHandleVariableCommunicationStepSize="true"
     canNotUseMemoryManagementFunctions="true">
     <SourceFiles>

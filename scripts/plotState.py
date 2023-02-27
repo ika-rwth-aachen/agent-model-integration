@@ -3,9 +3,37 @@ import pathlib
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+from math import sqrt
 import argparse
 import os
 import time
+
+default_width = 3.4 # 3.4 (2 columns)   2.1 (3 columns)
+default_ratio = (sqrt(5.0) - 1.0) / 2.0 # golden mean
+
+# paper configuration
+# import matplotlib as mpl
+# mpl.use('pgf')
+# mpl.rcParams.update({
+#     "pgf.texsystem": "pdflatex",
+#     'font.family': 'serif',
+#     'text.usetex': True,
+#     'pgf.rcfonts': False,
+#     "font.serif": [],
+#     "font.size": 8,
+#     "font.sans-serif": [],
+#     "font.monospace": [],
+#     "figure.figsize": [default_width, default_width * default_ratio],
+#     "pgf.preamble": [
+#        # put LaTeX preamble declarations here
+#        r"\usepackage{graphicx}",
+#        #r"\usepackage[utf8x]{inputenc}",
+#        #r"\usepackage[T1]{fontenc}",
+#        # macros defined here will be available in plots, e.g.:
+#        # You can use dummy implementations, since you LaTeX document
+#        # will render these properly, anyway.
+#    ],
+# })
 
 # parameters
 # colors of the set_level project
@@ -18,7 +46,8 @@ light_blue = '#0a6799'
 
 # figure sizes
 cm = 1/2.54  # conversion of inches to cm
-figure_size_one = (7*cm, 4.1*cm)
+
+figure_size_one = [default_width, default_width * default_ratio]
 figure_size_multi = (45*cm, 30*cm)
 
 # set dpi
@@ -49,11 +78,11 @@ def helperOneVal(axs, x, y, p, unit, a = False, name = True, color = light_blue)
     return axs
 
 # helper function for plotting two values. possible to change both variable terms to the desired names 
-def helperTwoVal(axs1, axs2, x, y1, y2, p, p2, unit1, unit2, a = False, name_1 = True, name_2 = True, color_1 = light_blue, color_2 = dark_red):
+def helperTwoVal(axs1, axs2, x, y1, y2, p, p2, unit1, unit2, label1, label2, a = False, name_1 = True, name_2 = True, color_1 = light_blue, color_2 = dark_red):
 
     if not a:
         axs1.plot(x, y1, color_1)
-        axs2.plot(x, y2, color_2)
+        axs2.plot(x, y2, color_2, linestyle='dashed')
 
     axs1.tick_params(axis = 'y', which = 'both', right = False, colors = color_1)
     axs2.tick_params(axis = 'y', which = 'both', right = True, labelright = True, left = False, labelleft = False, colors = color_2)
@@ -70,8 +99,8 @@ def helperTwoVal(axs1, axs2, x, y1, y2, p, p2, unit1, unit2, a = False, name_1 =
     axs2.spines['right'].set_color(color_2)
 
     axs1.set_xlabel(f"time [{r'$s$'}]")
-    axs1.set_ylabel(f'{p} [{unit1}]', color = color_1)
-    axs2.set_ylabel(f'{p2} [{unit2}]', color = color_2)
+    axs1.set_ylabel(f'{label1} [{unit1}]', color = color_1)
+    axs2.set_ylabel(f'{label2} [{unit2}]', color = color_2)
     if name_1 != True:
         axs1.set_ylabel(name_1, color = color_1)
     if name_2 != True:
@@ -87,7 +116,7 @@ def plotState(args):
     if args.plot in {'driver_state', 'ego_input', 'vehicle_state'}:
         plt.style.use(os.path.join(pathlib.PurePath(), "style_multi.mplstyle"))
     else:
-        plt.style.use(os.path.join(pathlib.PurePath(), "style_single.mplstyle"))
+        plt.style.use("style_single.mplstyle")
 
     data = json.load(args.file)
 
@@ -96,10 +125,16 @@ def plotState(args):
     'ego_d', 'ego_v', 'ego_a', 'ego_s', 'ego_psi', 'ego_d_psi',
     'vs_s', 'vs_v', 'vs_a', 'vs_d_psi', 'vs_kappa', 'vs_delta',
     'THW']
+    
+    list_label = ['t', 'distance', 'velocity', 'ds','ds_max', 'v_local', 'v_pred',
+    'a', 'd_psi', r'$\kappa$',
+    'lateral offset', 'v', 'a', 's', 'psi', 'd_psi',
+    's', 'v', 'a', 'vs_d_psi', r'$\kappa$', 'vs_delta',
+    'THW']
 
-    list_var_unit = [r'$s$', r'$m$', r'$\frac{m}{s}$', r'$m$', r'$m$', r'$\frac{m}{s}$', r'$\frac{m}{s}$', r'$\frac{m}{s^2}$', r'$rad$', r'$rad$', 
-    r'$m$', r'$\frac{m}{s}$', r'$\frac{m}{s^2}$', r'$m$', r'$rad$', r'$rad$',
-    r'$m$', r'$\frac{m}{s}$', r'$\frac{m}{s^2}$', r'$rad$', r'$rad$', r'$m$',
+    list_var_unit = [r'$s$', r'$m$', r'$m/s$', r'$m$', r'$m$', r'$m/s$', r'$m/s$', r'$m/s^2$', r'$rad$', r'$1/m$', 
+    r'$m$', r'$m/s$', r'$m/s^2$', r'$m$', r'$rad$', r'$rad$',
+    r'$m$', r'$m/s$', r'$m/s^2$', r'$rad$', r'$1/m$', r'$m$',
     r'$s$']
 
     dict_var = {var: [] for var in list_var}
@@ -178,7 +213,7 @@ def plotState(args):
                     k += 1
         plt.suptitle('Driver States')
         plt.tight_layout()
-        plt.show()
+        #plt.show()
         name = 'driver_state'
     
 
@@ -194,9 +229,8 @@ def plotState(args):
                 k += 1
         plt.suptitle('Ego Inputs')
         plt.tight_layout()
-        plt.show()
+        #plt.show()
         name = 'ego_input'
-
 
     if args.plot == 'vehicle_state':
         fig, axs = plt.subplots(3, 2, figsize = figure_size_multi)
@@ -210,9 +244,8 @@ def plotState(args):
                 k += 1
         plt.suptitle('Vehicle States')
         plt.tight_layout()
-        plt.show()
+        #plt.show()
         name = 'vehicle_state'
-
 
     # for plotting only one value over t
     if p in list(dict_var.keys()) and p2 == 'none' and not args.animation:
@@ -223,7 +256,7 @@ def plotState(args):
         unit = list_var_unit[list(dict_var.keys()).index(p)]
         axs = helperOneVal(axs, x, y, p, unit)
 
-        plt.show()
+        #plt.show()
         name = f'{p}'
         
     if p in list(dict_var.keys()) and p2 == 'none' and args.animation:
@@ -243,7 +276,7 @@ def plotState(args):
             return line,
 
         anim = animation.FuncAnimation(fig, animate_one, frames = x.size + 1, interval = 50, blit = True) # set speed over interval: 100=normal, 50=double
-        plt.show()
+        #plt.show()
         name = f'{p}'
     
     # plotting two values over t
@@ -254,13 +287,16 @@ def plotState(args):
         unit1 = list_var_unit[list(dict_var.keys()).index(p)]
         unit2 = list_var_unit[list(dict_var.keys()).index(p2)]
 
+        label1 = list_label[list(dict_var.keys()).index(p)]
+        label2 = list_label[list(dict_var.keys()).index(p2)]
+
         x = np.array(dict_var['t'])
         y1 = np.array(dict_var[p])
         y2 = np.array(dict_var[p2])
 
-        axs1, axs2 = helperTwoVal(axs1, axs2, x, y1, y2, p, p2, unit1, unit2)
+        axs1, axs2 = helperTwoVal(axs1, axs2, x, y1, y2, p, p2, unit1, unit2, label1, label2)
         name = f'{p}_and_{p2}'
-        plt.show()
+        #plt.show()
     
     if p in list(dict_var.keys()) and p2 in list(dict_var.keys()) and args.animation:
         fig, axs1 = plt.subplots(figsize = figure_size_one, tight_layout = True)
@@ -272,11 +308,15 @@ def plotState(args):
         unit1 = list_var_unit[list(dict_var.keys()).index(p)]
         unit2 = list_var_unit[list(dict_var.keys()).index(p2)]
 
+        label1 = list_label[list(dict_var.keys()).index(p)]
+        label2 = list_label[list(dict_var.keys()).index(p2)]
+
         x = np.array(dict_var['t'])
         y1 = np.array(dict_var[p])
         y2 = np.array(dict_var[p2])
 
-        axs1, axs2 = helperTwoVal(axs1, axs2, x, y1, y2, p, p2, unit1, unit2, a = True) # pass here alternative names or colors as arguments
+        axs1, axs2 = helperTwoVal(axs1, axs2, x, y1, y2, p, p2, unit1, unit2, label1, label2, a = True) # pass here alternative names or colors as arguments
+
 
         line1.set_data([], [])
         line2.set_data([], [])
@@ -287,21 +327,21 @@ def plotState(args):
             return line1, line2
 
         lines = [line1, line2]
-        axs1.legend(lines, [f'{p}', f'{p2}'], frameon = True, loc = legend_location)
+        #axs1.legend(lines, [f'{p}', f'{p2}'], frameon = True, loc = legend_location)
 
         # change properties here if tight_layout not preferred
         #plt.subplots_adjust(left=0.19, right=0.77, bottom=0.25, top=0.88, wspace=0.5)
 
         anim = animation.FuncAnimation(fig, animate_two, frames = x.size + 1, interval = 50, blit = True) # set speed over interval: 100=normal, 50=double
         name = f'{p}_and_{p2}'
-        plt.show()
+        #plt.show()
 
 
     if args.save and not args.animation:
         if not args.output.exists():
             os.mkdir(args.output)
 
-        format_plot = 'png'
+        format_plot = 'pgf'
         file_name = pathlib.PurePath(args.output, name)
         plt.savefig(f'{file_name}.{format_plot}', format=format_plot, dpi=set_dpi)
 
@@ -309,7 +349,7 @@ def plotState(args):
         if not args.output.exists():
             os.mkdir(args.output)
 
-        format_anim = 'gif'
+        format_anim = 'mp4'
         file_name = pathlib.PurePath(args.output, name)
         anim.save(f'{file_name}.{format_anim}', dpi=set_dpi)
 
