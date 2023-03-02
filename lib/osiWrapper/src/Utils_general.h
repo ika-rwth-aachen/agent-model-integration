@@ -69,6 +69,7 @@ double wrapAngle(double psi) {
 void removeDuplicates(std::vector<Point2D> &v, double eps = 0.01) {
   
   if (v.size() == 0) {
+    SPDLOG_INFO("vector is of size 0, therefore could not remove duplicates");
     return;
   }
 
@@ -76,7 +77,7 @@ void removeDuplicates(std::vector<Point2D> &v, double eps = 0.01) {
     double dv = pow(v[i + 1].x - v[i].x, 2) + pow(v[i + 1].y - v[i].y, 2);
 
     if (dv < eps) {
-        v.erase(v.begin() + i);
+        v.erase(v.begin() + (i+1));
         i--;
     }
   }
@@ -84,7 +85,7 @@ void removeDuplicates(std::vector<Point2D> &v, double eps = 0.01) {
 
 
 /**
- * @brief find a point in a point vector based on distanc (small tolerance eps) 
+ * @brief find a point in a point vector based on distance (small tolerance eps) 
  * 
  * @param points vector of points
  * @param point specfic point for checking
@@ -99,5 +100,6 @@ int findPointInPoints(std::vector<Point2D> points, Point2D point, double eps = 0
         return i;
     }
   }
+  SPDLOG_ERROR("point in point vector could not be found within a distance of eps = {}", eps);
   return -1;
 }

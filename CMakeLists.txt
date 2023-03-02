@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(ikaDriverAgent)
+project(ikaAgentModel)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -14,7 +14,7 @@ endif()
 
 # configure build version
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-  message(STATUS "Setting ikaDriverAgent build type to '${default_build_type}' as none was specified.")
+  message(STATUS "Setting ikaAgentModel build type to '${default_build_type}' as none was specified.")
   set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE
       STRING "Choose the type of build." FORCE)
   # Set the possible values of build type for cmake-gui
@@ -40,7 +40,7 @@ string(TIMESTAMP FMUTIMESTAMP UTC)
 string(MD5 FMUGUID modelDescription.in.xml)
 configure_file(modelDescription.xml modelDescription.xml @ONLY)
 
-# Define target library ikaDriver
+# Define target library ikaAgentModel
 add_library(${PROJECT_NAME} SHARED 
 	src/OSMPTrafficAgent.cpp 
 	)

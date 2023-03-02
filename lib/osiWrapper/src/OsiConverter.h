@@ -14,6 +14,7 @@
 
 #include "AgentModel.h"
 #include "Interface.h"
+#include "Logger.h"
 
 #include "osi_sensorview.pb.h"
 #include "osi_trafficcommand.pb.h"
@@ -43,6 +44,9 @@ class OsiConverter {
   OsiConverter(){};
   ~OsiConverter(){};
 
+  void check(osi3::SensorView &sensor_view,
+               osi3::TrafficCommand &traffic_command);
+
   void convert(osi3::SensorView &sensor_view,
                osi3::TrafficCommand &traffic_command, 
                agent_model::Input &input,
@@ -60,6 +64,7 @@ class OsiConverter {
   
   // path variables
   std::vector<Point2D> path_centerline_;
+  std::vector<Point2D> path_intersection_;
   std::vector<double> path_s_;
   std::vector<double> path_kappa_;
   std::vector<double> path_psi_;
@@ -103,6 +108,8 @@ class OsiConverter {
   Point2D dest_point_;
   
   // helper functions
+  void inputCheck(osi3::SensorView &sensor_view);
+
   void preprocess(osi3::SensorView &sensor_view,
                              osi3::TrafficCommand &traffic_command,
                              agent_model::Input &input,
@@ -113,8 +120,7 @@ class OsiConverter {
                             agent_model::Parameters &param);
   void newLanes(osi3::SensorView &sensor_view);
 
-  void classifyManeuver(osi3::SensorView &sensor_view,
-                        agent_model::Input &input);
+  void classifyManeuver(agent_model::Input &input);
 
   void generatePath(osi3::SensorView &sensor_view);
 

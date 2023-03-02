@@ -1,55 +1,57 @@
-# Driver model for SET Level 4to5
-> CI pipeline results:  
-> * [**Latest FMU** (Ubuntu 20.04 LTS)](../-/jobs/artifacts/master/raw/lib/ikaDriverAgent.fmu?job=deploy_to_artifacts) 
+# Agent Model
 
-This driver model is a closed loop agent model that reacts on other traffic participants and is able to perform basic maneuvers. 
-The model is based on the work done by [1] and got extended with an OSI adapter. The model described in [1] is available on [GitHub](https://github.com/ika-rwth-aachen/SimDriver).
-The driver model was developed by the institute for automotive engineering, RWTH Aachen University within the scope of the SET Level project.
+> CI pipeline results:  
+> * [**Latest FMU** (Ubuntu 20.04 LTS)](../-/jobs/artifacts/master/raw/ikaAgentModel.fmu?job=build_fmu) 
+
+This agent model is a responsive, closed loop and human-like agent that reacts on other traffic participants and is able to perform basic maneuvers. 
+The model is based on the work done by [1] and got extended with an OSI adapter and a modular simulation architecture. The model described in [1] is available on [GitHub](https://github.com/ika-rwth-aachen/SimDriver). The agent model was developed by the institute for automotive engineering, RWTH Aachen University.
+
+<img src="Documentation/teaser.png" style="width: 600px;"/>  
+
 
 ## Modeling Approach
-In the following, the basic maneuvers and the implementation concept are outlined.
+In the following, the implementation concept is outlined.
 
 ### Framework
 Before describing the model itself, its framework is briefly described. 
 The implementation uses the [OSI Sensor Model Packaging (OSMP)](https://github.com/OpenSimulationInterface/osi-sensor-model-packaging) framework to pack the library as a standardized [FMU](https://fmi-standard.org/). This way, the model may be integrated in any simulation platform that supports the [Open Simulation Interface (OSI)](https://github.com/OpenSimulationInterface/open-simulation-interface) and FMI.
-Fig. 1 illustrates the wrapping around the actual behavior model to end up with an encapsulated FMU. The input of the FMU consists of an `osi3::SensorView`  for the environment representation and an `osi3::TrafficCommand` which holds information on the agent's task in the simulation run. On the output side the simulator can either use the provided `osi3::TrafficUpdate` to manage the updated pose of the agent or forward the generated `sl4to5::DynamicsRequest` message to another module that then calculates an `osi3::TrafficUpdate` from that.  
+Fig. 1 illustrates the wrapping around the actual behavior and dynamics model to end up with an encapsulated FMU. The input of the FMU consists of an `osi3::SensorView`  for the environment representation and an `osi3::TrafficCommand` which holds information on the agent's task in the simulation run. On the output side the simulator can either use the provided `osi3::TrafficUpdate` to manage the updated pose of the agent or forward the generated `sl::DynamicsRequest` message to another module that then calculates an `osi3::TrafficUpdate`.  
 Inside the FMU, internal interfaces are used to feed the ika behavior model and then calculate its new position with a simple vehicle model and controllers for pedal values and the steering angle.
 
-![osmp](Documentation/drivermodel_osmp.png)  
-Fig. 1: OSMP wrapping of the driver model  
+![osmp](Documentation/architecture.png)  
+Fig. 1: OSMP wrapping of the agent model  
 
 ### Behavior Model
 The model core is hosted on [GitHub](https://github.com/ika-rwth-aachen/SimDriver) and its basic structure and features are described in this section.
+
 #### Information Flow
-An extensive discussion of Fig. 2 can be found in [1]. However, the basic concept of the driver model shall be outlined. 
+An extensive discussion of Fig. 2 can be found in [1]. However, the basic concept of the agent model shall be outlined. 
 On the left side of Fig. 2 the input interface is shown. It consists of information on the environment (static + dynamic), the route and the ego vehicle. Inside the model these signals are processed the *Perception* layer. This is currently just a "pass-through" layer, but it would be possible to model the driver's perception ability by disturbing the signals.  
-The *Processing* layer takes the environment and traffic data and enriches them, e.g., with TTC or THW measures. Then, the most suitable maneuver is selected and modeled by conscious guiding variables (e.g. a time headway to a leading vehicle that should be maintained). Conscious variables are controlled by the sub-conscious variables acceleration and curvature (*Note:* `Z-micro` corresponds to the `sl4to5::DynamicsRequest` message here).  
+The *Processing* layer takes the environment and traffic data and enriches them, e.g., with TTC or THW measures. Then, the most suitable maneuver is selected and modeled by conscious guiding variables (e.g. a time headway to a leading vehicle that should be maintained). Conscious variables are controlled by the sub-conscious variables acceleration and curvature (*Note:* `Z-micro` corresponds to the `sl::DynamicsRequest` message here).  
 The *Action* column is actually located outside the "ika Agent Model" block from Fig. 1, but modeled in the most right block of Fig. 1.
 
 ![architecutre](Documentation/04_architecture-en.svg)  
 Fig. 2: Behavior model architecture (taken from [2])  
 
 #### Basic Maneuvers
-This section should help enlighten some blocks within the *Processing* column of Fig. 2. The driver model is implemented such that basic driving maneuvers are modeled which enables the model to perform most driving tasks that are required in urban scenarios (cf. [1]). Those capabilities or basic maneuvers are illustrated as a state diagram in Fig. 3.
+This section should help enlighten some blocks within the *Processing* column of Fig. 2. The agent model is implemented such that basic driving maneuvers are modeled which enables the model to perform most driving tasks that are required in urban scenarios (cf. [1]). Those capabilities or basic maneuvers are illustrated as a state diagram in Fig. 3.
 
 ![states](Documentation/states-original.svg)  
 Fig. 3: Behavior model basic maneuvers (taken from [2])  
 
-**TODO: brief description of state diagram**
 
 ## Parametrization
-Currently, the model can only be parameterized directly in the source code. A solution for a FMU based approach will be done by the end of SET Level.  
+Currently, most of the model parameters can only be parameterized directly in the source code in [IkaAgent.cpp](src/IkaAgent.cpp). Only some parameters can be set as FMU parameters such as:
 
-In the source file [IkaAgent.cpp](src/IkaAgent.cpp) within the `init` function all parameters can be adjusted. Possible parameters of interest might be:
-```C++
-drParam->velocity.vComfort // The default velocity the driver reaches on a straight road ( in *m/s*)
-drParam->velocity.thwMax // The maximum time headway the driver starts to react (in *s*)
-drParam->follow.timeHeadway  // The time headway the driver tries to reach during following (in *s*)
-```
+| Parameter   | Description                                                            |
+| ------------| ---------------------------------------------------------------------- |
+| `v_init`    | The initial velocity of the agent (in *m/s*)                          |
+| `v_desired` | The desired velocity the agent reaches on a straight road (in *m/s*)  |
+
 
 ## Interface
 
-### OSI Input Fields
+### Input: Required Fields in OSI3::SensorView
 The following fields are required as OSI inputs for the driver model
 
 ```
@@ -105,8 +107,10 @@ traffic_command
     follow_trajectory_action
     speed_action --> the desired velocity is updated
 ```
-### OSI Output Fields
-The following fields are filled from the driver model and can be used by the simulator.
+
+
+### Output: Fields in OSI3::TrafficUpdate and SL::DynamicsRequest filled by the agent model
+The following fields are filled from the agent model and can be used by the simulator.
 
 ```
 osi3
@@ -118,48 +122,29 @@ osi3
     orientation (yaw)
     orientation_rate (yaw)
 
-# Can be used when a separate dynamic module is used
-# Note: these are *desired* values from the behavior model
-setlevel4to5
+# Can be used when a separate dynamic module is used (not the agent's dynamics module)
+sl
+  # Can be used when a separate dynamic module is used (not the agent's dynamics module)
   dynamic_request
     curvature_target
     longitudinal_acceleration_target
+# Note: these are *desired* values from the behavior model
 ```
-## Build
-Brief build instructions for compilation with `MSYS2 MinGW 64-bit` on Windows.  
+
+
+## Build Instructions
+
 ### Initialize Repository
+
 Befor starting the build process, the repositorie's submodules need to be downloaded
 ```
 git submodule update --init --recursive
 ```
 
-### Protobuf dependency
-Due to the usage of the CMake feature 'ExternalProject_Add()', there is no need to download and build protobuf from source source anymore. 
+:warning: Protobuf: Due to the usage of the CMake feature 'ExternalProject_Add()', there is no need to download and build protobuf from source source anymore. 
   
-### Windows Build FMU
-1. Start `MSYS2 MinGW 64-bit` shell
-1. Create a `build` directory and enter it:
-    ```
-    mkdir build && cd build
-    ```  
 
-2. Execute CMake:
-    ```
-    cmake -G "MSYS Makefiles" -DCMAKE_BUILD_TYPE=Release ..
-    ```  
-
-    Please note: The default build directory for the `FMU` is the subfolder `lib/`. If a specific `FMU` output dir shall be used, set the variable `FMU_OUTDIR`, e.g.
-    ```
-    cmake -G "MSYS Makefiles" -DCMAKE_BUILD_TYPE=Release -DFMU_OUTDIR=<dir> ..
-    ```  
-
-3. Compile the library:
-    ```
-    make.exe
-    ```
-    Optional: `make.exe -j4` for building on multiple cores (replace `4` with an arbitrary number).
-
-### Linux Build FMU
+### Build Model in Ubuntu 20.04
 1. Create a `build` directory and enter it:
     ```
     mkdir build && cd build
@@ -181,10 +166,12 @@ Due to the usage of the CMake feature 'ExternalProject_Add()', there is no need 
     ```
     Optional: `make -j4` for building on multiple cores (replace `4` with an arbitrary number).
 
-## Debugging
+
+### Debugging
 The external FMU parameter `debug` enables debugging log information in the `${workspace}/debug` folder as `json` file and holds information about `horizon`, `vehicle_state` and `driver_state` at each timestep.
 
 In addition the plot python scripts in [scripts](scripts) can be used to visualize the debug information with `matplotlib`.
+
 ## Licensing
 **Distributed under the [MIT License](LICENSE).**
 

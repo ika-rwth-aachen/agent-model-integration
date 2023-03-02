@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
     int sv_count = 0;
     while (found_sv)
     {
-        std::cout << "Senvor view count (including empty): " << sv_count++ << "\n";
+        std::cout << "Sensor view count (including empty): " << sv_count++ << "\n";
         // Perform open loop step of the driver model
         if (sv.has_global_ground_truth())
         {

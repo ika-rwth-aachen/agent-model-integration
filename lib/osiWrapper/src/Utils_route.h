@@ -36,9 +36,8 @@ uint64_t closestLane(osi3::GroundTruth* ground_truth, const Point2D point) {
     osi3::Lane cur_lane;
     cur_lane.CopyFrom(ground_truth->lane(i));
 
-    // skip free lane boundary lanes 
-    //    (no distance calculation due to arbitrary sorted points)
-    if (cur_lane.classification().free_lane_boundary_id_size() > 0)
+    // skip intersections without centerlines
+    if (cur_lane.classification().centerline_size() == 0 && cur_lane.classification().type() == osi3::Lane_Classification_Type_TYPE_INTERSECTION)
       continue;
       
     getXY(&cur_lane, centerline);
@@ -133,7 +132,7 @@ JunctionPath calcJunctionPath(osi3::GroundTruth* ground_truth, uint64_t lane_id)
  * @param ground_truth 
  * @return std::vector<int> 
  */
-std::vector<int> isReachable(int cur_idx, int dest_idx, osi3::GroundTruth* ground_truth) {
+std::vector<int> isReachable(int cur_idx, int dest_idx, osi3::GroundTruth* ground_truth, std::vector<int> distance_straight) {
 
   std::vector<int> route;
 
@@ -150,8 +149,11 @@ std::vector<int> isReachable(int cur_idx, int dest_idx, osi3::GroundTruth* groun
   // recursivly try to reach the destination from adjacent lanes
   for (int j = 0; j < adjacent_lanes.size(); j++) 
   {
-    route = isReachable(adjacent_lanes[j], dest_idx, ground_truth);
-    
+    // stop searching in this direction if distance to destination is higher than before
+    if (distance_straight[cur_idx] < distance_straight[adjacent_lanes[j]]){
+      continue;
+    }
+    route = isReachable(adjacent_lanes[j], dest_idx, ground_truth, distance_straight);
     if (route.size() > 0)  
     {
       route.push_back(cur_idx);
@@ -175,7 +177,7 @@ std::vector<int> isReachable(int cur_idx, int dest_idx, osi3::GroundTruth* groun
  * @param mode can be a combindation of 'L' and 'R', determine allowed changes
  * @return std::vector<LaneGroup> 
  */
-std::vector<LaneGroup> calculateLaneGroups(int base_idx, int dest_idx, osi3::GroundTruth* ground_truth, std::vector<int> distance) {
+std::vector<LaneGroup> calculateLaneGroups(int base_idx, int dest_idx, osi3::GroundTruth* ground_truth, std::vector<int> distance, std::vector<int> distance_straight) {
 
   std::vector<LaneGroup> groups;
   LaneGroup group; 
@@ -184,7 +186,7 @@ std::vector<LaneGroup> calculateLaneGroups(int base_idx, int dest_idx, osi3::Gro
   if (distance[base_idx] > 1000000) return groups;
 
   // check if destination can be reached from current lane WITHOUT lane change
-  std::vector<int> route = isReachable(base_idx, dest_idx, ground_truth);
+  std::vector<int> route = isReachable(base_idx, dest_idx, ground_truth, distance_straight);
 
   // if destination can be reached from current lane, add single lane group
   if (route.size() > 0) 
@@ -245,7 +247,7 @@ std::vector<LaneGroup> calculateLaneGroups(int base_idx, int dest_idx, osi3::Gro
       if (!reachable) {
       
         reachable = true;
-        groups = calculateLaneGroups(min_idx, dest_idx, ground_truth, distance);
+        groups = calculateLaneGroups(min_idx, dest_idx, ground_truth, distance, distance_straight);
         dir = type;
       }
     }  
@@ -314,7 +316,7 @@ std::vector<std::vector<int>> createAdjacencyMatrix(osi3::GroundTruth* ground_tr
       uint64_t suc_id = cls.lane_pairing(j).successor_lane_id().value();
 
       // in driving direction:
-      if (cls.centerline_is_driving_direction()) {
+      if (cls.centerline_is_driving_direction() || (cls.type() == osi3::Lane_Classification_Type_TYPE_INTERSECTION && cls.centerline_size() == 0)) {
         if (suc_id == -1) continue;
         
         auto* next_lane = findLane(suc_id, ground_truth);
@@ -382,6 +384,7 @@ std::vector<std::vector<int>> createAdjacencyMatrix(osi3::GroundTruth* ground_tr
       adj_matrix[lane_idx][i] = weight_adjacent;
     }
   }
+
   return adj_matrix;
 }
 
@@ -440,11 +443,10 @@ void computeDijkstra (std::vector<std::vector<int>> adj_matrix, std::vector<int>
 		}
 	}
   if (debug){
-    std::cout << "Reachability:" << std::endl;
+    SPDLOG_INFO("Dijkstra Algorithm: Reachability of vertices:");
     for (int i = 0; i < num_of_vertices; i++){
-      std::cout << "Distance ("<< i <<") = " << dist[i] << std::endl;
+      SPDLOG_INFO("Distance ({}) = {}", i, dist[i]);
     }
-    std::cout << std::endl;
   }
 }
 
@@ -470,16 +472,20 @@ void futureLanes(osi3::GroundTruth* ground_truth, const int& start_idx,
 
   // create an adjacency matrix out of the ground truth
   std::vector<std::vector<int>> adj_matrix;
+  std::vector<std::vector<int>> adj_matrix_straight;
   adj_matrix = createAdjacencyMatrix(ground_truth);
+  adj_matrix_straight = createAdjacencyMatrix(ground_truth, 1, 0); //INT_MAX
 
   // calculate shortest path with Dijkstra out of the adjacency matrix
   std::vector<int> dist(ground_truth->lane_size());
+  std::vector<int> dist_straight(ground_truth->lane_size());
 
   // dest_idx is the start point for which we compute dijkstra
   computeDijkstra(adj_matrix, dist, dest_idx);
+  computeDijkstra(adj_matrix_straight, dist_straight, dest_idx);
 
   // calculate lane groups
-  lane_groups = calculateLaneGroups(start_idx, dest_idx, ground_truth, dist);
+  lane_groups = calculateLaneGroups(start_idx, dest_idx, ground_truth, dist, dist_straight);
 
   // shift ids so that ego lane group has id 0
   for (int i = 0; i < lane_groups.size(); i++)
@@ -490,6 +496,7 @@ void futureLanes(osi3::GroundTruth* ground_truth, const int& start_idx,
   // add starting lane within single lane group, if no route could be found
   if (lane_groups.size() == 0)
   {
+    SPDLOG_INFO("no route could be found for id({}) and dest_id({}), add starting lane within single lane group", start_idx, dest_id);
     LaneGroup group;
     group.id = 0;
     group.change_amount = 0;

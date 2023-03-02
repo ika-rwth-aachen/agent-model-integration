@@ -82,6 +82,12 @@ message("Protobuf installation directory " ${PROTOBUF})
 
 # Json library for debug files
 set(JSON_LIB lib/json/include)
+# Spdlogger library for logging and debugging purposes
+set(SPD_LIB lib/spdlog/include)
+# Debug output directory
+add_definitions(-DDEBUG_OUTDIR="${CMAKE_SOURCE_DIR}/debug")
+# Log output directory
+add_definitions(-DLOG_OUTDIR="${CMAKE_SOURCE_DIR}/logs")
 
 # Setup osi wrapper library
 add_library(${PROJECT_NAME} STATIC 
@@ -99,6 +105,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
     ${OSI}/include/osi3
     ${PROTOBUF}/include
     ${JSON_LIB}
+    ${SPD_LIB}
     src)
 
 # Build ikaDriver after protobuf and osi has been downloaded and installed

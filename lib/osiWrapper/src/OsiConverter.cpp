@@ -13,12 +13,24 @@
 #include "Utils_osi.h"
 #include "Utils_geometry.h"
 #include "Utils_route.h"
+#include "Utils_checker.h"
+
+void OsiConverter::check(osi3::SensorView &sensor_view,
+                           osi3::TrafficCommand &traffic_command){
+  checkObjects(sensor_view);
+  checkLanes(sensor_view);
+  checkTrafficSignals(sensor_view);
+}
+
+
+
 
 void OsiConverter::convert(osi3::SensorView &sensor_view,
                            osi3::TrafficCommand &traffic_command,
                            agent_model::Input &input,
                            agent_model::Parameters &param,
                            agent_model::Memory &memory) {
+
   extractEgoInformation(sensor_view, input);
 
   preprocess(sensor_view, traffic_command, input, param, memory);
@@ -38,12 +50,18 @@ void OsiConverter::extractEgoInformation(osi3::SensorView &sensor_view,
   // find ego object
   ego_id_ = sensor_view.host_vehicle_id().value();
 
+  bool found_ego_ = false;
   for (int i = 0; i < ground_truth->moving_object_size(); i++) {
     if (ground_truth->moving_object(i).id().value() == ego_id_) {
       ego_ = ground_truth->moving_object(i);
       ego_base_ = ego_.base();
+      found_ego_ = true;
       break;
     }
+  }
+  if (!found_ego_){
+    SPDLOG_ERROR("ego_ not found for id({}) in ground_truth as a moving object", ego_id_);
+    exit(EXIT_FAILURE);
   }
 
   // find ego_lane_id_
@@ -72,9 +90,8 @@ void OsiConverter::extractEgoInformation(osi3::SensorView &sensor_view,
   }
   // no lane assignment possible, take closest lane
   else {
-    Point2D ego_position =
-      Point2D(ego_base_.position().x(), ego_base_.position().y());
-    ego_lane_id_ = closestLane(ground_truth, ego_position);
+    SPDLOG_ERROR("no lane assignment possible for ego_lane_id_, took closest lane id: {}", ego_lane_id_);
+    exit(EXIT_FAILURE);
   }
 
   // find lane pointer
@@ -96,9 +113,9 @@ void OsiConverter::preprocess(osi3::SensorView &sensor_view,
                               agent_model::Parameters &param,
                               agent_model::Memory &memory) 
 {
-  // analyize traffic commands
+  // analyze traffic commands
   processTrafficCommand(traffic_command, param);
-
+ 
   // if lane changed 
   if (memory.laneChange.switchLane != 0)
   {
@@ -120,7 +137,7 @@ void OsiConverter::preprocess(osi3::SensorView &sensor_view,
   generateJunctionPaths(sensor_view);
 
   // determine type of maneuver on intersection
-  classifyManeuver(sensor_view, input);
+  classifyManeuver(input);
 
   // unset flag
   calculate_lanes_ = false;
@@ -276,12 +293,14 @@ void OsiConverter::newLanes(osi3::SensorView &sensor_view) {
   lanes_changeable_ = lane_group.lanes_changeable;
     
   // print lanes
-  std::cout << "Destination at: " << dest_point_.x <<","<< dest_point_.y <<"\n";
-  std::cout << "With lanes to pass: ";
-  for (auto &lane : lanes_) std::cout << lane << " ";
-  std::cout << std::endl;
+  SPDLOG_INFO("Destination at: {}, {}", dest_point_.x, dest_point_.y);
+  std::string lanes_str = "";
+  for (auto &lane : lanes_){
+    lanes_str.append(" " + std::to_string(lane));
+  }
+  SPDLOG_INFO("With lanes to pass:{}", lanes_str);
   if (lane_group.change_amount != 0) {
-    std::cout << "Note: " << lane_group.change_amount << " lane changes are required to reach the destination!" << std::endl;
+    SPDLOG_INFO("Info: {} lane changes are required to reach the destination", lane_group.change_amount);
   }
 }
 
@@ -299,6 +318,7 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view) {
 
   // clear path variable when new path is generated
   path_centerline_.clear();
+  path_intersection_.clear();
   path_s_.clear();
   path_psi_.clear();
   path_kappa_.clear();
@@ -319,11 +339,11 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view) {
     osi3::Lane *lane = findLane(l, ground_truth);
 
     // determine lane_type
-    bool is_free_boundary_lane = false;
-    if (lane->classification().free_lane_boundary_id_size() > 0 &&
-        lane->classification().type() ==
-          osi3::Lane_Classification_Type_TYPE_INTERSECTION) {
-      is_free_boundary_lane = true;
+    bool is_free_intersection_area = false;
+    if (lane->classification().type() ==
+          osi3::Lane_Classification_Type_TYPE_INTERSECTION && lane->classification().centerline_size() == 0
+        ) {
+      is_free_intersection_area = true;
     }
 
     // calculate approaching_junction
@@ -332,12 +352,15 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view) {
       ego_approaching_junction_ = true;
     }
 
-    if (!is_free_boundary_lane) {
+    if (!is_free_intersection_area) {
 
       // get centerline_points
       std::vector<Point2D> centerline_points;
       getXY(lane, centerline_points);
 
+      if(ego_approaching_junction_){
+        path_intersection_ = centerline_points;
+      }
 
       // iterate over all centerline_points on lane;
       for (int i = 0; i < centerline_points.size(); i++)
@@ -438,16 +461,20 @@ void OsiConverter::generatePath(osi3::SensorView &sensor_view) {
   if (gap_idx > 0) {
     std::vector<Point2D> gap_points(&path_centerline_[gap_idx - 2],
                                     &path_centerline_[gap_idx + 2]);
-    int n_gap = calcGap(gap_points, path_centerline_, gap_idx);
 
-    std::vector<double> dummy_width (n_gap, -1);
+    path_intersection_ = calcGap(gap_points);
+
+    path_centerline_.insert(path_centerline_.begin() + gap_idx, path_intersection_.begin(), path_intersection_.end());
+
+    std::vector<double> dummy_width (path_intersection_.size(), -1);
     path_width_.insert(path_width_.begin() + gap_idx, dummy_width.begin(), dummy_width.end());
 
-    std::vector<double> dummy_toff (n_gap, 0);
+    std::vector<double> dummy_toff (path_intersection_.size(), 0);
     path_toff_left_.insert(path_toff_left_.begin() + gap_idx, dummy_toff.begin(), dummy_toff.end());
     path_toff_right_.insert(path_toff_right_.begin() + gap_idx, dummy_toff.begin(), dummy_toff.end());
   }
 
+  removeDuplicates(path_centerline_);
 
   // calculate s, psi, kappa from centerline
   xy2Curv(path_centerline_, path_s_, path_psi_, path_kappa_);
@@ -591,13 +618,12 @@ void OsiConverter::generateJunctionPaths(osi3::SensorView &sensor_view) {
       // iterate over all lane pairings to find starting lanes
       for (auto &l_pairs : lane->classification().lane_pairing()) 
       {
-        // always take antecessor if free lane boundary intersection
-        if (lane->classification().free_lane_boundary_id_size() > 0)
+        // always take antecessor if no centerlines available
+        if (lane->classification().type() == osi3::Lane_Classification_Type_TYPE_INTERSECTION && lane->classification().centerline_size() == 0)
         {
           if (!l_pairs.has_antecessor_lane_id()) break;
           lane_id = l_pairs.antecessor_lane_id().value();
         }
-        // if openPASS intersection "hack"
         else {
           if (lane->classification().centerline_is_driving_direction()) {
             if (!l_pairs.has_antecessor_lane_id()) break;
@@ -610,7 +636,6 @@ void OsiConverter::generateJunctionPaths(osi3::SensorView &sensor_view) {
          
         // get next_lane if exist
         auto* next_lane = findLane(lane_id, ground_truth);
-        if (next_lane == nullptr) continue;
 
         // check if next_lane is of type driving
         if (next_lane->classification().type() !=
@@ -658,36 +683,19 @@ void OsiConverter::generateJunctionPaths(osi3::SensorView &sensor_view) {
  * @param sensor_view osi sensor view from first time step
  * @param input agent_models input
  */
-void OsiConverter::classifyManeuver(osi3::SensorView &sensor_view,
-                                    agent_model::Input &input) {
-
-  osi3::GroundTruth *ground_truth = sensor_view.mutable_global_ground_truth();
+void OsiConverter::classifyManeuver(agent_model::Input &input) {
 
   // Assumption: at least one lane of lanes_ is of type INTERSECION
 
-  // get all path positions on intersection
-  std::vector<Point2D> positions;
-  for (auto it : lanes_) {
-    osi3::Lane *lane = findLane(it, ground_truth);
-    if (lane->classification().type() ==
-        osi3::Lane_Classification_Type_TYPE_INTERSECTION) {
-      if (lane->classification().free_lane_boundary_id_size() > 0) {
-        // TODO: not yet implemented for standard OSI
-      } else {
-        getXY(lane, positions);
-      }
-    }
-  }
-
   // remove duplicates (if ds is very small)
-  removeDuplicates(positions);
+  removeDuplicates(path_intersection_);
 
-  if (positions.empty() || positions.size() < 3) {
+  if (path_intersection_.empty() || path_intersection_.size() < 3) {
     input.vehicle.maneuver = agent_model::Maneuver::STRAIGHT;
   } else {
     // calculate curvature k
     std::vector<double> s, k, p;
-    xy2Curv(positions, s, p, k);
+    xy2Curv(path_intersection_, s, p, k);
 
     double avg = std::accumulate(k.cbegin(), k.cend(), 0.0) / k.size();
     double eps = 0.01;
@@ -1250,7 +1258,14 @@ void OsiConverter::fillLanes(osi3::SensorView &sensor_view,
 
   // get ego lane points
   std::vector<Point2D> ego_lane_points;
-  getXY(ego_lane_ptr_, ego_lane_points);
+  if (ego_lane_ptr_->classification().type() ==
+          osi3::Lane_Classification_Type_TYPE_INTERSECTION && ego_lane_ptr_->classification().centerline_size() == 0) 
+  {
+    ego_lane_points = path_intersection_;
+  } else {
+    getXY(ego_lane_ptr_, ego_lane_points);
+  }
+  
 
   // get ego lane group information
   LaneGroup ego_lane_group = findLaneGroup(lane_groups_, ego_lane_group_id_);
@@ -1331,8 +1346,15 @@ void OsiConverter::fillLanes(osi3::SensorView &sensor_view,
 
         // get ds of current lane
         std::vector<Point2D> lane_points;
-        getXY(findLane(cur_lane_id, ground_truth), lane_points);
-        
+        osi3::Lane* cur_lane = findLane(cur_lane_id, ground_truth);
+        if (cur_lane->classification().type() ==
+          osi3::Lane_Classification_Type_TYPE_INTERSECTION && cur_lane->classification().centerline_size() == 0) 
+        {
+          lane_points = path_intersection_;
+        } else {
+          getXY(cur_lane, lane_points);
+        }
+
         // calculate lane_ds
         double start_psi = atan2(lane_points[1].y - lane_points[0].y, lane_points[1].x - lane_points[0].x);
         double lane_ds = xy2s(lane_points.front(), lane_points.back(), lane_points, start_psi);

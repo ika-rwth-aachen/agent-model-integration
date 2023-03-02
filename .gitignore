@@ -1,4 +1,5 @@
 debug/
+logs/
 build/
 test/traces/
 
