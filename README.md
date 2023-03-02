@@ -3,8 +3,10 @@
 This agent model is a responsive, closed loop and human-like agent that reacts on other traffic participants and is able to perform basic maneuvers. 
 The model is based on the work done by [1] and got extended with an OSI adapter and a modular simulation architecture. The model described in [1] is available on [GitHub](https://github.com/ika-rwth-aachen/SimDriver). The agent model was developed by the institute for automotive engineering, RWTH Aachen University.
 
-<img src="doc/teaser.png" style="width: 600px;"/>  
-
+<p align="center">
+<img src="doc/teaser.png" width="600px"/>  
+</p>
+Fig. 1: Intersection scenario populated by multiple agents within the exemplary simulation tool CARLA. The agent model's main capabilities are highlighted to demonstrate a responsive and human-like behavior. In addition, the general integration process is illustrated, starting with the development of the agent model, subsequent simulation integration, and final testing.
 
 ## Modeling Approach
 In the following, the implementation concept is outlined.
@@ -12,29 +14,31 @@ In the following, the implementation concept is outlined.
 ### Framework
 Before describing the model itself, its framework is briefly described. 
 The implementation uses the [OSI Sensor Model Packaging (OSMP)](https://github.com/OpenSimulationInterface/osi-sensor-model-packaging) framework to pack the library as a standardized [FMU](https://fmi-standard.org/). This way, the model may be integrated in any simulation platform that supports the [Open Simulation Interface (OSI)](https://github.com/OpenSimulationInterface/open-simulation-interface) and FMI.
-Fig. 1 illustrates the wrapping around the actual behavior and dynamics model to end up with an encapsulated FMU. The input of the FMU consists of an `osi3::SensorView`  for the environment representation and an `osi3::TrafficCommand` which holds information on the agent's task in the simulation run. On the output side the simulator can either use the provided `osi3::TrafficUpdate` to manage the updated pose of the agent or forward the generated `sl::DynamicsRequest` message to another module that then calculates an `osi3::TrafficUpdate`.  
-Inside the FMU, internal interfaces are used to feed the ika behavior model and then calculate its new position with a simple vehicle model and controllers for pedal values and the steering angle.
+Fig. 2 illustrates the wrapping around the actual behavior and dynamics model to end up with an encapsulated FMU. The input of the FMU consists of an `osi3::SensorView` for the environment representation and an `osi3::TrafficCommand` which holds information on the agent's task in the simulation run. On the output side the simulator can either use the provided `osi3::TrafficUpdate` to manage the updated pose of the agent or forward the generated `sl::DynamicsRequest` message to another module that then calculates an `osi3::TrafficUpdate`.  
+Inside the FMU, internal interfaces are used to feed the behavior model and then calculate its new position with a simple vehicle model and controllers for pedal values and the steering angle.
 
-![osmp](doc/architecture.png)  
-Fig. 1: OSMP wrapping of the agent model  
+<p align="center">
+<img src="doc/architecture.png" width="600px"/>  
+</p>
+Fig. 2: Agent model packed as FMU integrated into an OSI-based simulation architecture.  
 
 ### Behavior Model
 The model core is hosted on [GitHub](https://github.com/ika-rwth-aachen/SimDriver) and its basic structure and features are described in this section.
 
 #### Information Flow
-An extensive discussion of Fig. 2 can be found in [1]. However, the basic concept of the agent model shall be outlined. 
-On the left side of Fig. 2 the input interface is shown. It consists of information on the environment (static + dynamic), the route and the ego vehicle. Inside the model these signals are processed the *Perception* layer. This is currently just a "pass-through" layer, but it would be possible to model the driver's perception ability by disturbing the signals.  
+An extensive discussion of Fig. 3 can be found in [1]. However, the basic concept of the agent model shall be outlined. 
+On the left side of Fig. 3 the input interface is shown. It consists of information on the environment (static + dynamic), the route and the ego vehicle. Inside the model these signals are processed the *Perception* layer. This is currently just a "pass-through" layer, but it would be possible to model the driver's perception ability by disturbing the signals.  
 The *Processing* layer takes the environment and traffic data and enriches them, e.g., with TTC or THW measures. Then, the most suitable maneuver is selected and modeled by conscious guiding variables (e.g. a time headway to a leading vehicle that should be maintained). Conscious variables are controlled by the sub-conscious variables acceleration and curvature (*Note:* `Z-micro` corresponds to the `sl::DynamicsRequest` message here).  
-The *Action* column is actually located outside the "ika Agent Model" block from Fig. 1, but modeled in the most right block of Fig. 1.
+The *Action* column is actually located outside the "Behavior Model" block from Fig. 2, but modeled in the most right block of Fig. 2.
 
 ![architecutre](doc/04_architecture-en.svg)  
-Fig. 2: Behavior model architecture (taken from [2])  
+Fig. 3: Behavior model architecture (taken from [2])  
 
 #### Basic Maneuvers
-This section should help enlighten some blocks within the *Processing* column of Fig. 2. The agent model is implemented such that basic driving maneuvers are modeled which enables the model to perform most driving tasks that are required in urban scenarios (cf. [1]). Those capabilities or basic maneuvers are illustrated as a state diagram in Fig. 3.
+This section should help enlighten some blocks within the *Processing* column of Fig. 3. The agent model is implemented such that basic driving maneuvers are modeled which enables the model to perform most driving tasks that are required in urban scenarios (cf. [1]). Those capabilities or basic maneuvers are illustrated as a state diagram in Fig. 4.
 
 ![states](doc/states-original.svg)  
-Fig. 3: Behavior model basic maneuvers (taken from [2])  
+Fig. 4: Behavior model basic maneuvers (taken from [2])  
 
 
 ## Parametrization
