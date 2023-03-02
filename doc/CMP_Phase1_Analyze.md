@@ -20,6 +20,7 @@ This Document is based on the Credible Modelling Process (CMP) and fills it from
 > * Criticality of decision of engineering task
 
 **Repos of [SUC1](https://gitlab.sl4to5.de/deliverables/use-case-definitions/usecase1/-/blob/master/Milestone2/Documentation/SUC1_CSP_Phase1_Analyze.md) , [SUC2](https://gitlab.sl4to5.de/deliverables/use-case-definitions/usecase2/-/blob/master/Milestone2/Documentation/SUC2_CSP_Phase1_Analyze.md) , [SUC3](https://gitlab.sl4to5.de/deliverables/use-case-definitions/use-case-3/-/blob/master/Milestone2/Documentation/SUC3_CSP_Phase1_Analyze.md)**
+*Note: These are only available SET Level internally*
 
 **Collection of all Inputs**
 
@@ -87,4 +88,4 @@ Entwicklungsbegleitendes Testen und Verifikation / Validation einer isolierten K
 
 | Previous Step | Next Step |
 | ------ | ------ |
-| [**Overview**](../../tree/master) | [**Next Step: Requirements Spec**](Documentation/CMP_Phase2_RequirementSpec.md) |
+| [**Overview**](../../tree/master) | [**Next Step: Requirements Spec**](doc/CMP_Phase2_RequirementSpec.md) |

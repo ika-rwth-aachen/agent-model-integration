@@ -69,4 +69,4 @@ This Document is based on the Credible Modelling Process (CMP) and fills it from
 
 | Previous Step | Next Step |
 | ------ | ------ |
-| [**Requirements Spec**](Documentation/CMP_Phase2_RequirementSpec.md) | [**Implementation**](Documentation/CMP_Phase4_Implementation.md) |
+| [**Requirements Spec**](doc/CMP_Phase2_RequirementSpec.md) | [**Implementation**](Documentation/CMP_Phase4_Implementation.md) |

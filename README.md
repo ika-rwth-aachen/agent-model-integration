@@ -3,7 +3,7 @@
 This agent model is a responsive, closed loop and human-like agent that reacts on other traffic participants and is able to perform basic maneuvers. 
 The model is based on the work done by [1] and got extended with an OSI adapter and a modular simulation architecture. The model described in [1] is available on [GitHub](https://github.com/ika-rwth-aachen/SimDriver). The agent model was developed by the institute for automotive engineering, RWTH Aachen University.
 
-<img src="Documentation/teaser.png" style="width: 600px;"/>  
+<img src="doc/teaser.png" style="width: 600px;"/>  
 
 
 ## Modeling Approach
@@ -15,7 +15,7 @@ The implementation uses the [OSI Sensor Model Packaging (OSMP)](https://github.c
 Fig. 1 illustrates the wrapping around the actual behavior and dynamics model to end up with an encapsulated FMU. The input of the FMU consists of an `osi3::SensorView`  for the environment representation and an `osi3::TrafficCommand` which holds information on the agent's task in the simulation run. On the output side the simulator can either use the provided `osi3::TrafficUpdate` to manage the updated pose of the agent or forward the generated `sl::DynamicsRequest` message to another module that then calculates an `osi3::TrafficUpdate`.  
 Inside the FMU, internal interfaces are used to feed the ika behavior model and then calculate its new position with a simple vehicle model and controllers for pedal values and the steering angle.
 
-![osmp](Documentation/architecture.png)  
+![osmp](doc/architecture.png)  
 Fig. 1: OSMP wrapping of the agent model  
 
 ### Behavior Model
@@ -27,13 +27,13 @@ On the left side of Fig. 2 the input interface is shown. It consists of informat
 The *Processing* layer takes the environment and traffic data and enriches them, e.g., with TTC or THW measures. Then, the most suitable maneuver is selected and modeled by conscious guiding variables (e.g. a time headway to a leading vehicle that should be maintained). Conscious variables are controlled by the sub-conscious variables acceleration and curvature (*Note:* `Z-micro` corresponds to the `sl::DynamicsRequest` message here).  
 The *Action* column is actually located outside the "ika Agent Model" block from Fig. 1, but modeled in the most right block of Fig. 1.
 
-![architecutre](Documentation/04_architecture-en.svg)  
+![architecutre](doc/04_architecture-en.svg)  
 Fig. 2: Behavior model architecture (taken from [2])  
 
 #### Basic Maneuvers
 This section should help enlighten some blocks within the *Processing* column of Fig. 2. The agent model is implemented such that basic driving maneuvers are modeled which enables the model to perform most driving tasks that are required in urban scenarios (cf. [1]). Those capabilities or basic maneuvers are illustrated as a state diagram in Fig. 3.
 
-![states](Documentation/states-original.svg)  
+![states](doc/states-original.svg)  
 Fig. 3: Behavior model basic maneuvers (taken from [2])  
 
 

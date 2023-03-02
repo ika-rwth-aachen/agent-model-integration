@@ -55,4 +55,4 @@ This Document is based on the Credible Modelling Process (CMP) and fills it from
 
 | Previous Step | Next Step |
 | ------ | ------ |
-| [**Design Spec**](Documentation/CMP_Phase3_DesignSpec.md) | [**Overview**](../../tree/master) |
+| [**Design Spec**](doc/CMP_Phase3_DesignSpec.md) | [**Overview**](../../tree/master) |
