@@ -1,8 +1,5 @@
 # Agent Model
 
-> CI pipeline results:  
-> * [**Latest FMU** (Ubuntu 20.04 LTS)](../-/jobs/artifacts/master/raw/ikaAgentModel.fmu?job=build_fmu) 
-
 This agent model is a responsive, closed loop and human-like agent that reacts on other traffic participants and is able to perform basic maneuvers. 
 The model is based on the work done by [1] and got extended with an OSI adapter and a modular simulation architecture. The model described in [1] is available on [GitHub](https://github.com/ika-rwth-aachen/SimDriver). The agent model was developed by the institute for automotive engineering, RWTH Aachen University.
 
