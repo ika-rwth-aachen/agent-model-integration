@@ -248,6 +248,6 @@ year = {2024}
 
 
 ## Acknowledgements
-The work of this paper has been done in the context of the [SUNRISE](https://sunrise-europe.eu/) project which is co-funded by the European Commission’s Horizon Europe Research and Innovation Programme under grant agreement number 101069573. Views and opinions expressed, are those of the author(s) only and do not necessarily reflect those of the European Union or the European Climate, Infrastructure and Environment Executive Agency (CINEA). Neither the European Union nor the granting authority can be held responsible for them.
+The work of this paper has been done in the context of the [SUNRISE](https://ccam-sunrise-project.eu/) project which is co-funded by the European Commission’s Horizon Europe Research and Innovation Programme under grant agreement number 101069573. Views and opinions expressed, are those of the author(s) only and do not necessarily reflect those of the European Union or the European Climate, Infrastructure and Environment Executive Agency (CINEA). Neither the European Union nor the granting authority can be held responsible for them.
 
 Additionally, this work received funding from the [SET Level](https://setlevel.de/) and VVM projects as part of the PEGASUS project family, promoted by the German Federal Ministry for Economic Affairs and Energy based on a decision of the Deutsche Bundestag.
