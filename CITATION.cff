@@ -1,0 +1,38 @@
+cff-version: 1.2.0
+message: "We hope that our agent model integration can help your research. If this is the case, please cite it using the following metadata."
+
+title: "CARLOS"
+type: software
+repository-code: "https://github.com/ika-rwth-aachen/agent-model-integration"
+date-released: 2024-05-01
+authors:
+  - given-names: Christian
+    family-names: Geller
+  - given-names: Daniel
+    family-names: Becker
+  - given-names: Jobst
+    family-names: Beckmann
+  - given-names: Lutz
+    family-names: Eckstein
+
+preferred-citation:
+  title: "Integration of an Agent Model into an Open Simulation Architecture for Scenario-Based Testing of Automated Vehicles"
+  type: conference-paper
+  # conference:
+  #   name:
+  # month:
+  year: 2024
+  # doi:
+  url: "https://github.com/ika-rwth-aachen/agent-model-integration"
+  authors:
+    - given-names: Christian
+      family-names: Geller
+      orcid: "https://orcid.org/0000-0001-8655-3201"
+    - given-names: Daniel
+      family-names: Becker
+      orcid: "https://orcid.org/0000-0003-4224-0195"
+    - given-names: Jobst
+      family-names: Beckmann
+      orcid: "https://orcid.org/0000-0000-0000-0000"
+    - given-names: Lutz
+      family-names: Eckstein

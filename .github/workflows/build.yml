@@ -1,0 +1,23 @@
+name: Build
+on:
+  push:
+jobs:
+  build-project:
+    name: Build Project
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.1.2        
+        with:
+          submodules: 'true'
+
+      - name: Configure and Build Project
+        uses: threeal/cmake-action@main
+
+      - name: Release build FMU
+        uses: ncipollo/release-action@v1.14.0
+        with:
+          artifacts: "lib/ikaAgentModel.fmu"
+          tag: "v1.0.0"
+          allowUpdates: "true"
+          body: "Agent model packaged as FMU expecting OSI input/output messages"
