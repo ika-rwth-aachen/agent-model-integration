@@ -1,5 +1,16 @@
 # Integration of an Agent Model into an Open Simulation Architecture for Scenario-Based Testing of Automated Vehicles
 
+<p align="left">
+  <img src="https://img.shields.io/github/v/release/ika-rwth-aachen/agent-model-integration"/>
+  <img src="https://img.shields.io/github/license/ika-rwth-aachen/agent-model-integration"/>
+  <a href="https://github.com/ika-rwth-aachen/agent-model-integration/actions/workflows/build.yml">
+  <img src="https://github.com/ika-rwth-aachen/agent-model-integration/actions/workflows/build.yml/badge.svg"/></a>
+  <img src="https://img.shields.io/badge/Ubuntu-22.04-E95420"/>
+  <img src="https://img.shields.io/badge/OSI-3-blueviolet"/>
+  <img src="https://img.shields.io/badge/FMU-2-blueviolet"/>
+  <img src="https://img.shields.io/github/stars/ika-rwth-aachen/agent-model-integration?style=social"/>
+</p>
+
 This repository contains the modular integration of our closed-loop agent model within an open simulation architecture presented in our [paper](TODO). We provide a straight-forward simulation integration approach based on standards such as FMI and the Open Simulation Interface (OSI) enabling the [agent model](https://github.com/ika-rwth-aachen/SimDriver) to be integrated within different simulation tools. The model itself is a responsive, closed loop and human-like agent that reacts on other traffic participants and is able to perform basic maneuvers. Find a brief description of the simulation architecture but also the agent model itself in the sections below.
 
 <p align="center">
