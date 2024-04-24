@@ -18,4 +18,5 @@ jobs:
         uses: ncipollo/release-action@v1.14.0
         with:
           artifacts: "README.md"
+          tag: "v1.0.0"
           bodyFile: "Agent model packaged as FMU expecting OSI input/output messages"
