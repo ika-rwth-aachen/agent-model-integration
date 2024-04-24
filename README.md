@@ -2,9 +2,11 @@
 
 This repository contains the modular integration of our closed-loop agent model within an open simulation architecture presented in our [paper](TODO). We provide a straight-forward simulation integration approach based on standards such as FMI and the [Open Simulation Interface (OSI)](https://github.com/OpenSimulationInterface/open-simulation-interface) enabling the [agent model](https://github.com/ika-rwth-aachen/SimDriver) to be integrated within different simulation tools. The model itself is a responsive, closed loop and human-like agent that reacts on other traffic participants and is able to perform basic maneuvers. Find a brief description of the simulation architecture but also the agent model itself in the sections below.
 
-<img src="./doc/teaser.png" height=250 align="center">
+<p align="center">
+<img src="doc/teaser.png" width="600px"/>  
+</p>
 
-> > *Fig. 1: Intersection scenario populated by multiple agents within the exemplary simulation tool CARLA. The agent model's main capabilities are highlighted to demonstrate a responsive and human-like behavior. In addition, the general integration process is illustrated, starting with the development of the agent model, subsequent simulation integration, and final testing.*
+> *Fig. 1: Intersection scenario populated by multiple agents within the exemplary simulation tool CARLA. The agent model's main capabilities are highlighted to demonstrate a responsive and human-like behavior. In addition, the general integration process is illustrated, starting with the development of the agent model, subsequent simulation integration, and final testing.*
 
 ## Notice
 
@@ -48,9 +50,11 @@ Before describing the agent model itself, its framework is briefly described.
 The implementation uses the [OSI Sensor Model Packaging (OSMP)](https://github.com/OpenSimulationInterface/osi-sensor-model-packaging) framework to pack the library as a standardized [FMU](https://fmi-standard.org/). This way, the model may be integrated in any simulation platform that supports the [Open Simulation Interface (OSI)](https://github.com/OpenSimulationInterface/open-simulation-interface) and FMI.
 The figure below illustrates the wrapping around the actual behavior and dynamics model to end up with an encapsulated FMU. The input of the FMU consists of an `osi3::SensorView` for the environment representation and an `osi3::TrafficCommand` which holds information on the agent's task in the simulation run. On the output side the simulator can either use the provided `osi3::TrafficUpdate` to manage the updated pose of the agent or forward the generated `sl::DynamicsRequest` message to another module that then calculates an `osi3::TrafficUpdate`. Inside the FMU, internal interfaces are used to feed the behavior model and then calculate its new position with a simple vehicle model and controllers for pedal values and the steering angle.
 
-<img src="./doc/architecture.png" width="600px" align="center"> 
+<p align="center">
+<img src="./doc/simulation-architecture.png" width="600px"> 
+</p>
 
-> > *Fig. 2: Agent model packed as FMU integrated into an OSI-based simulation architecture.*  
+> *Fig. 2: Agent model packed as FMU integrated into an OSI-based simulation architecture.*  
 
 ## Agent Model
 The model core itself is open-sourced in a dedicated [GitHub repository](https://github.com/ika-rwth-aachen/SimDriver). However, its basic structure and features are described in this section.
@@ -60,16 +64,18 @@ On the left side of the following figure the input interface is shown. It consis
 The *Processing* layer takes the environment and traffic data and enriches them with measured values such as TTC or THW. Following, the most suitable maneuver is selected and modeled by conscious guiding variables (e.g. a THW to a leading vehicle that should be maintained). Conscious variables are controlled by the sub-conscious variables acceleration and curvature (*Note:* `Z-micro` corresponds to the later implemented `sl::DynamicsRequest` message here).  
 The *Action* layer models the actual dynamics of the vehicle and is visualized as *Dynamics Model* also in the right most block of the previous figure.
 
-<img src="./doc/04_architecture.png" width="600px" align="center"> 
-
-> > *Fig. 3: Behavior model architecture (taken from [2]). An extensive discussion of the figure below can be found in [1]*
+<p align="center">
+<img src="./doc/information-flow.svg" width="600px"> 
+</p>
+> *Fig. 3: Behavior model architecture (taken from [2]). An extensive discussion of the figure below can be found in [1]*
 
 ### Basic Maneuvers
 The agent model is implemented such that basic driving maneuvers are modeled which enable the model to perform most driving tasks that are required in urban scenarios (cf. [1]). Those capabilities or basic maneuvers are illustrated as a state diagram in the following:
 
-<img src="./doc/states-original.svg" width="600px" align="center"> 
-
-> > *Fig. 4: Behavior model basic maneuvers (taken from [2]).*  
+<p align="center">
+<img src="./doc/basic-maneuvers.svg" width="600px"> 
+</p>
+> *Fig. 4: Behavior model basic maneuvers (taken from [2]).*  
 
 
 ### Parametrization
