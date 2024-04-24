@@ -11,12 +11,12 @@ jobs:
         with:
           submodules: 'true'
 
-      #- name: Configure and Build Project
-      #  uses: threeal/cmake-action@main
+      - name: Configure and Build Project
+        uses: threeal/cmake-action@main
 
       - name: Release build FMU
         uses: ncipollo/release-action@v1.14.0
         with:
-          artifacts: "README.md"
+          artifacts: "lib/ikaAgentModel.fmu"
           tag: "v1.0.0"
           body: "Agent model packaged as FMU expecting OSI input/output messages"
