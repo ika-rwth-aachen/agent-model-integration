@@ -1,6 +1,6 @@
 # Integration of an Agent Model into an Open Simulation Architecture for Scenario-Based Testing of Automated Vehicles
 
-This repository contains the modular integration of our closed-loop agent model within an open simulation architecture presented in our [paper](TODO). We provide a straight-forward simulation integration approach based on standards such as FMI and the [Open Simulation Interface (OSI)](https://github.com/OpenSimulationInterface/open-simulation-interface) enabling the [agent model](https://github.com/ika-rwth-aachen/SimDriver) to be integrated within different simulation tools. The model itself is a responsive, closed loop and human-like agent that reacts on other traffic participants and is able to perform basic maneuvers. Find a brief description of the simulation architecture but also the agent model itself in the sections below.
+This repository contains the modular integration of our closed-loop agent model within an open simulation architecture presented in our [paper](TODO). We provide a straight-forward simulation integration approach based on standards such as FMI and the Open Simulation Interface (OSI) enabling the [agent model](https://github.com/ika-rwth-aachen/SimDriver) to be integrated within different simulation tools. The model itself is a responsive, closed loop and human-like agent that reacts on other traffic participants and is able to perform basic maneuvers. Find a brief description of the simulation architecture but also the agent model itself in the sections below.
 
 <p align="center">
 <img src="doc/teaser.png" width="600px"/>  
@@ -23,10 +23,13 @@ This repository contains the modular integration of our closed-loop agent model 
   - [Notice](#notice)
   - [Content](#content)
   - [Publication](#publication)
-  - [Open Simulation Architecture](#open-simulation-architecture)
-  - [Agent Model](#agent-model)
-  - [Interface](#interface)
   - [Getting Started](#getting-started)
+    - [Download Artifact](#download-artifact)
+    - [Build from Source](#build-from-source)
+  - [Concept](#concept)
+    - [Open Simulation Architecture](#open-simulation-architecture)
+    - [Agent Model](#agent-model)
+    - [External Interface](#external-interface)
   - [References](#references)
   - [Citation](#citation)
   - [Acknowledgements](#acknowledgements)
@@ -44,7 +47,59 @@ This repository contains the modular integration of our closed-loop agent model 
 
 ---
 
-## Open Simulation Architecture
+
+## Getting Started
+
+### Download Artifact
+We provide a [Github action](./github/workflows/build.yml) that directly builds and packages the model in a FMU. You can download the released FMU [here](TODO).
+
+### Build from Source
+The following steps describe how you can build the resulting `ikaAgentModel.fmu` from source.
+
+#### Requirements
+
+**We recommend to use Ubuntu 20.04 or higher and require a working CMake installation.**
+
+Before starting the build process, the repository submodules need to be downloaded:
+```
+git submodule update --init --recursive
+```
+> [!NOTE]
+> Due to the usage of the CMake feature 'ExternalProject_Add()', there is no need to download and build **protobuf** from source source anymore. 
+  
+#### Build Model using CMake
+1. Create a `build` directory and enter it:
+    ```
+    mkdir build && cd build
+    ```  
+
+2. Execute CMake:
+    ```
+    cmake -DCMAKE_BUILD_TYPE=Release ..
+    ```  
+
+    Please note: The default build directory for the `FMU` is the subfolder `lib/`. If a specific `FMU` output dir shall be used, set the variable `FMU_OUTDIR`, e.g.
+    ```
+    cmake -DCMAKE_BUILD_TYPE=Release -DFMU_OUTDIR=<dir> ..
+    ```  
+
+3. Compile the library:
+    ```
+    make
+    ```
+
+> [!NOTE]
+> Optional: `make -j4` for building on multiple cores
+
+#### Debugging
+The external FMU parameter `debug` enables debugging log information in the `${workspace}/debug` folder as `json` file and holds information about `horizon`, `vehicle_state` and `driver_state` at each timestep.
+
+In addition the plot python scripts in [scripts](scripts) can be used to visualize the debug information with `matplotlib`.
+
+
+## Concept
+
+### Open Simulation Architecture
 
 Before describing the agent model itself, its framework is briefly described. 
 The implementation uses the [OSI Sensor Model Packaging (OSMP)](https://github.com/OpenSimulationInterface/osi-sensor-model-packaging) framework to pack the library as a standardized [FMU](https://fmi-standard.org/). This way, the model may be integrated in any simulation platform that supports the [Open Simulation Interface (OSI)](https://github.com/OpenSimulationInterface/open-simulation-interface) and FMI.
@@ -56,10 +111,10 @@ The figure below illustrates the wrapping around the actual behavior and dynamic
 
 > *Fig. 2: Agent model packed as FMU integrated into an OSI-based simulation architecture.*  
 
-## Agent Model
+### Agent Model
 The model core itself is open-sourced in a dedicated [GitHub repository](https://github.com/ika-rwth-aachen/SimDriver). However, its basic structure and features are described in this section.
 
-### Information Flow
+#### Information Flow
 On the left side of the following figure the input interface is shown. It consists of information on the environment (static + dynamic), the route and the ego vehicle. Inside the model these signals are processed as *Perception* layer. This is currently just a "pass-through" layer, but it would be possible to model the driver's perception ability by disturbing input signals.  
 The *Processing* layer takes the environment and traffic data and enriches them with measured values such as TTC or THW. Following, the most suitable maneuver is selected and modeled by conscious guiding variables (e.g. a THW to a leading vehicle that should be maintained). Conscious variables are controlled by the sub-conscious variables acceleration and curvature (*Note:* `Z-micro` corresponds to the later implemented `sl::DynamicsRequest` message here).  
 The *Action* layer models the actual dynamics of the vehicle and is visualized as *Dynamics Model* also in the right most block of the previous figure.
@@ -69,7 +124,7 @@ The *Action* layer models the actual dynamics of the vehicle and is visualized a
 </p>
 > *Fig. 3: Behavior model architecture (taken from [2]). An extensive discussion of the figure below can be found in [1]*
 
-### Basic Maneuvers
+#### Basic Maneuvers
 The agent model is implemented such that basic driving maneuvers are modeled which enable the model to perform most driving tasks that are required in urban scenarios (cf. [1]). Those capabilities or basic maneuvers are illustrated as a state diagram in the following:
 
 <p align="center">
@@ -78,7 +133,7 @@ The agent model is implemented such that basic driving maneuvers are modeled whi
 > *Fig. 4: Behavior model basic maneuvers (taken from [2]).*  
 
 
-### Parametrization
+#### Parametrization
 The most important parameters are directly configurable using FMU parameters:
 
 | Parameter   | Description                                                            |
@@ -90,10 +145,10 @@ The most important parameters are directly configurable using FMU parameters:
 > All other model parameters can be parameterized directly in the source code of the [agent model](src/IkaAgent.cpp). 
 
 
-## Interface
+### External Interface
 When integrating the agent model within the open simulation architecture, a well-defined interface is required. OSI already defines a valid and powerful baseline.
 
-### Input: Required Fields in OSI3::SensorView
+#### Input: Required Fields in OSI3::SensorView
 The following fields are required as OSI inputs for the agent model
 
 ```
@@ -151,7 +206,7 @@ traffic_command
 ```
 
 
-### Output: Fields in OSI3::TrafficUpdate and SL::DynamicsRequest filled by the agent model
+#### Output: Fields in OSI3::TrafficUpdate and SL::DynamicsRequest filled by the agent model
 The following fields are filled from the agent model and can be used by the simulation tool.
 
 ```
@@ -172,49 +227,6 @@ sl
     longitudinal_acceleration_target
 # Note: these are *desired* values from the behavior model
 ```
-
-## Getting Started
-
-### Initialize Repository
-
-Before starting the build process, the repository submodules need to be downloaded:
-```
-git submodule update --init --recursive
-```
-> [!NOTE]
-> Due to the usage of the CMake feature 'ExternalProject_Add()', there is no need to download and build **protobuf** from source source anymore. 
-  
-
-### Build Model in Ubuntu
-1. Create a `build` directory and enter it:
-    ```
-    mkdir build && cd build
-    ```  
-
-2. Execute CMake:
-    ```
-    cmake -DCMAKE_BUILD_TYPE=Release ..
-    ```  
-
-    Please note: The default build directory for the `FMU` is the subfolder `lib/`. If a specific `FMU` output dir shall be used, set the variable `FMU_OUTDIR`, e.g.
-    ```
-    cmake -DCMAKE_BUILD_TYPE=Release -DFMU_OUTDIR=<dir> ..
-    ```  
-
-3. Compile the library:
-    ```
-    make
-    ```
-
-> [!NOTE]
-> Optional: `make -j4` for building on multiple cores
-> Requirements: Ubuntu 20.04 or higher and CMake installation
-
-
-### Debugging
-The external FMU parameter `debug` enables debugging log information in the `${workspace}/debug` folder as `json` file and holds information about `horizon`, `vehicle_state` and `driver_state` at each timestep.
-
-In addition the plot python scripts in [scripts](scripts) can be used to visualize the debug information with `matplotlib`.
 
 
 ## References
