@@ -5,9 +5,8 @@
   <img src="https://img.shields.io/github/license/ika-rwth-aachen/agent-model-integration"/>
   <a href="https://github.com/ika-rwth-aachen/agent-model-integration/actions/workflows/build.yml">
   <img src="https://github.com/ika-rwth-aachen/agent-model-integration/actions/workflows/build.yml/badge.svg"/></a>
-  <img src="https://img.shields.io/badge/Ubuntu-22.04-E95420"/>
-  <img src="https://img.shields.io/badge/OSI-3-blueviolet"/>
-  <img src="https://img.shields.io/badge/FMU-2-blueviolet"/>
+  <img src="https://img.shields.io/badge/OSI-3.1-blueviolet"/>
+  <img src="https://img.shields.io/badge/FMU-2.0-blueviolet"/>
   <img src="https://img.shields.io/github/stars/ika-rwth-aachen/agent-model-integration?style=social"/>
 </p>
 
@@ -62,21 +61,21 @@ This repository contains the modular integration of our closed-loop agent model 
 ## Getting Started
 
 ### Download Artifact
-We provide a [Github action](./github/workflows/build.yml) that directly builds and packages the model in a FMU. You can download the released FMU [here](TODO).
+We provide a [GitHub Action](./github/workflows/build.yml) that directly builds and the agent model in a FMU package within a CI workflow. You can download all released FMU's [here](https://github.com/ika-rwth-aachen/agent-model-integration/releases/).
 
 ### Build from Source
-The following steps describe how you can build the resulting `ikaAgentModel.fmu` from source.
+Alternatively, the following steps describe how you can build the resulting `ikaAgentModel.fmu` package own your own from source.
 
 #### Requirements
 
-**We recommend to use Ubuntu 20.04 or higher and require a working CMake installation.**
+**We recommend to use Ubuntu 20.04 or higher and at least CMake version 3.5**
 
 Before starting the build process, the repository submodules need to be downloaded:
 ```
 git submodule update --init --recursive
 ```
 > [!NOTE]
-> Due to the usage of the CMake feature 'ExternalProject_Add()', there is no need to download and build **protobuf** from source source anymore. 
+> Due to the usage of the CMake feature `ExternalProject_Add()`, there is no need to download and build **[Protobuf](https://protobuf.dev/)** from source. 
   
 #### Build Model using CMake
 1. Create a `build` directory and enter it:
@@ -103,9 +102,7 @@ git submodule update --init --recursive
 > Optional: `make -j4` for building on multiple cores
 
 #### Debugging
-The external FMU parameter `debug` enables debugging log information in the `${workspace}/debug` folder as `json` file and holds information about `horizon`, `vehicle_state` and `driver_state` at each timestep.
-
-In addition the plot python scripts in [scripts](scripts) can be used to visualize the debug information with `matplotlib`.
+The external FMU parameter `debug` enables logging information at runtime within the `${workspace}/debug` folder. The resulting `json` files hold information about the `horizon`, `vehicle_state` and `driver_state` at each timestep.
 
 
 ## Concept
@@ -118,9 +115,10 @@ The figure below illustrates the wrapping around the actual behavior and dynamic
 
 <p align="center">
 <img src="./doc/simulation-architecture.png" width="600px"> 
-</p>
 
 > *Fig. 2: Agent model packed as FMU integrated into an OSI-based simulation architecture.*  
+</p>
+
 
 ### Agent Model
 The model core itself is open-sourced in a dedicated [GitHub repository](https://github.com/ika-rwth-aachen/SimDriver). However, its basic structure and features are described in this section.
@@ -132,16 +130,18 @@ The *Action* layer models the actual dynamics of the vehicle and is visualized a
 
 <p align="center">
 <img src="./doc/information-flow.svg" width="600px"> 
-</p>
+
 > *Fig. 3: Behavior model architecture (taken from [2]). An extensive discussion of the figure below can be found in [1]*
+</p>
 
 #### Basic Maneuvers
 The agent model is implemented such that basic driving maneuvers are modeled which enable the model to perform most driving tasks that are required in urban scenarios (cf. [1]). Those capabilities or basic maneuvers are illustrated as a state diagram in the following:
 
 <p align="center">
 <img src="./doc/basic-maneuvers.svg" width="600px"> 
-</p>
+
 > *Fig. 4: Behavior model basic maneuvers (taken from [2]).*  
+</p>
 
 
 #### Parametrization
@@ -243,7 +243,7 @@ sl
 ## References
 [1] *System Design of an Agent Model for the Closed-Loop Simulation of Relevant Scenarios in the Development of ADS*, 29th Aachen Colloquium 2020, 07.10.2020, Aachen. Jens Klimke, E.Go Moove GmbH; Daniel Becker, Institut für Kraftfahrzeuge (ika); Univ.-Prof. Dr.-Ing. Lutz Eckstein, Insitut für Kraftfahrzeuge (ika)
 
-[2] *Agentenmodell für die Closed-Loop-Simulation von Verkehrszenarien*, ATZelektronik 05 Mai 2021, 16. Jahrgang, S.42-46. Daniel Becker, Jens Klimke, Lutz Eckstein. Link: https://www.springerprofessional.de/agentenmodell-fuer-die-closed-loop-simulation-von-verkehrsszenar/19141908
+[2] *Agentenmodell für die Closed-Loop-Simulation von Verkehrszenarien*, ATZelektronik 05 Mai 2021, 16. Jahrgang, S.42-46. Daniel Becker, Jens Klimke, Lutz Eckstein. [Link](https://www.springerprofessional.de/agentenmodell-fuer-die-closed-loop-simulation-von-verkehrsszenar/19141908)
 
 
 ## Citation
@@ -252,7 +252,7 @@ We hope that our agent model integration can help your research. If this is the 
 @inproceedings{AgentModel24,
 author = {Geller, Christian and Becker, Daniel and Beckmann, Jobst and Eckstein, Lutz},
 title = {{Integration of an Agent Model into an Open Simulation Architecture for Scenario-Based Testing of Automated Vehicles}},
-url = {TODO},
+url = {https://github.com/ika-rwth-aachen/agent-model-integration},
 year = {2024}
 }
 ```
