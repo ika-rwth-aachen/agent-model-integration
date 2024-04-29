@@ -250,7 +250,7 @@ sl
 ## Citation
 We hope that our agent model integration can help your research. If this is the case, please cite it using the following metadata.
 ```
-@inproceedings{AgentModel24,
+@inproceedings{AgentModelIntegration24,
 author = {Geller, Christian and Becker, Daniel and Beckmann, Jobst and Eckstein, Lutz},
 title = {{Integration of an Agent Model into an Open Simulation Architecture for Scenario-Based Testing of Automated Vehicles}},
 url = {https://github.com/ika-rwth-aachen/agent-model-integration},
