@@ -12,7 +12,7 @@
 
 This repository contains the modular integration of our closed-loop agent model within an open simulation architecture presented in our [paper](TODO). We provide a straight-forward simulation integration approach based on standards such as FMI and the Open Simulation Interface (OSI) enabling the [agent model](https://github.com/ika-rwth-aachen/SimDriver) to be integrated within different simulation tools. The model itself is a responsive, closed loop and human-like agent that reacts on other traffic participants and is able to perform basic maneuvers. Find a brief description of the simulation architecture but also the agent model itself in the sections below.
 
-https://github.com/ika-rwth-aachen/agent-model-integration/assets/88664444/d113c191-2f69-46b1-9711-6fbad14e44db
+https://github.com/ika-rwth-aachen/agent-model-integration/assets/88664444/dac551b2-aa18-4920-b169-d9219db17334
 
 ## Notice
 
