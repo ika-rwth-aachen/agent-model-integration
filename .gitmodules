@@ -1,6 +1,12 @@
-[submodule "open-simulation-interface"]
-	path = lib/open-simulation-interface
-	url = https://gitlab.sl4to5.de/deliverables/architecture/open-simulation-interface.git
 [submodule "SimDriver"]
-	path = lib/SimDriver
+	path = lib/osiWrapper/lib/SimDriver
 	url = https://github.com/ika-rwth-aachen/SimDriver.git
+[submodule "json"]
+	path = lib/osiWrapper/lib/json
+	url = https://github.com/nlohmann/json.git
+[submodule "lib/osiWrapper/lib/spdlog"]
+	path = lib/osiWrapper/lib/spdlog
+	url = https://github.com/gabime/spdlog.git
+[submodule "lib/osiWrapper/lib/open-simulation-interface"]
+	path = lib/osiWrapper/lib/open-simulation-interface
+	url = https://gitlab.setlevel.de/open/osi.git
