@@ -32,6 +32,7 @@ https://github.com/ika-rwth-aachen/agent-model-integration/assets/88664444/e2668
   - [Getting Started](#getting-started)
     - [Download Artifact](#download-artifact)
     - [Build from Source](#build-from-source)
+    - [Simulation Integration](#simulation-integration)
   - [Concept](#concept)
     - [Open Simulation Architecture](#open-simulation-architecture)
     - [Agent Model](#agent-model)
@@ -63,15 +64,17 @@ In our paper, we motivate the simulation integration architecture and evaluate t
 
 ## Getting Started
 
+The overall architecture is designed to package the model as an FMU capable of transferring data via OSI. Thus, the model can be either directly downloaded as provided FMU file or alternatively built from source.
+
 ### Download Artifact
-We provide a [GitHub Action](./github/workflows/build.yml) that directly builds and the agent model in a FMU package within a CI workflow. You can download all released FMU's [here](https://github.com/ika-rwth-aachen/agent-model-integration/releases/).
+We provide a [GitHub Action](./github/workflows/build.yml) that directly builds the agent model in an FMU package within a GitHub CI workflow. You can download all released FMU packages of the agent model [here](https://github.com/ika-rwth-aachen/agent-model-integration/releases/).
 
 ### Build from Source
 Alternatively, the following steps describe how you can build the resulting `ikaAgentModel.fmu` package own your own from source.
 
 #### Requirements
 
-**We recommend to use Ubuntu 20.04 or higher and at least CMake version 3.5**
+**We recommend to use Ubuntu 20.04 or higher and at least CMake version 3.5!**
 
 Before starting the build process, the repository submodules need to be downloaded:
 ```
@@ -82,31 +85,32 @@ git submodule update --init --recursive
   
 #### Build Model using CMake
 1. Create a `build` directory and enter it:
-    ```
-    mkdir build && cd build
-    ```  
+  ```
+  mkdir build && cd build
+  ```  
 
 2. Execute CMake:
-    ```
-    cmake -DCMAKE_BUILD_TYPE=Release ..
-    ```  
+  ```
+  cmake -DCMAKE_BUILD_TYPE=Release ..
+  ```  
+  > [!NOTE]
+  > The default build directory for the `FMU` is the subfolder `lib/`. If a specific `FMU` output dir shall be used, set the variable `FMU_OUTDIR`, e.g.
+  > ```
+  > cmake -DCMAKE_BUILD_TYPE=Release -DFMU_OUTDIR=<dir> ..
+  > ```  
 
-    Please note: The default build directory for the `FMU` is the subfolder `lib/`. If a specific `FMU` output dir shall be used, set the variable `FMU_OUTDIR`, e.g.
-    ```
-    cmake -DCMAKE_BUILD_TYPE=Release -DFMU_OUTDIR=<dir> ..
-    ```  
-
-3. Compile the library:
-    ```
-    make
-    ```
-
-> [!NOTE]
-> Optional: `make -j4` for building on multiple cores
+3. Compile the FMU package:
+  ```
+  make
+  ```
+  > [!NOTE]
+  > Use `make -j4` for building on multiple cores
 
 #### Debugging
-The external FMU parameter `debug` enables logging information at runtime within the `${workspace}/debug` folder. The resulting `json` files hold information about the `horizon`, `vehicle_state` and `driver_state` at each timestep.
+The external FMU parameter `DEBUG` enables logging information at runtime within the `${workspace}/debug` folder. The resulting `json` files hold information about the `horizon`, `vehicle_state`, and `driver_state` at each timestep.
 
+### Simulation Integration
+The final integration of the model into an existing simulation architecture depends significantly on the particular tool, which means that no specific instructions can be given here. While some tools such as CarMaker or OpenPass enable direct support of FMUs, third-party open-source tools such as the [Carla-OSI-Service](https://github.com/DLR-TS/Carla-OSI-Service) and [OSMP-Service](https://github.com/DLR-TS/OSMP-Service) can be used for CARLA. Please have a detailed look at the specific documentation of your chosen simulation tool. 
 
 ## Concept
 
